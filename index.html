@@ -2222,6 +2222,10 @@ function bindEvents() {
     const button = event.target.closest("[data-market-code]");
     if (button) selectMarket(button.dataset.marketCode);
   });
+  document.querySelector("#deskWorklist").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-desk-action]");
+    if (button) switchView(button.dataset.deskAction);
+  });
   document.querySelector("#openMarketInterfacesBtn").addEventListener("click", () => switchView("interfaces"));
   document.querySelector("#exportDailyBtn").addEventListener("click", exportDailyStrategy);
   document.querySelector("#copyReportBtn").addEventListener("click", copyReportText);
@@ -2544,7 +2548,7 @@ function renderDesk() {
   const topPrice = maxBy(rows, (row) => row.averageSettlementPriceYuanMwh || 0);
   const tasks = [
     {
-      title: "运行盘前数据检查",
+      title: "确认盘前数据完整性",
       body: "先检查价格、负荷、预测特征、边界和客户案例数据是否完成导入。",
     },
     {
@@ -2552,15 +2556,23 @@ function renderDesk() {
       body: `客户案例中 ${topAmount.time} 结算金额 ${fmt(topAmount.totalSettlementAmountYuan)} 元；${topPrice.time} 结算均价 ${fmt(topPrice.averageSettlementPriceYuanMwh)} 元/MWh，可作为现货复盘样本。`,
     },
     {
-      title: "运行现货预测与价差判断",
-      body: "使用负荷、新能源、边界和历史价格接口，为日前申报前的价差方向判断预留模型入口。",
+      title: "确认预测与价差任务",
+      body: "检查负荷、新能源、边界和历史价格数据是否齐全，并进入预测评估确认模型版本、运行状态和重点复核时段。",
+      action: "forecast",
+      actionLabel: "进入预测评估",
     },
     {
       title: "生成日报与复盘材料",
       body: "把盘前建议、执行结果、价格异常和客户案例归因写入报告复盘模块。",
     },
   ];
-  document.querySelector("#deskWorklist").innerHTML = tasks.map((task) => `<article class="work-item"><strong>${task.title}</strong><p>${task.body}</p></article>`).join("");
+  document.querySelector("#deskWorklist").innerHTML = tasks.map((task) => `
+    <article class="work-item">
+      <strong>${task.title}</strong>
+      <p>${task.body}</p>
+      ${task.action ? `<button class="table-action top-gap" type="button" data-desk-action="${task.action}">${task.actionLabel}</button>` : ""}
+    </article>
+  `).join("");
 }
 
 function renderSamples() {
