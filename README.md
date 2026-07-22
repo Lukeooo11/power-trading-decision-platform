@@ -1,5 +1,7 @@
 # 全国电力交易辅助决策平台 · 公开演示版
 
+长期访问地址：https://lukeooo11.github.io/power-trading-decision-platform/
+
 此目录由 `power-trading-platform-upgrade/build-public-demo.mjs` 生成。
 
 - 页面为单文件静态版本，可直接部署到 GitHub Pages。
