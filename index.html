@@ -758,6 +758,62 @@ canvas {
   margin: 12px 0;
 }
 
+.loss-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.loss-kpi-grid article,
+.loss-scenario {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+  padding: 12px;
+}
+
+.loss-kpi-grid span,
+.loss-scenario span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.loss-kpi-grid strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 19px;
+}
+
+.loss-boundary-note {
+  margin: 0;
+  border-left: 3px solid var(--amber);
+  background: #f8f4e9;
+  color: #665b3e;
+  padding: 9px 11px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.loss-scenario {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.loss-scenario strong {
+  font-size: 20px;
+}
+
+.text-risk {
+  color: var(--red);
+}
+
+.text-ok {
+  color: var(--green);
+}
+
 .medium-basis-note {
   min-height: 42px;
   margin: 0 0 12px;
@@ -1295,6 +1351,10 @@ th {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .loss-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .import-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1350,6 +1410,10 @@ th {
   .model-governance,
   .architecture-flow,
   .company-foundation {
+    grid-template-columns: 1fr;
+  }
+
+  .loss-kpi-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1409,7 +1473,8 @@ th {
           <button class="nav-item" data-view="grid"><span>07</span>拓扑阻塞</button>
           <button class="nav-item" data-view="data"><span>08</span>数据导入</button>
           <button class="nav-item" data-view="report"><span>09</span>报告复盘</button>
-          <button class="nav-item" data-view="interfaces"><span>10</span>接口清单</button>
+          <button class="nav-item" data-view="loss"><span>10</span>亏损分析</button>
+          <button class="nav-item" data-view="interfaces"><span>11</span>接口清单</button>
         </nav>
 
         <div class="side-status">
@@ -2204,6 +2269,87 @@ th {
           </div>
         </section>
 
+        <section class="view" id="lossView">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>亏损分析附加模块</h3>
+                <p id="lossSubtitle">对所选日期进行结算成本、市场基准、覆盖结构和收入情景分析</p>
+              </div>
+              <div class="inline-actions">
+                <span class="pill partial" id="lossBasisPill">成本事实与风险代理</span>
+                <button class="secondary-action" id="exportLossBtn" type="button">导出亏损分析</button>
+              </div>
+            </div>
+            <div class="loss-kpi-grid" id="lossKpis"></div>
+            <p class="loss-boundary-note" id="lossBoundaryNote"></p>
+          </section>
+
+          <div class="grid two-one">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>成本基准对比</h3>
+                  <p>比较客户结算成本或组合实时成本代理与同日市场价格基准</p>
+                </div>
+              </div>
+              <div class="chart-frame chart-frame-large">
+                <canvas id="lossChart" height="320" data-chart-height="320"></canvas>
+              </div>
+              <div class="table-wrap compact-table">
+                <table>
+                  <thead>
+                    <tr><th>成本项</th><th>金额</th><th>口径</th></tr>
+                  </thead>
+                  <tbody id="lossBreakdownTable"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>收入情景测算</h3>
+                  <p>录入零售综合收入单价后，计算毛利情景；不替代财务结算</p>
+                </div>
+              </div>
+              <div class="form-grid">
+                <label class="field">
+                  <span>零售综合收入单价（元/MWh）</span>
+                  <input id="lossRevenueInput" type="number" min="0" step="0.1" placeholder="待补收入口径" />
+                </label>
+                <label class="field">
+                  <span>其他日成本（元）</span>
+                  <input id="lossOtherCostInput" type="number" value="0" step="100" />
+                </label>
+                <button class="primary-action" id="runLossBtn" type="button">测算收入情景</button>
+              </div>
+              <div class="loss-scenario" id="lossScenario"></div>
+              <div class="sample-list" id="lossHypotheses"></div>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>小时成本贡献</h3>
+                <p>正值表示该小时成本高于日前基准，负值表示低于日前基准；排序用于复核优先级</p>
+              </div>
+            </div>
+            <div class="table-wrap tall">
+              <table>
+                <thead>
+                  <tr>
+                    <th>时点</th><th>电量</th><th>实际/代理成本</th><th>实际/代理单价</th>
+                    <th>日前基准成本</th><th>对日前差额</th><th>日前电量占比</th><th>复核状态</th>
+                  </tr>
+                </thead>
+                <tbody id="lossAttributionTable"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
         <section class="view" id="interfacesView">
           <section class="panel">
             <div class="panel-head">
@@ -2300,7 +2446,7 @@ const ORG_ROLES = {
   },
 };
 
-const MARKET_DEPENDENT_VIEWS = new Set(["desk", "spot", "forecast", "medium", "grid", "report"]);
+const MARKET_DEPENDENT_VIEWS = new Set(["desk", "spot", "forecast", "medium", "grid", "report", "loss"]);
 
 const DATA_SOURCES = {
   settlement: "#demo-settlement",
@@ -2327,6 +2473,7 @@ const MODULES = [
   { name: "拓扑阻塞", status: "wait", text: "预留网架拓扑、节点价格、线路约束和阻塞诊断接口。" },
   { name: "数据导入", status: "partial", text: "管理 Excel、PDF、CSV、模型结果和客户案例数据的导入版本。" },
   { name: "报告复盘", status: "ok", text: "沉淀盘前建议、执行记录、出清复盘和客户案例报告。" },
+  { name: "亏损分析", status: "partial", text: "附加分析结算成本、日前基准、覆盖结构和零售收入情景，区分事实与待补数据。" },
   { name: "客户案例", status: "ok", text: "已接入客户案例-001结算单作为附加案例。" },
 ];
 
@@ -2455,6 +2602,7 @@ const INTERFACES = [
   { path: "/api/adapters/normalize", use: "外部系统字段适配", method: "POST", input: "sourceSystem,dataDomain,fieldMapping,records", output: "统一字段、校验错误、脱敏说明", status: "已接入" },
   { path: "/api/strategy/review", use: "策略陪跑与复盘", method: "POST", input: "date,strategy,manualAdjustments,result", output: "执行评价、归因、次日建议", status: "等待执行数据" },
   { path: "/api/finance/settlement", use: "批零收益与财务口径", method: "GET/POST", input: "month,settlementItems", output: "收入、成本、偏差、净收益", status: "接口预留" },
+  { path: "/api/analytics/loss-analysis", use: "结算成本与亏损风险分析", method: "GET", input: "market_code,date,revenue_price,other_cost", output: "成本拆解、基准差额、小时贡献、收入情景", status: "前后端口径已接入" },
   { path: "/api/policy/documents", use: "省级规则文件登记", method: "GET/POST", input: "marketCode,documentId,version,checksum,授权状态", output: "文件版本与RAG待索引状态", status: "登记接口已接入，RAG待接" },
   { path: "/api/ecosystem/resources", use: "能碳生态资源", method: "GET/POST", input: "resourceType,capacity,carbonData", output: "储能、可调负荷、碳资产", status: "二期预留" },
 ];
@@ -2581,6 +2729,9 @@ const state = {
   mediumSummary: null,
   mediumMonth: "",
   mediumPreviewDate: "",
+  lossAnalysis: null,
+  lossRevenuePrice: null,
+  lossOtherCost: 0,
   importRecords: [],
   importBatches: [],
   pendingImport: null,
@@ -2613,6 +2764,7 @@ const chartEls = {
   spotPrice: document.querySelector("#spotPriceChart"),
   forecast: document.querySelector("#forecastChart"),
   medium: document.querySelector("#mediumCurveChart"),
+  loss: document.querySelector("#lossChart"),
   customerLoad: document.querySelector("#customerLoadChart"),
 };
 
@@ -2731,6 +2883,21 @@ function bindEvents() {
   document.querySelector("#exportPolicyBtn").addEventListener("click", exportPolicyAnalysis);
   document.querySelector("#runGridBtn").addEventListener("click", runResourceDiagnosis);
   document.querySelector("#exportGridBtn").addEventListener("click", exportResourceDiagnosis);
+  document.querySelector("#runLossBtn").addEventListener("click", () => {
+    readLossScenarioInputs();
+    renderLossAnalysis();
+    renderCharts();
+    showToast("亏损收入情景已更新。");
+  });
+  document.querySelector("#exportLossBtn").addEventListener("click", exportLossAnalysis);
+  document.querySelector("#lossRevenueInput").addEventListener("change", () => {
+    readLossScenarioInputs();
+    renderLossAnalysis();
+  });
+  document.querySelector("#lossOtherCostInput").addEventListener("change", () => {
+    readLossScenarioInputs();
+    renderLossAnalysis();
+  });
   document.querySelector("#validateImportBtn").addEventListener("click", validateImportFile);
   document.querySelector("#dataImportUpload").addEventListener("change", inspectImportSelection);
   document.querySelector("#importDomainSelect").addEventListener("change", refreshImportInspector);
@@ -2905,6 +3072,7 @@ function switchView(view) {
     grid: "拓扑阻塞",
     data: "数据中心",
     report: "报告复盘",
+    loss: "亏损分析",
     interfaces: "接口清单",
   };
   state.activeView = view;
@@ -3119,6 +3287,7 @@ function renderAll() {
   else renderMediumResults();
   renderDataQuality();
   renderCustomerAnalysis();
+  renderLossAnalysis();
   document.querySelector("#dataInventoryTable").innerHTML = buildInventoryRows();
   renderReport();
   renderSamples();
@@ -3318,6 +3487,213 @@ function renderSpotWorkspace() {
     sampleItem({ title: `${summary.date} · ${CUSTOMER.company}`, body: `真实结算单附加案例：总电量${fmt(summary.totalEnergyMwh)} MWh，总金额${fmt(summary.totalSettlementAmountYuan)}元，平均结算价${fmt(summary.avgSettlementPriceYuanMwh)}元/MWh。` }),
     sampleItem({ title: "使用边界", body: "该结算单用于客户复盘和亏损归因，不替代山东市场价格、组合负荷和交易执行数据。" }),
   ].join("")}</div>`;
+}
+
+function readLossScenarioInputs() {
+  const revenueInput = document.querySelector("#lossRevenueInput");
+  const otherCostInput = document.querySelector("#lossOtherCostInput");
+  const revenueText = revenueInput.value.trim();
+  const revenueValue = Number(revenueText);
+  const otherCostValue = Number(otherCostInput.value);
+  state.lossRevenuePrice = revenueText && Number.isFinite(revenueValue) && revenueValue >= 0 ? revenueValue : null;
+  state.lossOtherCost = Number.isFinite(otherCostValue) ? Math.max(0, otherCostValue) : 0;
+  otherCostInput.value = String(state.lossOtherCost);
+}
+
+function buildLossAnalysis(date = state.selectedDate) {
+  const marketRows = spotMarketRows(date);
+  const settlementDate = settlementSummary().date;
+  const exactSettlement = date === settlementDate && settlementRows().length > 0;
+  const settlementMap = new Map((exactSettlement ? settlementRows() : []).map((row) => [row.time, row]));
+  const hourly = marketRows.map((marketRow) => {
+    const settlementRow = settlementMap.get(marketRow.time);
+    const energyMwh = exactSettlement ? settlementRow?.totalEnergyMwh : marketRow.totalMwh;
+    const actualCostYuan = exactSettlement
+      ? settlementRow?.totalSettlementAmountYuan
+      : Number.isFinite(energyMwh) && Number.isFinite(marketRow.realtimePriceYuanMwh)
+        ? energyMwh * marketRow.realtimePriceYuanMwh
+        : null;
+    const dayAheadBenchmarkYuan = Number.isFinite(energyMwh) && Number.isFinite(marketRow.dayAheadPriceYuanMwh)
+      ? energyMwh * marketRow.dayAheadPriceYuanMwh
+      : null;
+    const realtimeBenchmarkYuan = Number.isFinite(energyMwh) && Number.isFinite(marketRow.realtimePriceYuanMwh)
+      ? energyMwh * marketRow.realtimePriceYuanMwh
+      : null;
+    const actualUnitCostYuanMwh = Number.isFinite(actualCostYuan) && energyMwh > 0 ? actualCostYuan / energyMwh : null;
+    const deltaVsDayAheadYuan = Number.isFinite(actualCostYuan) && Number.isFinite(dayAheadBenchmarkYuan)
+      ? actualCostYuan - dayAheadBenchmarkYuan
+      : null;
+    const dayAheadEnergyShare = exactSettlement && energyMwh > 0 ? (settlementRow?.dayAheadEnergyMwh || 0) / energyMwh : null;
+    let status = { key: "missing", label: "数据不足" };
+    if (Number.isFinite(deltaVsDayAheadYuan)) {
+      if (deltaVsDayAheadYuan > 100) status = { key: "buy", label: "高于日前基准" };
+      else if (deltaVsDayAheadYuan < -100) status = { key: "sell", label: "低于日前基准" };
+      else status = { key: "hold", label: "接近日前基准" };
+    }
+    return {
+      date,
+      time: marketRow.time,
+      energyMwh,
+      actualCostYuan,
+      actualUnitCostYuanMwh,
+      dayAheadPriceYuanMwh: marketRow.dayAheadPriceYuanMwh,
+      realtimePriceYuanMwh: marketRow.realtimePriceYuanMwh,
+      marketSpreadYuanMwh: marketRow.spreadYuanMwh,
+      dayAheadBenchmarkYuan,
+      realtimeBenchmarkYuan,
+      deltaVsDayAheadYuan,
+      dayAheadEnergyShare,
+      status,
+    };
+  });
+  const sumFinite = (rows, getter) => rows.reduce((sum, row) => {
+    const value = getter(row);
+    return sum + (Number.isFinite(value) ? value : 0);
+  }, 0);
+  const settlement = exactSettlement ? settlementRows() : [];
+  const validEnergyHours = hourly.filter((row) => Number.isFinite(row.energyMwh)).length;
+  const totalEnergyMwh = validEnergyHours ? sumFinite(hourly, (row) => row.energyMwh) : null;
+  const actualCostYuan = hourly.some((row) => Number.isFinite(row.actualCostYuan)) ? sumFinite(hourly, (row) => row.actualCostYuan) : null;
+  const dayAheadBenchmarkYuan = hourly.some((row) => Number.isFinite(row.dayAheadBenchmarkYuan)) ? sumFinite(hourly, (row) => row.dayAheadBenchmarkYuan) : null;
+  const realtimeBenchmarkYuan = hourly.some((row) => Number.isFinite(row.realtimeBenchmarkYuan)) ? sumFinite(hourly, (row) => row.realtimeBenchmarkYuan) : null;
+  const realtimePrincipalYuan = exactSettlement ? sumFinite(settlement, (row) => row.realtimeAmountYuan) : realtimeBenchmarkYuan;
+  const dayAheadAdjustmentYuan = exactSettlement ? sumFinite(settlement, (row) => row.dayAheadAmountYuan) : null;
+  const contractAdjustmentYuan = exactSettlement ? sumFinite(settlement, (row) => row.intraMarketContractAmountYuan) : null;
+  const dayAheadEnergyMwh = exactSettlement ? sumFinite(settlement, (row) => row.dayAheadEnergyMwh) : null;
+  const contractEnergyMwh = exactSettlement ? sumFinite(settlement, (row) => row.intraMarketContractEnergyMwh) : null;
+  const recordedCoverageMwh = exactSettlement ? dayAheadEnergyMwh + contractEnergyMwh : null;
+  const recordedCoverageShare = exactSettlement && totalEnergyMwh > 0 ? recordedCoverageMwh / totalEnergyMwh : null;
+  const residualExposureMwh = exactSettlement && Number.isFinite(totalEnergyMwh) ? Math.max(0, totalEnergyMwh - recordedCoverageMwh) : null;
+  const revenuePrice = state.lossRevenuePrice;
+  const otherCostYuan = state.lossOtherCost;
+  const revenueYuan = Number.isFinite(revenuePrice) && Number.isFinite(totalEnergyMwh) ? totalEnergyMwh * revenuePrice : null;
+  const grossMarginYuan = Number.isFinite(revenueYuan) && Number.isFinite(actualCostYuan) ? revenueYuan - actualCostYuan - otherCostYuan : null;
+  const grossMarginRate = Number.isFinite(grossMarginYuan) && revenueYuan > 0 ? grossMarginYuan / revenueYuan : null;
+  const breakEvenRevenuePrice = totalEnergyMwh > 0 && Number.isFinite(actualCostYuan) ? (actualCostYuan + otherCostYuan) / totalEnergyMwh : null;
+  const rankedHourly = hourly
+    .filter((row) => Number.isFinite(row.deltaVsDayAheadYuan))
+    .slice()
+    .sort((left, right) => right.deltaVsDayAheadYuan - left.deltaVsDayAheadYuan);
+  return {
+    date,
+    exactSettlement,
+    basis: exactSettlement ? "客户结算案例-001 + 山东市场小时价格" : "山东组合负荷 × 实时价格成本代理",
+    hourly,
+    rankedHourly,
+    totalEnergyMwh,
+    actualCostYuan,
+    validEnergyHours,
+    actualUnitCostYuanMwh: totalEnergyMwh > 0 && Number.isFinite(actualCostYuan) ? actualCostYuan / totalEnergyMwh : null,
+    dayAheadBenchmarkYuan,
+    realtimeBenchmarkYuan,
+    deltaVsDayAheadYuan: Number.isFinite(actualCostYuan) && Number.isFinite(dayAheadBenchmarkYuan) ? actualCostYuan - dayAheadBenchmarkYuan : null,
+    deltaVsRealtimeYuan: Number.isFinite(actualCostYuan) && Number.isFinite(realtimeBenchmarkYuan) ? actualCostYuan - realtimeBenchmarkYuan : null,
+    realtimePrincipalYuan,
+    dayAheadAdjustmentYuan,
+    contractAdjustmentYuan,
+    dayAheadEnergyMwh,
+    contractEnergyMwh,
+    recordedCoverageMwh,
+    recordedCoverageShare,
+    residualExposureMwh,
+    revenuePrice,
+    otherCostYuan,
+    revenueYuan,
+    grossMarginYuan,
+    grossMarginRate,
+    breakEvenRevenuePrice,
+  };
+}
+
+function renderLossAnalysis() {
+  const analysis = buildLossAnalysis();
+  state.lossAnalysis = analysis;
+  const hasEnergy = Number.isFinite(analysis.totalEnergyMwh) && analysis.totalEnergyMwh > 0;
+  const deltaLabel = Number.isFinite(analysis.deltaVsDayAheadYuan)
+    ? (analysis.deltaVsDayAheadYuan > 0 ? "高于日前基准" : "低于日前基准")
+    : "暂无可比成本";
+  const costLabel = analysis.exactSettlement ? "批发侧结算成本" : "实时成本代理";
+  const grossLabel = Number.isFinite(analysis.grossMarginYuan)
+    ? `${signed(analysis.grossMarginYuan)} 元`
+    : "待补零售收入";
+  document.querySelector("#lossSubtitle").textContent = `${analysis.date} · ${analysis.basis}`;
+  const basisPill = document.querySelector("#lossBasisPill");
+  basisPill.textContent = analysis.exactSettlement ? "结算事实 + 市场基准" : "组合成本代理";
+  basisPill.className = `pill ${analysis.exactSettlement ? "partial" : "wait"}`;
+  document.querySelector("#lossKpis").innerHTML = [
+    [costLabel, `${fmt(analysis.actualCostYuan)} 元`, `${fmt(analysis.totalEnergyMwh)} MWh`],
+    ["平均成本", `${fmt(analysis.actualUnitCostYuanMwh)} 元/MWh`, analysis.exactSettlement ? "结算单实绩" : "实时价代理"],
+    ["对日前基准", `${signed(analysis.deltaVsDayAheadYuan)} 元`, deltaLabel],
+    ["记录覆盖代理", analysis.exactSettlement ? `${fmt(analysis.recordedCoverageShare * 100)}%` : "--", analysis.exactSettlement ? `剩余敞口代理${fmt(analysis.residualExposureMwh)} MWh` : "待补持仓与申报"],
+    ["收入情景毛利", grossLabel, Number.isFinite(analysis.grossMarginRate) ? `毛利率${fmt(analysis.grossMarginRate * 100)}%` : "尚不能确认真实亏损"],
+  ].map(([label, value, note]) => `<article><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+  document.querySelector("#lossBoundaryNote").textContent = !hasEnergy
+    ? `当前日期只有市场价格，没有可用的客户结算电量或组合负荷，因此不能计算批发侧成本、市场基准差额或盈亏情景。`
+    : analysis.exactSettlement
+      ? `当前可确认${analysis.date}的批发侧结算成本及其小时结构，但缺少零售收入、完整合同持仓、申报成交和其他费用，因此不能直接确认售电公司利润或亏损。`
+      : `当前日期没有客户结算单，页面使用真实组合负荷乘以实时价格形成成本代理；该结果不等于客户结算成本，也不能用于确认利润。`;
+
+  const breakdownRows = [
+    [analysis.exactSettlement ? "实时电量结算主项" : "组合实时成本代理", analysis.realtimePrincipalYuan, analysis.exactSettlement ? "结算单实时金额合计" : "组合负荷 × 实时价格"],
+    ["全量日前价格基准", analysis.dayAheadBenchmarkYuan, "同日电量 × 逐时日前价格"],
+    ["实际/代理成本", analysis.actualCostYuan, analysis.exactSettlement ? "客户结算单总金额" : "组合实时成本代理"],
+    ["对日前基准差额", analysis.deltaVsDayAheadYuan, analysis.deltaVsDayAheadYuan > 0 ? "成本增加代理" : "成本节约代理"],
+  ];
+  if (analysis.exactSettlement) {
+    breakdownRows.push(
+      ["日前结算调整", analysis.dayAheadAdjustmentYuan, "结算单日前金额合计"],
+      ["场内合同调整", analysis.contractAdjustmentYuan, "结算单场内合同金额合计"],
+    );
+  }
+  document.querySelector("#lossBreakdownTable").innerHTML = breakdownRows.map(([label, value, basis]) => `
+    <tr><td>${label}</td><td>${signed(value)} 元</td><td>${basis}</td></tr>
+  `).join("");
+
+  document.querySelector("#lossScenario").innerHTML = Number.isFinite(analysis.revenueYuan)
+    ? `<span>按同日电量和录入收入单价测算</span><strong class="${analysis.grossMarginYuan < 0 ? "text-risk" : "text-ok"}">${signed(analysis.grossMarginYuan)} 元</strong><span>收入${fmt(analysis.revenueYuan)}元，其他成本${fmt(analysis.otherCostYuan)}元，盈亏平衡收入单价${fmt(analysis.breakEvenRevenuePrice)}元/MWh。</span>`
+    : `<span>真实利润尚未计算</span><strong>待补零售综合收入单价</strong><span>在其他成本为${fmt(analysis.otherCostYuan)}元时，当前盈亏平衡收入单价为${fmt(analysis.breakEvenRevenuePrice)}元/MWh。</span>`;
+
+  const topPositive = analysis.rankedHourly.find((row) => row.deltaVsDayAheadYuan > 0);
+  const hypotheses = !hasEnergy ? [
+    sampleItem({ title: "该日期缺少负荷口径", body: "现货价格已接入，但没有可用于成本计算的结算电量或组合负荷，因此不生成金额和盈亏结论。" }),
+    sampleItem({ title: "待补数据", body: "补齐该日组合负荷或客户结算电量后，可继续计算实时成本代理、日前基准和小时贡献。" }),
+  ] : analysis.exactSettlement ? [
+    sampleItem({
+      title: "现货采购并非已确认亏损原因",
+      body: `实际结算成本比全量日前价格基准${analysis.deltaVsDayAheadYuan <= 0 ? "低" : "高"}${fmt(Math.abs(analysis.deltaVsDayAheadYuan))}元。现有一天数据不支持直接认定现货采购造成亏损。`,
+    }),
+    sampleItem({
+      title: "覆盖结构需要重点复核",
+      body: `结算单记录日前电量${fmt(analysis.dayAheadEnergyMwh)} MWh、场内合同电量${fmt(analysis.contractEnergyMwh)} MWh，合计覆盖代理${fmt(analysis.recordedCoverageShare * 100)}%；仍需完整持仓和申报成交确认。`,
+    }),
+    sampleItem({
+      title: "场内合同调整降低当日成本",
+      body: `场内合同调整金额合计${signed(analysis.contractAdjustmentYuan)}元；需要结合合同买卖方向和结算规则解释经济含义。`,
+    }),
+    sampleItem({
+      title: "优先复核小时",
+      body: topPositive ? `${topPositive.time}相对日前基准成本增加${fmt(topPositive.deltaVsDayAheadYuan)}元，为当前最需要核对申报与持仓的小时。` : "各小时实际成本均未高于日前基准。",
+    }),
+  ] : [
+    sampleItem({ title: "当前为成本代理", body: `使用${fmt(analysis.totalEnergyMwh)} MWh组合负荷和实时价格估算成本，不含合同、偏差、服务费和零售收入。` }),
+    sampleItem({ title: "市场价差影响", body: `组合实时成本相对日前基准${analysis.deltaVsDayAheadYuan > 0 ? "增加" : "减少"}${fmt(Math.abs(analysis.deltaVsDayAheadYuan))}元，仅反映日前与实时价格差异。` }),
+    sampleItem({ title: "待补关键链路", body: "需补申报、成交、合同持仓、客户零售收入和财务费用后，才能完成真实亏损归因。" }),
+  ];
+  document.querySelector("#lossHypotheses").innerHTML = hypotheses.join("");
+
+  document.querySelector("#lossAttributionTable").innerHTML = analysis.rankedHourly.map((row) => `
+    <tr>
+      <td>${row.time}</td>
+      <td>${fmt(row.energyMwh)} MWh</td>
+      <td>${fmt(row.actualCostYuan)} 元</td>
+      <td>${fmt(row.actualUnitCostYuanMwh)}</td>
+      <td>${fmt(row.dayAheadBenchmarkYuan)} 元</td>
+      <td>${signed(row.deltaVsDayAheadYuan)} 元</td>
+      <td>${Number.isFinite(row.dayAheadEnergyShare) ? `${fmt(row.dayAheadEnergyShare * 100)}%` : "--"}</td>
+      <td><span class="tag ${row.status.key}">${row.status.label}</span></td>
+    </tr>
+  `).join("");
+  if (!hasEnergy) document.querySelector("#lossAttributionTable").innerHTML = '<tr><td colspan="8">该日期缺少可用负荷或结算数据。</td></tr>';
 }
 
 function buildForecastResults(date) {
@@ -3870,6 +4246,10 @@ function renderReport() {
   const forecastRows = state.forecastResults || [];
   const forecastMetricsResult = forecastMetrics(forecastRows);
   const highConfidenceCount = forecastRows.filter((row) => row.confidence >= 0.72).length;
+  const loss = buildLossAnalysis();
+  const lossText = Number.isFinite(loss.actualCostYuan)
+    ? `${loss.exactSettlement ? "批发侧结算成本" : "组合成本代理"}${fmt(loss.actualCostYuan)}元，相对全量日前价格基准${loss.deltaVsDayAheadYuan <= 0 ? "降低" : "增加"}${fmt(Math.abs(loss.deltaVsDayAheadYuan))}元`
+    : "该日期缺少结算电量或组合负荷，暂不能计算成本";
   const text = [
     `${state.selectedDate} 电力交易辅助决策系统日报草稿`,
     "",
@@ -3879,6 +4259,7 @@ function renderReport() {
     "4. 中长期：保留合约曲线优化、长周期价格预测、曲线分解和结果导出能力。",
     "5. 政策与拓扑：政策 AI 解读、网架拓扑和阻塞诊断模块已搭建页面与接口占位，等待真实政策、拓扑、潮流和边界数据。",
     `6. 客户案例附录：${CUSTOMER.company}${caseSummary.date}结算单已接入，总电量${fmt(caseSummary.totalEnergyMwh)} MWh，总金额${fmt(caseSummary.totalSettlementAmountYuan)}元，平均结算价${fmt(caseSummary.avgSettlementPriceYuanMwh)}元/MWh；仅用于附加复盘。`,
+    `7. 亏损分析附录：${lossText}；零售收入、完整合同持仓、申报成交和其他财务费用待补，当前不确认真实利润或亏损。`,
   ].join("\n");
   document.querySelector("#reportPreview").textContent = text;
 }
@@ -3903,6 +4284,12 @@ function renderCharts() {
   drawLineChart(chartEls.medium, [
     { name: "实际电量", color: "#0e6f78", values: medium.map((row) => row.baseEnergy) },
     { name: "建议覆盖", color: "#c95341", values: medium.map((row) => row.optimizedEnergy) },
+  ]);
+  const loss = state.lossAnalysis?.date === state.selectedDate ? state.lossAnalysis : buildLossAnalysis();
+  drawLineChart(chartEls.loss, [
+    { name: loss.exactSettlement ? "结算单价" : "成本代理单价", color: "#c95341", values: loss.hourly.map((row) => row.actualUnitCostYuanMwh) },
+    { name: "日前价格", color: "#b57b1b", values: loss.hourly.map((row) => row.dayAheadPriceYuanMwh) },
+    ...(loss.exactSettlement ? [{ name: "实时价格", color: "#0e6f78", values: loss.hourly.map((row) => row.realtimePriceYuanMwh) }] : []),
   ]);
   const customerHourly = state.customerLoadHourly.find((row) => row.customerAlias === state.selectedCustomerAlias && row.date === state.selectedCustomerDate);
   drawLineChart(chartEls.customerLoad, [
@@ -4254,6 +4641,55 @@ function exportMediumResults() {
   if (!state.mediumMonthlyResults.length) runMediumOptimization({ silent: true });
   const rows = state.mediumMonthlyResults.map((row) => [row.date, row.time, fmt(row.baseEnergy), fmt(row.optimizedEnergy), fmt(row.price), fmt(row.value), row.dataBasis, row.explanation]);
   downloadCsv(`中长期曲线优化_${state.mediumMonth}.csv`, [["日期", "时点", "基准电量", "建议覆盖", "参考价格", "风险价值", "数据口径", "解释"], ...rows]);
+}
+
+function exportLossAnalysis() {
+  const analysis = buildLossAnalysis();
+  const hasEnergy = Number.isFinite(analysis.totalEnergyMwh) && analysis.totalEnergyMwh > 0;
+  const conclusion = !hasEnergy
+    ? "该日期缺少结算电量或组合负荷，不能计算成本和盈亏。"
+    : analysis.exactSettlement
+    ? `现有结算日批发侧成本相对全量日前价格基准${analysis.deltaVsDayAheadYuan <= 0 ? "降低" : "增加"}${fmt(Math.abs(analysis.deltaVsDayAheadYuan))}元；因缺少零售收入、完整持仓、申报成交和其他费用，不能确认真实利润或亏损。`
+    : "当前日期仅有组合负荷乘以实时价格形成的成本代理，不等于客户结算成本，不能用于确认真实利润或亏损。";
+  const scenarioStatus = Number.isFinite(analysis.grossMarginYuan)
+    ? (analysis.grossMarginYuan < 0 ? "收入情景为负毛利" : "收入情景为正毛利")
+    : "未录入零售收入，不计算毛利";
+  const summaryRows = [
+    ["亏损分析汇总"],
+    ["分析日期", analysis.date],
+    ["数据口径", analysis.basis],
+    ["口径类型", analysis.exactSettlement ? "结算事实 + 市场基准" : "组合成本代理"],
+    ["总电量(MWh)", fmt(analysis.totalEnergyMwh)],
+    ["批发侧实际/代理成本(元)", fmt(analysis.actualCostYuan)],
+    ["平均实际/代理成本(元/MWh)", fmt(analysis.actualUnitCostYuanMwh)],
+    ["全量日前价格基准(元)", fmt(analysis.dayAheadBenchmarkYuan)],
+    ["对日前基准差额(元)", fmt(analysis.deltaVsDayAheadYuan)],
+    ["日前+场内合同记录覆盖代理", analysis.exactSettlement ? `${fmt(analysis.recordedCoverageShare * 100)}%` : "待补持仓与申报"],
+    ["零售综合收入单价(元/MWh)", Number.isFinite(analysis.revenuePrice) ? fmt(analysis.revenuePrice) : "待补"],
+    ["其他成本(元)", fmt(analysis.otherCostYuan)],
+    ["收入情景(元)", Number.isFinite(analysis.revenueYuan) ? fmt(analysis.revenueYuan) : "待补"],
+    ["毛利情景(元)", Number.isFinite(analysis.grossMarginYuan) ? fmt(analysis.grossMarginYuan) : "待补"],
+    ["盈亏平衡收入单价(元/MWh)", fmt(analysis.breakEvenRevenuePrice)],
+    ["情景状态", scenarioStatus],
+    ["分析结论", conclusion],
+    [],
+    ["小时明细"],
+    ["日期", "时点", "电量(MWh)", "实际/代理成本(元)", "实际/代理单价(元/MWh)", "日前价格(元/MWh)", "实时价格(元/MWh)", "日前基准成本(元)", "对日前基准差额(元)", "日前电量占比", "复核状态"],
+  ];
+  const hourlyRows = analysis.rankedHourly.map((row) => [
+    row.date,
+    row.time,
+    fmt(row.energyMwh),
+    fmt(row.actualCostYuan),
+    fmt(row.actualUnitCostYuanMwh),
+    fmt(row.dayAheadPriceYuanMwh),
+    fmt(row.realtimePriceYuanMwh),
+    fmt(row.dayAheadBenchmarkYuan),
+    fmt(row.deltaVsDayAheadYuan),
+    Number.isFinite(row.dayAheadEnergyShare) ? `${fmt(row.dayAheadEnergyShare * 100)}%` : "--",
+    row.status.label,
+  ]);
+  downloadCsv(`亏损分析_${analysis.date}.csv`, [...summaryRows, ...hourlyRows]);
 }
 
 function exportPolicyAnalysis() {
