@@ -1806,7 +1806,7 @@ th {
                 <h3>电价与价差预测评估</h3>
                 <p>按已知时序使用D-1日前价格、D-2实时价格和历史组合负荷运行山东小时回测基线</p>
               </div>
-              <span class="pill partial" id="forecastModeStatus">回测基线</span>
+              <span class="pill partial" id="forecastModeStatus">浏览器回退基线</span>
             </div>
             <div class="form-grid bottom-gap">
               <label class="field">
@@ -2321,7 +2321,7 @@ th {
               <div class="panel-head">
                 <div>
                   <h3>报告复盘</h3>
-                  <p>自动整理盘前建议、执行记录、出清复盘、客户案例和后续数据请求</p>
+                    <p>当前生成浏览器报告草稿；真实运行、审核、成交和结算接入后再落库复盘</p>
                 </div>
                 <div class="inline-actions">
                   <button class="secondary-action" id="copyReportBtn" type="button">复制报告文本</button>
@@ -2334,7 +2334,7 @@ th {
               <div class="panel-head">
                 <div>
                   <h3>客户案例摘要</h3>
-                  <p>客户案例-001结算单作为平台能力的附加业务案例</p>
+                    <p>客户结算案例-001作为平台能力的附加业务案例</p>
                 </div>
               </div>
               <div class="sample-list" id="executionSampleList"></div>
@@ -2596,8 +2596,8 @@ th {
     <script type="application/json" id="demo-metadata">{"market":"山东电力市场","sourceRoot":"山东客户数据（名称已映射）","loadFiles":4,"loadDateStart":"2026-03-01","loadDateEnd":"2026-04-13","loadDailyRecords":44,"loadHourlyRecords":1056,"forecastFiles":2,"forecastRecords":192,"priceFilesFound":88,"priceStatus":"2026年1至6月山东小时日前/实时价格已接入。","isSynthetic":false}</script>
     <script>
 const CUSTOMER = {
-  company: "客户案例-001",
-  partner: "合作方（已脱敏）",
+  company: "客户结算案例-001",
+  partner: "合作方-001",
   market: "山东电力市场",
   project: "电力交易辅助决策系统客户案例",
 };
@@ -2671,9 +2671,9 @@ const MODULES = [
   { name: "政策 AI", status: "wait", text: "预留政策文件上传、结构化解读、风险提示和版本差异接口。" },
   { name: "拓扑阻塞", status: "wait", text: "预留网架拓扑、节点价格、线路约束和阻塞诊断接口。" },
   { name: "数据导入", status: "partial", text: "管理 Excel、PDF、CSV、模型结果和客户案例数据的导入版本。" },
-  { name: "报告复盘", status: "ok", text: "沉淀盘前建议、执行记录、出清复盘和客户案例报告。" },
+  { name: "报告复盘", status: "partial", text: "当前生成浏览器报告草稿；真实运行、审核、成交和结算记录接入后再落库复盘。" },
   { name: "盈亏分析", status: "partial", text: "附加分析结算成本、日前基准、覆盖结构和零售收入情景，区分事实与待补数据。" },
-  { name: "客户案例", status: "ok", text: "已接入客户案例-001结算单作为附加案例。" },
+  { name: "客户案例", status: "ok", text: "已接入客户结算案例-001作为附加案例。" },
 ];
 
 const DATA_REQUIREMENTS = [
@@ -2779,6 +2779,21 @@ const DATA_REQUIREMENTS = [
 ];
 
 const INTERFACES = [
+  { path: "/api/v1/health", use: "算法测试环境健康检查", method: "GET", input: "无", output: "API版本、环境、鉴权、上传/超时/留存限制", status: "真实后端已接入" },
+  { path: "/api/v1/models", use: "模型注册与接入状态", method: "GET", input: "无", output: "模型ID、版本、运行方式、结果契约", status: "真实后端已接入" },
+  { path: "/api/v1/data-assets", use: "真实与缺失数据资产清单", method: "GET", input: "market_code", output: "数据状态、版本、范围和缺口", status: "真实后端已接入" },
+  { path: "/api/v1/data-dictionary", use: "算法核心数据字典", method: "GET", input: "无", output: "字段、类型、单位、时段、主键和空值规则", status: "真实后端已接入" },
+  { path: "/api/v1/hourly-data", use: "统一24点价格与负荷输入", method: "GET", input: "market_code,market_date,customer_id,data_version", output: "24点小时数据、来源版本和缺失计数", status: "真实后端已接入" },
+  { path: "/api/v1/data-assets/prices", use: "版本化价格数据上传", method: "POST", input: "request_id,data_version,updated_at,records", output: "数据资产ID、质量状态和缺失计数", status: "真实后端已接入" },
+  { path: "/api/v1/models/price-forecast/runs", use: "创建价格预测运行", method: "POST", input: "request_id,market_date,model_id,model_version,data_version", output: "run_id、状态、结果和回调地址", status: "基线可运行；外部模型地址待接" },
+  { path: "/api/v1/model-runs/{run_id}", use: "模型运行状态", method: "GET", input: "run_id", output: "状态、版本、输入摘要、错误和时间", status: "真实后端已接入" },
+  { path: "/api/v1/model-runs/{run_id}/results", use: "回传或查询固定24点结果", method: "PUT/GET", input: "日前/实时P10-P90、风险、指标、HOLD建议", output: "结果、数据快照和审核状态", status: "真实后端已接入" },
+  { path: "/api/v1/model-runs", use: "运行历史", method: "GET", input: "market_code,market_date,model_id,status", output: "运行列表和180天留存口径", status: "真实后端已接入" },
+  { path: "/api/v1/model-runs/{run_id}/cancel", use: "取消模型任务", method: "POST", input: "actor,reason", output: "CANCELLED状态和审计记录", status: "真实后端已接入" },
+  { path: "/api/v1/model-runs/{run_id}/rerun", use: "重新运行", method: "POST", input: "新request_id,actor,reason", output: "新run_id和父运行ID", status: "真实后端已接入" },
+  { path: "/api/v1/model-runs/{run_id}/review", use: "策略人工审核", method: "POST", input: "SUBMIT/APPROVE/MODIFY/REJECT,reviewer,reason", output: "审核状态、版本和操作时间", status: "真实后端已接入；不自动下单" },
+  { path: "/api/v1/model-runs/{run_id}/reviews", use: "策略审核历史", method: "GET", input: "run_id", output: "原建议、修改后建议、审核人和原因", status: "真实后端已接入" },
+  { path: "/api/v1/model-runs/{run_id}/audit-logs", use: "运行操作审计", method: "GET", input: "run_id", output: "创建、结果、错误、审核和取消日志", status: "真实后端已接入" },
   { path: "/api/trade/settlement", use: "解析客户结算单", method: "POST", input: "file,customerId,date", output: "小时结算明细、总电量、均价、金额", status: "客户案例已接入" },
   { path: "/api/trade/execution", use: "申报成交全链路", method: "GET/POST", input: "date,customerId,declared,cleared,actual", output: "偏差、执行评价、亏损归因", status: "待补数据" },
   { path: "/api/customer/load-profile", use: "组合及客户负荷曲线", method: "GET", input: "marketCode,dateRange,interval,aggregation,customerAlias", output: "组合负荷或按稳定代号查询的24点客户负荷", status: "真实数据已接入" },
@@ -2790,19 +2805,19 @@ const INTERFACES = [
   { path: "/api/retail/contracts", use: "零售合同与套餐参数", method: "GET/POST", input: "customerId,contractMonth", output: "价格、偏差规则、服务费、保底封顶", status: "接口预留" },
   { path: "/api/medium-contract/positions", use: "中长期持仓和曲线覆盖", method: "GET/POST", input: "month,customerGroup", output: "合约电量、价格、曲线、敞口", status: "接口预留" },
   { path: "/api/forecast/features", use: "预测输入特征", method: "GET/POST", input: "date,weather,boundary,forecast", output: "负荷、电价、价差预测特征", status: "部分接入" },
-  { path: "/api/forecast/run", use: "运行日前电价与价差预测", method: "POST", input: "date,modelVersion,featureBatchId", output: "小时预测、置信区间、方向、驱动因素", status: "回测基线已接入" },
-  { path: "/api/forecast/results", use: "查询预测结果与模型版本", method: "GET", input: "date,modelVersion", output: "预测曲线、评估指标、数据血缘", status: "回测基线已接入" },
+  { path: "/api/forecast/run", use: "运行旧版日前电价与价差预测", method: "POST", input: "date,modelVersion,featureBatchId", output: "小时预测、置信区间、方向、驱动因素", status: "旧版兼容；本地后端基线" },
+  { path: "/api/forecast/results", use: "查询旧版预测结果与模型版本", method: "GET", input: "date,modelVersion", output: "预测曲线、评估指标、数据血缘", status: "旧版兼容；本地后端基线" },
   { path: "/api/data/quality", use: "查询导入与模型数据质量", method: "GET", input: "date,dataDomain,batchId", output: "点数、缺失率、来源、批次、质量状态", status: "真实数据已接入" },
   { path: "/api/analytics/market-features", use: "山东市场与负荷特征汇总", method: "GET", input: "marketCode", output: "月度价格特征、异常时点、价格负荷相关性、客户分群汇总", status: "已接入" },
   { path: "/api/integration/status", use: "跨系统接入状态", method: "GET", input: "无", output: "平台、算法、交易终端、政策RAG接入状态", status: "已接入" },
   { path: "/api/integration/contracts", use: "算法与外部系统契约", method: "GET", input: "无", output: "版本、批次字段、点级字段和业务顺序", status: "已接入" },
-  { path: "/api/integration/forecast-results", use: "接收王伊梵预测结果", method: "POST", input: "predictionBatchId,modelVersion,intervalMinutes,points", output: "质量状态、可否进入现货判断、结果编号", status: "已接入" },
-  { path: "/api/integration/strategy-results", use: "接收交易辅助策略", method: "POST", input: "strategyBatchId,predictionBatchId,points", output: "质量状态、人工复核状态、结果编号", status: "已接入" },
+  { path: "/api/integration/forecast-results", use: "接收旧版预测结果", method: "POST", input: "predictionBatchId,modelVersion,intervalMinutes,points", output: "质量状态、可否进入现货判断、结果编号", status: "旧版兼容" },
+  { path: "/api/integration/strategy-results", use: "接收旧版交易辅助策略", method: "POST", input: "strategyBatchId,predictionBatchId,points", output: "质量状态、人工复核状态、结果编号", status: "旧版兼容" },
   { path: "/api/adapters/normalize", use: "外部系统字段适配", method: "POST", input: "sourceSystem,dataDomain,fieldMapping,records", output: "统一字段、校验错误、脱敏说明", status: "已接入" },
   { path: "/api/strategy/review", use: "策略陪跑与复盘", method: "POST", input: "date,strategy,manualAdjustments,result", output: "执行评价、归因、次日建议", status: "等待执行数据" },
   { path: "/api/finance/settlement", use: "批零收益与财务口径", method: "GET/POST", input: "month,settlementItems", output: "收入、成本、偏差、净收益", status: "接口预留" },
-  { path: "/api/analytics/profit-loss-analysis", use: "结算成本与盈亏情景分析", method: "GET", input: "market_code,date,revenue_price,other_cost", output: "成本拆解、基准差额、小时贡献、收入情景", status: "前后端口径已接入" },
-  { path: "/api/analytics/customer-profit-contribution", use: "脱敏客户贡献代理分析", method: "GET", input: "market_code,date,revenue_price,other_cost", output: "客户成本分摊、收入与毛利情景、小时贡献", status: "已接入" },
+  { path: "/api/analytics/profit-loss-analysis", use: "结算成本与盈亏情景分析", method: "GET", input: "market_code,date,revenue_price,other_cost", output: "成本拆解、基准差额、小时贡献、收入情景", status: "后端已实现；网页当前本地同口径计算" },
+  { path: "/api/analytics/customer-profit-contribution", use: "脱敏客户贡献代理分析", method: "GET", input: "market_code,date,revenue_price,other_cost", output: "客户成本分摊、收入与毛利情景、小时贡献", status: "后端已实现；网页当前本地同口径计算" },
   { path: "/api/policy/documents", use: "省级规则文件登记", method: "GET/POST", input: "marketCode,documentId,version,checksum,授权状态", output: "文件版本与RAG待索引状态", status: "登记接口已接入，RAG待接" },
   { path: "/api/ecosystem/resources", use: "能碳生态资源", method: "GET/POST", input: "resourceType,capacity,carbonData", output: "储能、可调负荷、碳资产", status: "二期预留" },
 ];
@@ -2883,9 +2898,9 @@ const INTEGRATION_CONTRACTS = [
   },
   {
     target: "客户数据服务",
-    input: "customerHash, loadProfile, contract, settlement, sourceFile",
-    output: "customerAlias, qualityReport, importBatchId",
-    status: "脱敏规则已接入",
+    input: "customer_id, loadProfile, contract, settlement, sourceFile",
+    output: "customer_id, qualityReport, importBatchId",
+    status: "稳定映射由后台数据服务维护",
   },
   {
     target: "政策 RAG 服务",
@@ -2947,6 +2962,8 @@ const state = {
   forecastModelVersion: "lag-baseline-v0.3",
   forecastResults: [],
   forecastSource: "山东真实历史价格与组合负荷",
+  forecastProvidedMetrics: null,
+  forecastRunMeta: null,
   backendOnline: false,
   selectedMarket: "national",
   selectedRole: "trader",
@@ -4258,6 +4275,8 @@ async function runForecastEvaluation(options = {}) {
     return;
   }
   state.forecastModelVersion = document.querySelector("#forecastModelSelect").value;
+  state.forecastProvidedMetrics = null;
+  state.forecastRunMeta = null;
   if (state.backendOnline) {
     try {
       const response = await fetch("http://127.0.0.1:8001/api/forecast/run", {
@@ -4301,6 +4320,8 @@ function renderForecast() {
   const upCount = rows.filter((row) => row.direction === "实时高于日前").length;
   const downCount = rows.filter((row) => row.direction === "实时低于日前").length;
   const peakPoint = maxBy(rows, (row) => row.predictedPrice);
+  const negativeRiskCount = rows.filter((row) => ["MEDIUM", "HIGH"].includes(row.negativeRisk?.level)).length;
+  const highRiskCount = rows.filter((row) => ["MEDIUM", "HIGH"].includes(row.highRisk?.level)).length;
   document.querySelector("#forecastKpis").innerHTML = [
     ["预测点数", `${rows.length} 点`],
     ["预测均价", `${fmt(avgPrice)} 元/MWh`],
@@ -4310,24 +4331,39 @@ function renderForecast() {
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
   document.querySelector("#forecastChartSubtitle").textContent = `${state.forecastDate} · ${state.forecastSource} · ${state.forecastModelVersion}`;
   document.querySelector("#forecastPointStatus").textContent = `${rows.length} 点`;
-  document.querySelector("#forecastModeStatus").textContent = state.forecastSource.includes("导入") ? "外部结果" : "规则基线";
+  document.querySelector("#forecastModeStatus").textContent = state.forecastSource.includes("外部导入")
+    ? "外部文件结果"
+    : state.forecastSource.includes("本地 FastAPI")
+      ? "本地后端基线"
+      : "浏览器回退基线";
   document.querySelector("#forecastInsights").innerHTML = [
     { title: "价差方向", body: `实时高于日前 ${upCount} 点，实时低于日前 ${downCount} 点，其余为收敛区间。` },
+    { title: "风险时段", body: `负价中高风险 ${negativeRiskCount} 点，高价中高风险 ${highRiskCount} 点；风险原因码保留在小时结果中供人工复核。` },
     { title: "峰值时段", body: `${peakPoint.time} 预测价格最高，为 ${fmt(peakPoint.predictedPrice)} 元/MWh；驱动因素：${peakPoint.drivers}。` },
     { title: "最大偏离", body: `${peakSpread.time} 相对日前参考价差 ${signed(peakSpread.spread)} 元/MWh，建议作为申报复核点。` },
     { title: "使用边界", body: "当前为真实历史数据上的时序基线；竞价空间、边界、新能源、天气和规则尚未接入，不能作为正式交易指令。" },
   ].map((item) => `<article class="signal-item"><strong>${item.title}</strong><p>${item.body}</p></article>`).join("");
 
   const metrics = forecastMetrics(rows);
+  const provided = state.forecastProvidedMetrics;
+  const mae = provided?.mae_yuan_per_mwh ?? metrics?.mae;
+  const rmse = provided?.rmse_yuan_per_mwh ?? metrics?.rmse;
+  const bias = provided?.bias_yuan_per_mwh ?? metrics?.bias;
+  const negativeAccuracy = provided?.negative_price_direction_accuracy ?? metrics?.negativeAccuracy;
+  const extremeRecall = provided?.extreme_high_price_recall ?? metrics?.extremeHighRecall;
+  const backtestWindow = provided?.window_start && provided?.window_end ? `${provided.window_start} 至 ${provided.window_end}` : "当前选择日回测";
   document.querySelector("#forecastBacktest").innerHTML = [
-    ["MAE", metrics ? `${fmt(metrics.mae)} 元/MWh` : "待真实值"],
-    ["RMSE", metrics ? `${fmt(metrics.rmse)} 元/MWh` : "待真实值"],
-    ["MAPE", metrics ? `${fmt(metrics.mape)}%` : "待真实值"],
-    ["方向命中率", metrics ? `${fmt(metrics.directionHit)}%` : "待真实值"],
+    ["MAE", Number.isFinite(mae) ? `${fmt(mae)} 元/MWh` : "待真实值"],
+    ["RMSE", Number.isFinite(rmse) ? `${fmt(rmse)} 元/MWh` : "待真实值"],
+    ["Bias", Number.isFinite(bias) ? `${signed(bias)} 元/MWh` : "待真实值"],
+    ["负价方向准确率", Number.isFinite(negativeAccuracy) ? `${fmt(negativeAccuracy * 100)}%` : "待样本"],
+    ["极端高价召回率", Number.isFinite(extremeRecall) ? `${fmt(extremeRecall * 100)}%` : "待极端样本"],
+    ["回测窗口", backtestWindow],
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
   document.querySelector("#forecastGovernance").innerHTML = [
     ["数据来源", `${state.forecastSource}；逐户名称未进入模型输入`],
     ["输入批次", rows[0].importBatchId || "外部导入批次"],
+    ["运行追踪", state.forecastRunMeta?.run_id ? `${state.forecastRunMeta.run_id} · ${state.forecastRunMeta.data_version || "待补数据版本"}` : "浏览器结果，尚未生成run_id"],
     ["上线门槛", "连续历史数据、滚动回测、规则校验和交易员确认全部通过"],
   ].map(([label, value]) => `<article class="governance-item"><strong>${label}</strong><span>${value}</span></article>`).join("");
   document.querySelector("#forecastResultTable").innerHTML = rows.map((row) => `
@@ -4350,9 +4386,21 @@ function forecastMetrics(rows) {
   const errors = evaluated.map((row) => row.predictedPrice - row.actualPrice);
   const mae = mean(errors.map(Math.abs));
   const rmse = Math.sqrt(mean(errors.map((value) => value ** 2)));
+  const bias = mean(errors);
   const mape = mean(evaluated.map((row) => Math.abs((row.predictedPrice - row.actualPrice) / Math.max(1, Math.abs(row.actualPrice))))) * 100;
   const directionHits = evaluated.filter((row) => Math.sign(row.spread) === Math.sign(row.actualSpread ?? row.dayAheadReference - row.actualPrice)).length;
-  return { mae, rmse, mape, directionHit: (directionHits / evaluated.length) * 100 };
+  const negativeHits = evaluated.filter((row) => (row.predictedPrice < 0) === (row.actualPrice < 0)).length;
+  const extremeActual = evaluated.filter((row) => row.actualPrice >= 800);
+  const extremeRecalled = extremeActual.filter((row) => row.upper >= 800).length;
+  return {
+    mae,
+    rmse,
+    bias,
+    mape,
+    directionHit: (directionHits / evaluated.length) * 100,
+    negativeAccuracy: negativeHits / evaluated.length,
+    extremeHighRecall: extremeActual.length ? extremeRecalled / extremeActual.length : null,
+  };
 }
 
 function directionClass(direction) {
@@ -4366,11 +4414,21 @@ async function importForecastResults(event) {
   if (!file) return;
   try {
     const text = await file.text();
-    const rawRows = file.name.toLowerCase().endsWith(".json") ? JSON.parse(text) : parseCsvRecords(text);
-    const normalized = normalizeForecastRows(Array.isArray(rawRows) ? rawRows : rawRows.results || []);
+    const payload = file.name.toLowerCase().endsWith(".json") ? JSON.parse(text) : parseCsvRecords(text);
+    const resultPayload = payload?.result || payload;
+    const sourceRows = Array.isArray(payload) ? payload : resultPayload?.periods || resultPayload?.results || [];
+    const normalized = normalizeForecastRows(sourceRows, resultPayload);
     if (!normalized.length) throw new Error("没有识别到 time 和 predictedPrice 字段");
     state.forecastResults = normalized;
     state.forecastDate = normalized[0].date;
+    state.forecastModelVersion = resultPayload?.model?.version || normalized[0].modelVersion || "external";
+    state.forecastProvidedMetrics = resultPayload?.backtest || null;
+    state.forecastRunMeta = {
+      request_id: resultPayload?.request_id || null,
+      run_id: resultPayload?.run_id || payload?.run?.run_id || null,
+      data_version: resultPayload?.data_snapshot?.version || payload?.run?.data_version || null,
+      review_status: payload?.review?.status || null,
+    };
     state.forecastSource = `外部导入：${file.name}`;
     ensureForecastDateOption(state.forecastDate);
     addImportRecord("预测结果", file.name, "已导入", `已识别 ${normalized.length} 个预测点。`);
@@ -4385,20 +4443,24 @@ async function importForecastResults(event) {
   }
 }
 
-function normalizeForecastRows(rows) {
+function normalizeForecastRows(rows, context = {}) {
   return rows.map((row, index) => {
-    const predictedPrice = Number(row.predictedPrice ?? row.prediction ?? row.predicted_price ?? row["预测价格"]);
-    const time = row.time ?? row.pointTime ?? row.point_time ?? row["时点"];
+    const realtimeQuantiles = row.real_time_price_yuan_per_mwh;
+    const dayAheadQuantiles = row.day_ahead_price_yuan_per_mwh;
+    const predictedPrice = Number(realtimeQuantiles?.p50 ?? row.predictedPrice ?? row.prediction ?? row.predicted_price ?? row["预测价格"]);
+    const time = row.time ?? row.pointTime ?? row.point_time ?? row.datetime?.slice(11, 16) ?? row["时点"];
     if (!time || !Number.isFinite(predictedPrice)) return null;
-    const dayAheadReference = Number(row.dayAheadReference ?? row.day_ahead_reference ?? row.dayAheadPrice ?? row["日前参考"] ?? predictedPrice);
-    const lower = Number(row.lower ?? row.lowerBound ?? row.lower_bound ?? row["置信区间下限"] ?? predictedPrice - 40);
-    const upper = Number(row.upper ?? row.upperBound ?? row.upper_bound ?? row["置信区间上限"] ?? predictedPrice + 40);
-    const spread = predictedPrice - dayAheadReference;
-    const direction = row.direction ?? row["方向"] ?? (spread > 10 ? "实时高于日前" : spread < -10 ? "实时低于日前" : "价差收敛");
+    const dayAheadReference = Number(dayAheadQuantiles?.p50 ?? row.dayAheadReference ?? row.day_ahead_reference ?? row.dayAheadPrice ?? row["日前参考"] ?? predictedPrice);
+    const lower = Number(realtimeQuantiles?.p10 ?? row.lower ?? row.lowerBound ?? row.lower_bound ?? row["置信区间下限"] ?? predictedPrice - 40);
+    const upper = Number(realtimeQuantiles?.p90 ?? row.upper ?? row.upperBound ?? row.upper_bound ?? row["置信区间上限"] ?? predictedPrice + 40);
+    const spread = Number(row.spread_day_ahead_minus_real_time_yuan_per_mwh ?? row.spread ?? dayAheadReference - predictedPrice);
+    const direction = row.direction ?? row["方向"] ?? (spread < -10 ? "实时高于日前" : spread > 10 ? "实时低于日前" : "价差收敛");
+    const reasonCodes = Array.isArray(row.risk_reason_codes) ? row.risk_reason_codes.join("、") : null;
+    const actualRaw = row.actualPrice ?? row.actual_price ?? row["实际价格"];
     return {
-      date: row.date ?? row.forecastDate ?? row.forecast_date ?? row["预测日期"] ?? state.forecastDate ?? "外部导入",
+      date: row.date ?? row.forecastDate ?? row.forecast_date ?? context.market_date ?? row["预测日期"] ?? state.forecastDate ?? "外部导入",
       time: String(time),
-      pointIndex: index + 1,
+      pointIndex: Number(row.period ?? index + 1),
       dayAheadReference,
       predictedPrice,
       lower,
@@ -4406,11 +4468,15 @@ function normalizeForecastRows(rows) {
       spread,
       direction,
       confidence: Number(row.confidence ?? row["置信度"] ?? 0.7),
-      drivers: row.drivers ?? row["主要驱动"] ?? "外部模型输出",
-      modelVersion: row.modelVersion ?? row.model_version ?? row["模型版本"] ?? "external",
-      actualPrice: Number.isFinite(Number(row.actualPrice ?? row.actual_price ?? row["实际价格"])) ? Number(row.actualPrice ?? row.actual_price ?? row["实际价格"]) : null,
+      drivers: reasonCodes || row.drivers || row["主要驱动"] || "外部模型输出",
+      modelVersion: row.modelVersion ?? row.model_version ?? context.model?.version ?? row["模型版本"] ?? "external",
+      actualPrice: actualRaw !== null && actualRaw !== undefined && actualRaw !== "" && Number.isFinite(Number(actualRaw)) ? Number(actualRaw) : null,
+      negativeRisk: row.negative_price_risk || null,
+      highRisk: row.high_price_risk || null,
+      dataCompleteness: row.data_completeness || null,
+      strategySuggestion: row.strategy_suggestion || null,
       sourceFile: "external-upload",
-      importBatchId: `upload-${Date.now()}`,
+      importBatchId: context.data_snapshot?.version || `upload-${Date.now()}`,
     };
   }).filter(Boolean);
 }
@@ -5656,7 +5722,6 @@ function normalizeImportRows(pending, importBatchId) {
     if (pending.anonymizeCustomers && normalized.customerName) {
       const identity = anonymizeCustomer(normalized.customerName);
       normalized.customerName = identity.alias;
-      normalized.customerHash = identity.hash;
       normalized.customerDataClass = "anonymized";
     }
     if (pending.intervalMinutes) normalized.intervalMinutes = pending.intervalMinutes;
@@ -5666,24 +5731,14 @@ function normalizeImportRows(pending, importBatchId) {
 
 function anonymizeCustomer(customerName) {
   const source = String(customerName ?? "").trim();
-  if (!source) return { alias: "", hash: "" };
+  if (!source) return { alias: "" };
   if (!state.customerAliasMap[source]) {
     const sequence = Object.keys(state.customerAliasMap).length + 1;
     state.customerAliasMap[source] = {
       alias: `客户-${String(sequence).padStart(3, "0")}`,
-      hash: `CUS-${fnv1a(source).toString(16).toUpperCase().padStart(8, "0")}`,
     };
   }
   return state.customerAliasMap[source];
-}
-
-function fnv1a(value) {
-  let hash = 0x811c9dc5;
-  for (const character of String(value)) {
-    hash ^= character.codePointAt(0);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash >>> 0;
 }
 
 function normalizeImportValue(value, field, header) {
