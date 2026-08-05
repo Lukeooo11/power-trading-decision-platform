@@ -1473,7 +1473,7 @@ th {
           <button class="nav-item" data-view="grid"><span>07</span>拓扑阻塞</button>
           <button class="nav-item" data-view="data"><span>08</span>数据导入</button>
           <button class="nav-item" data-view="report"><span>09</span>报告复盘</button>
-          <button class="nav-item" data-view="loss"><span>10</span>亏损分析</button>
+          <button class="nav-item" data-view="loss"><span>10</span>盈亏分析</button>
           <button class="nav-item" data-view="interfaces"><span>11</span>接口清单</button>
         </nav>
 
@@ -2273,12 +2273,12 @@ th {
           <section class="panel">
             <div class="panel-head">
               <div>
-                <h3>亏损分析附加模块</h3>
+                <h3>盈亏分析附加模块</h3>
                 <p id="lossSubtitle">对所选日期进行结算成本、市场基准、覆盖结构和收入情景分析</p>
               </div>
               <div class="inline-actions">
                 <span class="pill partial" id="lossBasisPill">成本事实与风险代理</span>
-                <button class="secondary-action" id="exportLossBtn" type="button">导出亏损分析</button>
+                <button class="secondary-action" id="exportLossBtn" type="button">导出盈亏分析</button>
               </div>
             </div>
             <div class="loss-kpi-grid" id="lossKpis"></div>
@@ -2473,7 +2473,7 @@ const MODULES = [
   { name: "拓扑阻塞", status: "wait", text: "预留网架拓扑、节点价格、线路约束和阻塞诊断接口。" },
   { name: "数据导入", status: "partial", text: "管理 Excel、PDF、CSV、模型结果和客户案例数据的导入版本。" },
   { name: "报告复盘", status: "ok", text: "沉淀盘前建议、执行记录、出清复盘和客户案例报告。" },
-  { name: "亏损分析", status: "partial", text: "附加分析结算成本、日前基准、覆盖结构和零售收入情景，区分事实与待补数据。" },
+  { name: "盈亏分析", status: "partial", text: "附加分析结算成本、日前基准、覆盖结构和零售收入情景，区分事实与待补数据。" },
   { name: "客户案例", status: "ok", text: "已接入客户案例-001结算单作为附加案例。" },
 ];
 
@@ -2602,7 +2602,7 @@ const INTERFACES = [
   { path: "/api/adapters/normalize", use: "外部系统字段适配", method: "POST", input: "sourceSystem,dataDomain,fieldMapping,records", output: "统一字段、校验错误、脱敏说明", status: "已接入" },
   { path: "/api/strategy/review", use: "策略陪跑与复盘", method: "POST", input: "date,strategy,manualAdjustments,result", output: "执行评价、归因、次日建议", status: "等待执行数据" },
   { path: "/api/finance/settlement", use: "批零收益与财务口径", method: "GET/POST", input: "month,settlementItems", output: "收入、成本、偏差、净收益", status: "接口预留" },
-  { path: "/api/analytics/loss-analysis", use: "结算成本与亏损风险分析", method: "GET", input: "market_code,date,revenue_price,other_cost", output: "成本拆解、基准差额、小时贡献、收入情景", status: "前后端口径已接入" },
+  { path: "/api/analytics/profit-loss-analysis", use: "结算成本与盈亏情景分析", method: "GET", input: "market_code,date,revenue_price,other_cost", output: "成本拆解、基准差额、小时贡献、收入情景", status: "前后端口径已接入" },
   { path: "/api/policy/documents", use: "省级规则文件登记", method: "GET/POST", input: "marketCode,documentId,version,checksum,授权状态", output: "文件版本与RAG待索引状态", status: "登记接口已接入，RAG待接" },
   { path: "/api/ecosystem/resources", use: "能碳生态资源", method: "GET/POST", input: "resourceType,capacity,carbonData", output: "储能、可调负荷、碳资产", status: "二期预留" },
 ];
@@ -3072,7 +3072,7 @@ function switchView(view) {
     grid: "拓扑阻塞",
     data: "数据中心",
     report: "报告复盘",
-    loss: "亏损分析",
+    loss: "盈亏分析",
     interfaces: "接口清单",
   };
   state.activeView = view;
@@ -4259,7 +4259,7 @@ function renderReport() {
     "4. 中长期：保留合约曲线优化、长周期价格预测、曲线分解和结果导出能力。",
     "5. 政策与拓扑：政策 AI 解读、网架拓扑和阻塞诊断模块已搭建页面与接口占位，等待真实政策、拓扑、潮流和边界数据。",
     `6. 客户案例附录：${CUSTOMER.company}${caseSummary.date}结算单已接入，总电量${fmt(caseSummary.totalEnergyMwh)} MWh，总金额${fmt(caseSummary.totalSettlementAmountYuan)}元，平均结算价${fmt(caseSummary.avgSettlementPriceYuanMwh)}元/MWh；仅用于附加复盘。`,
-    `7. 亏损分析附录：${lossText}；零售收入、完整合同持仓、申报成交和其他财务费用待补，当前不确认真实利润或亏损。`,
+    `7. 盈亏分析附录：${lossText}；零售收入、完整合同持仓、申报成交和其他财务费用待补，当前不确认真实利润或亏损。`,
   ].join("\n");
   document.querySelector("#reportPreview").textContent = text;
 }
@@ -4655,7 +4655,7 @@ function exportLossAnalysis() {
     ? (analysis.grossMarginYuan < 0 ? "收入情景为负毛利" : "收入情景为正毛利")
     : "未录入零售收入，不计算毛利";
   const summaryRows = [
-    ["亏损分析汇总"],
+    ["盈亏分析汇总"],
     ["分析日期", analysis.date],
     ["数据口径", analysis.basis],
     ["口径类型", analysis.exactSettlement ? "结算事实 + 市场基准" : "组合成本代理"],
@@ -4689,7 +4689,7 @@ function exportLossAnalysis() {
     Number.isFinite(row.dayAheadEnergyShare) ? `${fmt(row.dayAheadEnergyShare * 100)}%` : "--",
     row.status.label,
   ]);
-  downloadCsv(`亏损分析_${analysis.date}.csv`, [...summaryRows, ...hourlyRows]);
+  downloadCsv(`盈亏分析_${analysis.date}.csv`, [...summaryRows, ...hourlyRows]);
 }
 
 function exportPolicyAnalysis() {
