@@ -710,6 +710,71 @@ canvas {
   background: #e8f3f1;
 }
 
+.loss-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin: 14px 0 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.loss-tab {
+  min-height: 42px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.loss-tab:hover {
+  color: var(--ink);
+  background: #f5f8f7;
+}
+
+.loss-tab.active {
+  border-bottom-color: var(--teal);
+  color: var(--teal);
+  background: #edf6f4;
+}
+
+[data-loss-panel][hidden] {
+  display: none;
+}
+
+[data-loss-panel] {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.loss-customer-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 8px;
+  min-width: min(100%, 620px);
+}
+
+.compact-field {
+  gap: 4px;
+}
+
+.compact-field span {
+  font-size: 11px;
+}
+
+.compact-field input,
+.compact-field select {
+  min-height: 36px;
+}
+
+.customer-detail-selector {
+  width: min(260px, 100%);
+}
+
+.customer-contribution-table table {
+  min-width: 1480px;
+}
+
 .spot-workspace {
   min-height: 130px;
 }
@@ -1355,6 +1420,11 @@ th {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .loss-customer-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
   .import-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1414,6 +1484,10 @@ th {
   }
 
   .loss-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .loss-customer-filters {
     grid-template-columns: 1fr;
   }
 
@@ -2273,81 +2347,206 @@ th {
           <section class="panel">
             <div class="panel-head">
               <div>
-                <h3>盈亏分析附加模块</h3>
-                <p id="lossSubtitle">对所选日期进行结算成本、市场基准、覆盖结构和收入情景分析</p>
+                <h3>盈亏分析</h3>
+                <p id="lossSubtitle">组合成本、客户贡献与收入情景</p>
               </div>
               <div class="inline-actions">
                 <span class="pill partial" id="lossBasisPill">成本事实与风险代理</span>
                 <button class="secondary-action" id="exportLossBtn" type="button">导出盈亏分析</button>
               </div>
             </div>
+            <div class="loss-tabs" role="tablist" aria-label="盈亏分析视图">
+              <button class="loss-tab active" type="button" role="tab" aria-selected="true" data-loss-tab="portfolio">组合盈亏</button>
+              <button class="loss-tab" type="button" role="tab" aria-selected="false" data-loss-tab="customers">客户贡献</button>
+              <button class="loss-tab" type="button" role="tab" aria-selected="false" data-loss-tab="detail">客户详情</button>
+            </div>
             <div class="loss-kpi-grid" id="lossKpis"></div>
             <p class="loss-boundary-note" id="lossBoundaryNote"></p>
           </section>
 
-          <div class="grid two-one">
+          <div id="lossPortfolioPanel" data-loss-panel="portfolio">
+            <div class="grid two-one">
+              <section class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>成本基准对比</h3>
+                    <p>客户结算成本或组合实时成本代理与同日市场价格基准</p>
+                  </div>
+                </div>
+                <div class="chart-frame chart-frame-large">
+                  <canvas id="lossChart" height="320" data-chart-height="320"></canvas>
+                </div>
+                <div class="table-wrap compact-table">
+                  <table>
+                    <thead>
+                      <tr><th>成本项</th><th>金额</th><th>口径</th></tr>
+                    </thead>
+                    <tbody id="lossBreakdownTable"></tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>收入情景测算</h3>
+                    <p>统一收入单价与其他日成本；不替代财务结算</p>
+                  </div>
+                </div>
+                <div class="form-grid">
+                  <label class="field">
+                    <span>零售综合收入单价（元/MWh）</span>
+                    <input id="lossRevenueInput" type="number" min="0" step="0.1" placeholder="待补收入口径" />
+                  </label>
+                  <label class="field">
+                    <span>其他日成本（元）</span>
+                    <input id="lossOtherCostInput" type="number" value="0" step="100" />
+                  </label>
+                  <button class="primary-action" id="runLossBtn" type="button">测算收入情景</button>
+                </div>
+                <div class="loss-scenario" id="lossScenario"></div>
+                <div class="sample-list" id="lossHypotheses"></div>
+              </section>
+            </div>
+
             <section class="panel">
               <div class="panel-head">
                 <div>
-                  <h3>成本基准对比</h3>
-                  <p>比较客户结算成本或组合实时成本代理与同日市场价格基准</p>
+                  <h3>小时成本贡献</h3>
+                  <p>正值高于日前基准，负值低于日前基准</p>
                 </div>
               </div>
-              <div class="chart-frame chart-frame-large">
-                <canvas id="lossChart" height="320" data-chart-height="320"></canvas>
-              </div>
-              <div class="table-wrap compact-table">
+              <div class="table-wrap tall">
                 <table>
                   <thead>
-                    <tr><th>成本项</th><th>金额</th><th>口径</th></tr>
+                    <tr>
+                      <th>时点</th><th>电量</th><th>实际/代理成本</th><th>实际/代理单价</th>
+                      <th>日前基准成本</th><th>对日前差额</th><th>日前电量占比</th><th>复核状态</th>
+                    </tr>
                   </thead>
-                  <tbody id="lossBreakdownTable"></tbody>
+                  <tbody id="lossAttributionTable"></tbody>
                 </table>
               </div>
             </section>
+          </div>
+
+          <div id="lossCustomersPanel" data-loss-panel="customers" hidden>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>客户贡献概览</h3>
+                  <p>按脱敏客户分时负荷分摊组合逐时成本</p>
+                </div>
+                <span class="pill wait">代理测算</span>
+              </div>
+              <div class="loss-kpi-grid" id="lossCustomerSummaryKpis"></div>
+              <p class="loss-boundary-note" id="lossCustomerBoundaryNote"></p>
+            </section>
 
             <section class="panel">
               <div class="panel-head">
                 <div>
-                  <h3>收入情景测算</h3>
-                  <p>录入零售综合收入单价后，计算毛利情景；不替代财务结算</p>
+                  <h3>客户贡献明细</h3>
+                  <p id="lossCustomerTableSubtitle">仅显示稳定客户代号</p>
+                </div>
+                <div class="loss-customer-filters">
+                  <label class="field compact-field">
+                    <span>客户代号</span>
+                    <input id="lossCustomerSearch" type="search" placeholder="客户-001" />
+                  </label>
+                  <label class="field compact-field">
+                    <span>贡献状态</span>
+                    <select id="lossCustomerStatusFilter">
+                      <option value="all">全部</option>
+                      <option value="negative">情景负毛利</option>
+                      <option value="positive">情景正毛利</option>
+                      <option value="pending">待补收入</option>
+                    </select>
+                  </label>
+                  <label class="field compact-field">
+                    <span>排序</span>
+                    <select id="lossCustomerSort">
+                      <option value="margin">毛利从低到高</option>
+                      <option value="cost">成本从高到低</option>
+                      <option value="energy">电量从高到低</option>
+                    </select>
+                  </label>
                 </div>
               </div>
-              <div class="form-grid">
-                <label class="field">
-                  <span>零售综合收入单价（元/MWh）</span>
-                  <input id="lossRevenueInput" type="number" min="0" step="0.1" placeholder="待补收入口径" />
-                </label>
-                <label class="field">
-                  <span>其他日成本（元）</span>
-                  <input id="lossOtherCostInput" type="number" value="0" step="100" />
-                </label>
-                <button class="primary-action" id="runLossBtn" type="button">测算收入情景</button>
+              <div class="table-wrap tall customer-contribution-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>序号</th><th>客户代号</th><th>负荷类型</th><th>电量</th><th>成本代理</th>
+                      <th>平均成本</th><th>对日前差额</th><th>收入情景</th><th>毛利情景</th>
+                      <th>毛利率</th><th>组合占比</th><th>状态</th><th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="lossCustomerContributionTable"></tbody>
+                </table>
               </div>
-              <div class="loss-scenario" id="lossScenario"></div>
-              <div class="sample-list" id="lossHypotheses"></div>
             </section>
           </div>
 
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <h3>小时成本贡献</h3>
-                <p>正值表示该小时成本高于日前基准，负值表示低于日前基准；排序用于复核优先级</p>
+          <div id="lossCustomerDetailPanel" data-loss-panel="detail" hidden>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>客户贡献详情</h3>
+                  <p id="lossCustomerDetailSubtitle">稳定客户代号 · 代理测算</p>
+                </div>
+                <label class="field compact-field customer-detail-selector">
+                  <span>客户代号</span>
+                  <select id="lossCustomerContributionSelect"></select>
+                </label>
               </div>
+              <div class="loss-kpi-grid" id="lossCustomerDetailKpis"></div>
+              <p class="loss-boundary-note" id="lossCustomerDetailBoundary"></p>
+            </section>
+
+            <div class="grid two-one">
+              <section class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>24点单位成本</h3>
+                    <p>组合逐时成本单价、日前价格与收入情景</p>
+                  </div>
+                </div>
+                <div class="chart-frame chart-frame-large">
+                  <canvas id="lossCustomerChart" height="320" data-chart-height="320"></canvas>
+                </div>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>客户风险摘要</h3>
+                    <p>负荷结构、成本暴露和缺失口径</p>
+                  </div>
+                </div>
+                <div class="sample-list" id="lossCustomerDetailInsights"></div>
+              </section>
             </div>
-            <div class="table-wrap tall">
-              <table>
-                <thead>
-                  <tr>
-                    <th>时点</th><th>电量</th><th>实际/代理成本</th><th>实际/代理单价</th>
-                    <th>日前基准成本</th><th>对日前差额</th><th>日前电量占比</th><th>复核状态</th>
-                  </tr>
-                </thead>
-                <tbody id="lossAttributionTable"></tbody>
-              </table>
-            </div>
-          </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>客户小时贡献</h3>
+                  <p>其他日成本按客户日电量占比及小时电量占比分摊</p>
+                </div>
+              </div>
+              <div class="table-wrap tall">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>时点</th><th>客户电量</th><th>成本代理</th><th>单位成本</th><th>日前基准</th>
+                      <th>对日前差额</th><th>收入情景</th><th>其他成本分摊</th><th>毛利情景</th>
+                    </tr>
+                  </thead>
+                  <tbody id="lossCustomerHourlyTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
         </section>
 
         <section class="view" id="interfacesView">
@@ -2603,6 +2802,7 @@ const INTERFACES = [
   { path: "/api/strategy/review", use: "策略陪跑与复盘", method: "POST", input: "date,strategy,manualAdjustments,result", output: "执行评价、归因、次日建议", status: "等待执行数据" },
   { path: "/api/finance/settlement", use: "批零收益与财务口径", method: "GET/POST", input: "month,settlementItems", output: "收入、成本、偏差、净收益", status: "接口预留" },
   { path: "/api/analytics/profit-loss-analysis", use: "结算成本与盈亏情景分析", method: "GET", input: "market_code,date,revenue_price,other_cost", output: "成本拆解、基准差额、小时贡献、收入情景", status: "前后端口径已接入" },
+  { path: "/api/analytics/customer-profit-contribution", use: "脱敏客户贡献代理分析", method: "GET", input: "market_code,date,revenue_price,other_cost", output: "客户成本分摊、收入与毛利情景、小时贡献", status: "已接入" },
   { path: "/api/policy/documents", use: "省级规则文件登记", method: "GET/POST", input: "marketCode,documentId,version,checksum,授权状态", output: "文件版本与RAG待索引状态", status: "登记接口已接入，RAG待接" },
   { path: "/api/ecosystem/resources", use: "能碳生态资源", method: "GET/POST", input: "resourceType,capacity,carbonData", output: "储能、可调负荷、碳资产", status: "二期预留" },
 ];
@@ -2730,8 +2930,14 @@ const state = {
   mediumMonth: "",
   mediumPreviewDate: "",
   lossAnalysis: null,
+  lossCustomerAnalysis: null,
   lossRevenuePrice: null,
   lossOtherCost: 0,
+  activeLossTab: "portfolio",
+  lossCustomerAlias: "",
+  lossCustomerSearch: "",
+  lossCustomerStatus: "all",
+  lossCustomerSort: "margin",
   importRecords: [],
   importBatches: [],
   pendingImport: null,
@@ -2765,6 +2971,7 @@ const chartEls = {
   forecast: document.querySelector("#forecastChart"),
   medium: document.querySelector("#mediumCurveChart"),
   loss: document.querySelector("#lossChart"),
+  lossCustomer: document.querySelector("#lossCustomerChart"),
   customerLoad: document.querySelector("#customerLoadChart"),
 };
 
@@ -2887,7 +3094,7 @@ function bindEvents() {
     readLossScenarioInputs();
     renderLossAnalysis();
     renderCharts();
-    showToast("亏损收入情景已更新。");
+    showToast("盈亏收入情景已更新。");
   });
   document.querySelector("#exportLossBtn").addEventListener("click", exportLossAnalysis);
   document.querySelector("#lossRevenueInput").addEventListener("change", () => {
@@ -2897,6 +3104,36 @@ function bindEvents() {
   document.querySelector("#lossOtherCostInput").addEventListener("change", () => {
     readLossScenarioInputs();
     renderLossAnalysis();
+  });
+  document.querySelectorAll("[data-loss-tab]").forEach((button) => button.addEventListener("click", () => {
+    state.activeLossTab = button.dataset.lossTab;
+    renderLossAnalysis();
+    renderCharts();
+  }));
+  document.querySelector("#lossCustomerSearch").addEventListener("input", (event) => {
+    state.lossCustomerSearch = event.target.value;
+    renderLossAnalysis();
+  });
+  document.querySelector("#lossCustomerStatusFilter").addEventListener("change", (event) => {
+    state.lossCustomerStatus = event.target.value;
+    renderLossAnalysis();
+  });
+  document.querySelector("#lossCustomerSort").addEventListener("change", (event) => {
+    state.lossCustomerSort = event.target.value;
+    renderLossAnalysis();
+  });
+  document.querySelector("#lossCustomerContributionSelect").addEventListener("change", (event) => {
+    state.lossCustomerAlias = event.target.value;
+    renderLossAnalysis();
+    renderCharts();
+  });
+  document.querySelector("#lossCustomerContributionTable").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-loss-customer]");
+    if (!button) return;
+    state.lossCustomerAlias = button.dataset.lossCustomer;
+    state.activeLossTab = "detail";
+    renderLossAnalysis();
+    renderCharts();
   });
   document.querySelector("#validateImportBtn").addEventListener("click", validateImportFile);
   document.querySelector("#dataImportUpload").addEventListener("change", inspectImportSelection);
@@ -3605,9 +3842,260 @@ function buildLossAnalysis(date = state.selectedDate) {
   };
 }
 
+function buildCustomerContributionAnalysis(portfolioAnalysis = buildLossAnalysis()) {
+  const customerRows = state.customerLoadHourly.filter((row) => row.date === portfolioAnalysis.date);
+  const profileMap = new Map(state.customerProfiles.map((row) => [row.customerAlias, row]));
+  const portfolioByTime = new Map(portfolioAnalysis.hourly.map((row) => [row.time, row]));
+  const customerEnergyByAlias = new Map(customerRows.map((row) => [
+    row.customerAlias,
+    (row.hourlyMwh || []).reduce((sum, value) => sum + (Number.isFinite(Number(value)) ? Number(value) : 0), 0),
+  ]));
+  const totalCustomerEnergyMwh = [...customerEnergyByAlias.values()].reduce((sum, value) => sum + value, 0);
+  const customers = customerRows.map((row) => {
+    const energyMwh = customerEnergyByAlias.get(row.customerAlias) || 0;
+    const otherCostAllocationYuan = totalCustomerEnergyMwh > 0
+      ? portfolioAnalysis.otherCostYuan * energyMwh / totalCustomerEnergyMwh
+      : 0;
+    const hourly = hourlyTimes().map((time, index) => {
+      const rawEnergy = Number(row.hourlyMwh?.[index]);
+      const customerEnergyMwh = Number.isFinite(rawEnergy) ? rawEnergy : null;
+      const portfolioRow = portfolioByTime.get(time);
+      const allocatedUnitCostYuanMwh = portfolioRow?.actualUnitCostYuanMwh;
+      const allocatedCostYuan = Number.isFinite(customerEnergyMwh) && Number.isFinite(allocatedUnitCostYuanMwh)
+        ? customerEnergyMwh * allocatedUnitCostYuanMwh
+        : null;
+      const dayAheadBenchmarkYuan = Number.isFinite(customerEnergyMwh) && Number.isFinite(portfolioRow?.dayAheadPriceYuanMwh)
+        ? customerEnergyMwh * portfolioRow.dayAheadPriceYuanMwh
+        : null;
+      const revenueYuan = Number.isFinite(customerEnergyMwh) && Number.isFinite(portfolioAnalysis.revenuePrice)
+        ? customerEnergyMwh * portfolioAnalysis.revenuePrice
+        : null;
+      const hourlyOtherCostYuan = energyMwh > 0 && Number.isFinite(customerEnergyMwh)
+        ? otherCostAllocationYuan * customerEnergyMwh / energyMwh
+        : 0;
+      const grossMarginYuan = Number.isFinite(revenueYuan) && Number.isFinite(allocatedCostYuan)
+        ? revenueYuan - allocatedCostYuan - hourlyOtherCostYuan
+        : null;
+      return {
+        time,
+        energyMwh: customerEnergyMwh,
+        allocatedCostYuan,
+        allocatedUnitCostYuanMwh,
+        dayAheadPriceYuanMwh: portfolioRow?.dayAheadPriceYuanMwh,
+        dayAheadBenchmarkYuan,
+        deltaVsDayAheadYuan: Number.isFinite(allocatedCostYuan) && Number.isFinite(dayAheadBenchmarkYuan)
+          ? allocatedCostYuan - dayAheadBenchmarkYuan
+          : null,
+        revenueYuan,
+        otherCostAllocationYuan: hourlyOtherCostYuan,
+        grossMarginYuan,
+      };
+    });
+    const allocatedCostYuan = hourly.reduce((sum, item) => sum + (Number.isFinite(item.allocatedCostYuan) ? item.allocatedCostYuan : 0), 0);
+    const dayAheadBenchmarkYuan = hourly.reduce((sum, item) => sum + (Number.isFinite(item.dayAheadBenchmarkYuan) ? item.dayAheadBenchmarkYuan : 0), 0);
+    const revenueYuan = Number.isFinite(portfolioAnalysis.revenuePrice) ? energyMwh * portfolioAnalysis.revenuePrice : null;
+    const grossMarginYuan = Number.isFinite(revenueYuan) ? revenueYuan - allocatedCostYuan - otherCostAllocationYuan : null;
+    const grossMarginRate = Number.isFinite(grossMarginYuan) && revenueYuan > 0 ? grossMarginYuan / revenueYuan : null;
+    const breakEvenRevenuePriceYuanMwh = energyMwh > 0 ? (allocatedCostYuan + otherCostAllocationYuan) / energyMwh : null;
+    let status = "待补收入";
+    if (Number.isFinite(grossMarginYuan)) {
+      if (grossMarginYuan < -1) status = "情景负毛利";
+      else if (grossMarginYuan > 1) status = "情景正毛利";
+      else status = "接近平衡";
+    }
+    return {
+      customerAlias: row.customerAlias,
+      segment: profileMap.get(row.customerAlias)?.segment || "未分群",
+      energyMwh,
+      portfolioEnergyShare: totalCustomerEnergyMwh > 0 ? energyMwh / totalCustomerEnergyMwh : null,
+      allocatedCostYuan,
+      averageCostYuanMwh: energyMwh > 0 ? allocatedCostYuan / energyMwh : null,
+      dayAheadBenchmarkYuan,
+      deltaVsDayAheadYuan: allocatedCostYuan - dayAheadBenchmarkYuan,
+      otherCostAllocationYuan,
+      revenueYuan,
+      grossMarginYuan,
+      grossMarginRate,
+      breakEvenRevenuePriceYuanMwh,
+      status,
+      hourly,
+    };
+  }).sort((left, right) => left.customerAlias.localeCompare(right.customerAlias, "zh-CN", { numeric: true }));
+  const customerAllocatedCostYuan = customers.reduce((sum, row) => sum + row.allocatedCostYuan, 0);
+  const customerRevenueYuan = Number.isFinite(portfolioAnalysis.revenuePrice)
+    ? customers.reduce((sum, row) => sum + row.revenueYuan, 0)
+    : null;
+  const customerGrossMarginYuan = Number.isFinite(portfolioAnalysis.revenuePrice)
+    ? customers.reduce((sum, row) => sum + row.grossMarginYuan, 0)
+    : null;
+  return {
+    date: portfolioAnalysis.date,
+    exactSettlement: portfolioAnalysis.exactSettlement,
+    basis: portfolioAnalysis.exactSettlement
+      ? "客户分时负荷 × 结算单逐时成本单价"
+      : "客户分时负荷 × 实时价格成本代理",
+    customers,
+    customerCount: customers.length,
+    totalCustomerEnergyMwh: customers.length ? totalCustomerEnergyMwh : null,
+    portfolioEnergyMwh: portfolioAnalysis.totalEnergyMwh,
+    energyCoverageShare: customers.length && portfolioAnalysis.totalEnergyMwh > 0
+      ? totalCustomerEnergyMwh / portfolioAnalysis.totalEnergyMwh
+      : null,
+    customerAllocatedCostYuan: customers.length ? customerAllocatedCostYuan : null,
+    portfolioCostYuan: portfolioAnalysis.actualCostYuan,
+    unallocatedCostYuan: customers.length && Number.isFinite(portfolioAnalysis.actualCostYuan)
+      ? portfolioAnalysis.actualCostYuan - customerAllocatedCostYuan
+      : null,
+    revenuePrice: portfolioAnalysis.revenuePrice,
+    otherCostYuan: portfolioAnalysis.otherCostYuan,
+    customerRevenueYuan,
+    customerGrossMarginYuan,
+    negativeCount: customers.filter((row) => Number.isFinite(row.grossMarginYuan) && row.grossMarginYuan < -1).length,
+    positiveCount: customers.filter((row) => Number.isFinite(row.grossMarginYuan) && row.grossMarginYuan > 1).length,
+  };
+}
+
+function renderLossTabs() {
+  document.querySelectorAll("[data-loss-tab]").forEach((button) => {
+    const active = button.dataset.lossTab === state.activeLossTab;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  document.querySelectorAll("[data-loss-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.lossPanel !== state.activeLossTab;
+  });
+}
+
+function customerContributionStatusClass(row) {
+  if (!Number.isFinite(row.grossMarginYuan)) return "wait";
+  if (row.grossMarginYuan < -1) return "buy";
+  if (row.grossMarginYuan > 1) return "sell";
+  return "hold";
+}
+
+function filteredCustomerContributions(customers) {
+  const query = state.lossCustomerSearch.trim().toLowerCase();
+  let rows = customers.filter((row) => !query || row.customerAlias.toLowerCase().includes(query));
+  if (state.lossCustomerStatus === "negative") rows = rows.filter((row) => Number.isFinite(row.grossMarginYuan) && row.grossMarginYuan < -1);
+  if (state.lossCustomerStatus === "positive") rows = rows.filter((row) => Number.isFinite(row.grossMarginYuan) && row.grossMarginYuan > 1);
+  if (state.lossCustomerStatus === "pending") rows = rows.filter((row) => !Number.isFinite(row.grossMarginYuan));
+  return rows.slice().sort((left, right) => {
+    if (state.lossCustomerSort === "cost") return right.allocatedCostYuan - left.allocatedCostYuan;
+    if (state.lossCustomerSort === "energy") return right.energyMwh - left.energyMwh;
+    if (Number.isFinite(left.grossMarginYuan) && Number.isFinite(right.grossMarginYuan)) return left.grossMarginYuan - right.grossMarginYuan;
+    if (Number.isFinite(left.grossMarginYuan)) return -1;
+    if (Number.isFinite(right.grossMarginYuan)) return 1;
+    return right.allocatedCostYuan - left.allocatedCostYuan;
+  });
+}
+
+function renderCustomerContributionAnalysis(contribution) {
+  const hasCustomers = contribution.customerCount > 0;
+  const coverageText = Number.isFinite(contribution.energyCoverageShare)
+    ? `${fmt(contribution.energyCoverageShare * 100)}%`
+    : "--";
+  const marginText = Number.isFinite(contribution.customerGrossMarginYuan)
+    ? `${signed(contribution.customerGrossMarginYuan)} 元`
+    : "待补收入";
+  document.querySelector("#lossCustomerSummaryKpis").innerHTML = [
+    ["覆盖客户", `${contribution.customerCount} 家`, "仅显示稳定客户代号"],
+    ["客户实测电量", `${fmt(contribution.totalCustomerEnergyMwh)} MWh`, `组合电量覆盖${coverageText}`],
+    ["客户成本代理", `${fmt(contribution.customerAllocatedCostYuan)} 元`, contribution.basis],
+    ["未覆盖成本", `${signed(contribution.unallocatedCostYuan)} 元`, contribution.exactSettlement ? "结算与客户负荷口径差额" : "组合与逐户负荷校验"],
+    ["客户毛利情景", marginText, Number.isFinite(contribution.revenuePrice) ? `负毛利${contribution.negativeCount}家 · 正毛利${contribution.positiveCount}家` : "统一收入单价尚未录入"],
+  ].map(([label, value, note]) => `<article><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+  document.querySelector("#lossCustomerBoundaryNote").textContent = !hasCustomers
+    ? `当前日期没有逐客户分时负荷，不能生成客户贡献结果。`
+    : contribution.exactSettlement
+      ? `客户贡献按逐户分时负荷乘以结算单逐时成本单价测算，客户负荷覆盖结算组合电量${coverageText}；缺少逐客户合同、偏差责任和财务结算，结果不是客户真实利润。`
+      : `客户贡献按逐户分时负荷乘以实时价格测算，客户负荷覆盖组合电量${coverageText}；缺少逐客户合同、申报成交和财务结算，结果仅用于成本与收入情景排序。`;
+
+  const search = document.querySelector("#lossCustomerSearch");
+  if (search.value !== state.lossCustomerSearch) search.value = state.lossCustomerSearch;
+  document.querySelector("#lossCustomerStatusFilter").value = state.lossCustomerStatus;
+  document.querySelector("#lossCustomerSort").value = state.lossCustomerSort;
+  const rows = filteredCustomerContributions(contribution.customers);
+  document.querySelector("#lossCustomerTableSubtitle").textContent = `${contribution.date} · 显示${rows.length}/${contribution.customerCount}家 · ${contribution.basis}`;
+  document.querySelector("#lossCustomerContributionTable").innerHTML = rows.map((row, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td><strong>${escapeHtml(row.customerAlias)}</strong></td>
+      <td>${escapeHtml(row.segment)}</td>
+      <td>${fmt(row.energyMwh)} MWh</td>
+      <td>${fmt(row.allocatedCostYuan)} 元</td>
+      <td>${fmt(row.averageCostYuanMwh)} 元/MWh</td>
+      <td>${signed(row.deltaVsDayAheadYuan)} 元</td>
+      <td>${Number.isFinite(row.revenueYuan) ? `${fmt(row.revenueYuan)} 元` : "--"}</td>
+      <td class="${Number.isFinite(row.grossMarginYuan) ? (row.grossMarginYuan < 0 ? "text-risk" : "text-ok") : ""}">${Number.isFinite(row.grossMarginYuan) ? `${signed(row.grossMarginYuan)} 元` : "--"}</td>
+      <td>${Number.isFinite(row.grossMarginRate) ? `${fmt(row.grossMarginRate * 100)}%` : "--"}</td>
+      <td>${Number.isFinite(row.portfolioEnergyShare) ? `${fmt(row.portfolioEnergyShare * 100)}%` : "--"}</td>
+      <td><span class="tag ${customerContributionStatusClass(row)}">${row.status}</span></td>
+      <td><button class="table-action" type="button" data-loss-customer="${escapeHtml(row.customerAlias)}">查看</button></td>
+    </tr>
+  `).join("");
+  if (!rows.length) document.querySelector("#lossCustomerContributionTable").innerHTML = '<tr><td colspan="13">没有符合当前条件的客户记录。</td></tr>';
+
+  const aliases = contribution.customers.map((row) => row.customerAlias);
+  state.lossCustomerAlias = aliases.includes(state.lossCustomerAlias)
+    ? state.lossCustomerAlias
+    : aliases.includes(state.selectedCustomerAlias) ? state.selectedCustomerAlias : aliases[0] || "";
+  const select = document.querySelector("#lossCustomerContributionSelect");
+  select.innerHTML = aliases.map((alias) => `<option value="${escapeHtml(alias)}">${escapeHtml(alias)}</option>`).join("");
+  select.value = state.lossCustomerAlias;
+  renderCustomerContributionDetail(contribution);
+}
+
+function renderCustomerContributionDetail(contribution) {
+  const customer = contribution.customers.find((row) => row.customerAlias === state.lossCustomerAlias);
+  const subtitle = document.querySelector("#lossCustomerDetailSubtitle");
+  if (!customer) {
+    subtitle.textContent = `${contribution.date} · 无可用客户负荷`;
+    document.querySelector("#lossCustomerDetailKpis").innerHTML = "";
+    document.querySelector("#lossCustomerDetailBoundary").textContent = "当前日期无法生成客户贡献详情。";
+    document.querySelector("#lossCustomerDetailInsights").innerHTML = "";
+    document.querySelector("#lossCustomerHourlyTable").innerHTML = '<tr><td colspan="9">当前日期没有逐客户负荷数据。</td></tr>';
+    return;
+  }
+  subtitle.textContent = `${contribution.date} · ${customer.customerAlias} · ${contribution.basis}`;
+  const marginText = Number.isFinite(customer.grossMarginYuan) ? `${signed(customer.grossMarginYuan)} 元` : "待补收入";
+  document.querySelector("#lossCustomerDetailKpis").innerHTML = [
+    ["客户代号", customer.customerAlias, customer.segment],
+    ["客户电量", `${fmt(customer.energyMwh)} MWh`, `组合占比${fmt(customer.portfolioEnergyShare * 100)}%`],
+    ["成本代理", `${fmt(customer.allocatedCostYuan)} 元`, `平均${fmt(customer.averageCostYuanMwh)}元/MWh`],
+    ["盈亏平衡价", `${fmt(customer.breakEvenRevenuePriceYuanMwh)} 元/MWh`, `其他成本分摊${fmt(customer.otherCostAllocationYuan)}元`],
+    ["毛利情景", marginText, Number.isFinite(customer.grossMarginRate) ? `毛利率${fmt(customer.grossMarginRate * 100)}%` : "统一收入单价尚未录入"],
+  ].map(([label, value, note]) => `<article><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+  document.querySelector("#lossCustomerDetailBoundary").textContent = `${customer.customerAlias}仅使用脱敏分时负荷参与测算；真实名称未进入页面。逐客户零售合同、偏差责任、申报成交和财务结算待补。`;
+
+  const peakHour = customer.hourly.filter((row) => Number.isFinite(row.energyMwh)).slice().sort((left, right) => right.energyMwh - left.energyMwh)[0];
+  const riskHour = customer.hourly.filter((row) => Number.isFinite(row.deltaVsDayAheadYuan)).slice().sort((left, right) => right.deltaVsDayAheadYuan - left.deltaVsDayAheadYuan)[0];
+  document.querySelector("#lossCustomerDetailInsights").innerHTML = [
+    sampleItem({ title: "负荷峰值", body: peakHour ? `${peakHour.time}用电${fmt(peakHour.energyMwh)} MWh，为当日最高时点。` : "当前日期缺少分时负荷。" }),
+    sampleItem({ title: "成本暴露", body: riskHour ? `${riskHour.time}相对日前基准差额${signed(riskHour.deltaVsDayAheadYuan)}元，优先核对该时段合同覆盖和申报。` : "暂无可比成本。" }),
+    sampleItem({ title: "收入门槛", body: `当前代理口径的盈亏平衡收入单价为${fmt(customer.breakEvenRevenuePriceYuanMwh)}元/MWh。` }),
+    sampleItem({ title: "待补口径", body: "零售套餐、偏差规则、客户级申报成交和最终财务结算。" }),
+  ].join("");
+
+  document.querySelector("#lossCustomerHourlyTable").innerHTML = customer.hourly.map((row) => `
+    <tr>
+      <td>${row.time}</td>
+      <td>${fmt(row.energyMwh)} MWh</td>
+      <td>${fmt(row.allocatedCostYuan)} 元</td>
+      <td>${fmt(row.allocatedUnitCostYuanMwh)} 元/MWh</td>
+      <td>${fmt(row.dayAheadBenchmarkYuan)} 元</td>
+      <td>${signed(row.deltaVsDayAheadYuan)} 元</td>
+      <td>${Number.isFinite(row.revenueYuan) ? `${fmt(row.revenueYuan)} 元` : "--"}</td>
+      <td>${fmt(row.otherCostAllocationYuan)} 元</td>
+      <td class="${Number.isFinite(row.grossMarginYuan) ? (row.grossMarginYuan < 0 ? "text-risk" : "text-ok") : ""}">${Number.isFinite(row.grossMarginYuan) ? `${signed(row.grossMarginYuan)} 元` : "--"}</td>
+    </tr>
+  `).join("");
+}
+
 function renderLossAnalysis() {
   const analysis = buildLossAnalysis();
   state.lossAnalysis = analysis;
+  const customerContribution = buildCustomerContributionAnalysis(analysis);
+  state.lossCustomerAnalysis = customerContribution;
   const hasEnergy = Number.isFinite(analysis.totalEnergyMwh) && analysis.totalEnergyMwh > 0;
   const deltaLabel = Number.isFinite(analysis.deltaVsDayAheadYuan)
     ? (analysis.deltaVsDayAheadYuan > 0 ? "高于日前基准" : "低于日前基准")
@@ -3694,6 +4182,8 @@ function renderLossAnalysis() {
     </tr>
   `).join("");
   if (!hasEnergy) document.querySelector("#lossAttributionTable").innerHTML = '<tr><td colspan="8">该日期缺少可用负荷或结算数据。</td></tr>';
+  renderCustomerContributionAnalysis(customerContribution);
+  renderLossTabs();
 }
 
 function buildForecastResults(date) {
@@ -4291,6 +4781,19 @@ function renderCharts() {
     { name: "日前价格", color: "#b57b1b", values: loss.hourly.map((row) => row.dayAheadPriceYuanMwh) },
     ...(loss.exactSettlement ? [{ name: "实时价格", color: "#0e6f78", values: loss.hourly.map((row) => row.realtimePriceYuanMwh) }] : []),
   ]);
+  if (state.activeLossTab === "detail") {
+    const contribution = state.lossCustomerAnalysis?.date === state.selectedDate
+      ? state.lossCustomerAnalysis
+      : buildCustomerContributionAnalysis(loss);
+    const selectedCustomer = contribution.customers.find((row) => row.customerAlias === state.lossCustomerAlias);
+    drawLineChart(chartEls.lossCustomer, [
+      { name: "成本代理单价", color: "#c95341", values: selectedCustomer?.hourly.map((row) => row.allocatedUnitCostYuanMwh) || [] },
+      { name: "日前价格", color: "#b57b1b", values: selectedCustomer?.hourly.map((row) => row.dayAheadPriceYuanMwh) || [] },
+      ...(Number.isFinite(contribution.revenuePrice)
+        ? [{ name: "收入情景单价", color: "#0e6f78", values: selectedCustomer?.hourly.map(() => contribution.revenuePrice) || [] }]
+        : []),
+    ]);
+  }
   const customerHourly = state.customerLoadHourly.find((row) => row.customerAlias === state.selectedCustomerAlias && row.date === state.selectedCustomerDate);
   drawLineChart(chartEls.customerLoad, [
     { name: `${state.selectedCustomerAlias || "客户"}分时负荷`, color: "#0e6f78", values: customerHourly?.hourlyMwh || [] },
@@ -4645,6 +5148,7 @@ function exportMediumResults() {
 
 function exportLossAnalysis() {
   const analysis = buildLossAnalysis();
+  const contribution = buildCustomerContributionAnalysis(analysis);
   const hasEnergy = Number.isFinite(analysis.totalEnergyMwh) && analysis.totalEnergyMwh > 0;
   const conclusion = !hasEnergy
     ? "该日期缺少结算电量或组合负荷，不能计算成本和盈亏。"
@@ -4689,7 +5193,56 @@ function exportLossAnalysis() {
     Number.isFinite(row.dayAheadEnergyShare) ? `${fmt(row.dayAheadEnergyShare * 100)}%` : "--",
     row.status.label,
   ]);
-  downloadCsv(`盈亏分析_${analysis.date}.csv`, [...summaryRows, ...hourlyRows]);
+  const customerSummaryRows = [
+    [],
+    ["客户贡献代理汇总"],
+    ["客户数量", contribution.customerCount],
+    ["客户实测电量(MWh)", fmt(contribution.totalCustomerEnergyMwh)],
+    ["组合电量覆盖率", Number.isFinite(contribution.energyCoverageShare) ? `${fmt(contribution.energyCoverageShare * 100)}%` : "--"],
+    ["客户成本代理(元)", fmt(contribution.customerAllocatedCostYuan)],
+    ["未覆盖成本(元)", fmt(contribution.unallocatedCostYuan)],
+    ["客户毛利情景(元)", Number.isFinite(contribution.customerGrossMarginYuan) ? fmt(contribution.customerGrossMarginYuan) : "待补收入"],
+    ["客户口径", contribution.basis],
+    ["客户贡献说明", "客户分时负荷用于成本分摊；缺少逐客户合同、偏差责任和财务结算，结果不是客户真实利润。"],
+    [],
+    ["客户贡献明细"],
+    ["客户代号", "负荷类型", "电量(MWh)", "组合占比", "成本代理(元)", "平均成本(元/MWh)", "日前基准(元)", "对日前差额(元)", "其他成本分摊(元)", "收入情景(元)", "毛利情景(元)", "毛利率", "盈亏平衡收入单价(元/MWh)", "状态"],
+  ];
+  const customerRows = contribution.customers.map((row) => [
+    row.customerAlias,
+    row.segment,
+    fmt(row.energyMwh),
+    Number.isFinite(row.portfolioEnergyShare) ? `${fmt(row.portfolioEnergyShare * 100)}%` : "--",
+    fmt(row.allocatedCostYuan),
+    fmt(row.averageCostYuanMwh),
+    fmt(row.dayAheadBenchmarkYuan),
+    fmt(row.deltaVsDayAheadYuan),
+    fmt(row.otherCostAllocationYuan),
+    Number.isFinite(row.revenueYuan) ? fmt(row.revenueYuan) : "--",
+    Number.isFinite(row.grossMarginYuan) ? fmt(row.grossMarginYuan) : "--",
+    Number.isFinite(row.grossMarginRate) ? `${fmt(row.grossMarginRate * 100)}%` : "--",
+    fmt(row.breakEvenRevenuePriceYuanMwh),
+    row.status,
+  ]);
+  const selectedCustomer = contribution.customers.find((row) => row.customerAlias === state.lossCustomerAlias);
+  const selectedDetailRows = selectedCustomer ? [
+    [],
+    [`${selectedCustomer.customerAlias}小时贡献`],
+    ["时点", "客户电量(MWh)", "成本代理(元)", "单位成本(元/MWh)", "日前价格(元/MWh)", "日前基准(元)", "对日前差额(元)", "收入情景(元)", "其他成本分摊(元)", "毛利情景(元)"],
+    ...selectedCustomer.hourly.map((row) => [
+      row.time,
+      fmt(row.energyMwh),
+      fmt(row.allocatedCostYuan),
+      fmt(row.allocatedUnitCostYuanMwh),
+      fmt(row.dayAheadPriceYuanMwh),
+      fmt(row.dayAheadBenchmarkYuan),
+      fmt(row.deltaVsDayAheadYuan),
+      Number.isFinite(row.revenueYuan) ? fmt(row.revenueYuan) : "--",
+      fmt(row.otherCostAllocationYuan),
+      Number.isFinite(row.grossMarginYuan) ? fmt(row.grossMarginYuan) : "--",
+    ]),
+  ] : [];
+  downloadCsv(`盈亏分析_${analysis.date}.csv`, [...summaryRows, ...hourlyRows, ...customerSummaryRows, ...customerRows, ...selectedDetailRows]);
 }
 
 function exportPolicyAnalysis() {
