@@ -1804,7 +1804,7 @@ th {
             <div class="panel-head">
               <div>
                 <h3>电价与价差预测评估</h3>
-                <p>按已知时序使用D-1日前价格、D-2实时价格和历史组合负荷运行山东小时回测基线</p>
+                <p>运行24点日前/实时价格预测，展示P10-P90区间、价差风险和回测指标；策略建议必须人工复核</p>
               </div>
               <span class="pill partial" id="forecastModeStatus">浏览器回退基线</span>
             </div>
@@ -1816,8 +1816,8 @@ th {
               <label class="field">
                 <span>模型版本</span>
                 <select id="forecastModelSelect">
+                  <option value="price-forecast-v1.0.0">价格预测模型 v1.0.0</option>
                   <option value="lag-baseline-v0.3">时序基线 v0.3</option>
-                  <option value="external" disabled>外部模型接口（待接入）</option>
                 </select>
               </label>
               <label class="upload-card compact-upload">
@@ -1835,7 +1835,7 @@ th {
               <div class="panel-head">
                 <div>
                   <h3>预测曲线与置信区间</h3>
-                  <p id="forecastChartSubtitle">使用真实历史价格与脱敏组合负荷生成回测结果</p>
+                <p id="forecastChartSubtitle">价格预测模型输出日前/实时价格区间和价差判断</p>
                 </div>
                 <span class="pill partial" id="forecastPointStatus">24 点</span>
               </div>
@@ -2656,6 +2656,7 @@ const DATA_SOURCES = {
   spotPrices: "./data/spot-prices.json",
   portfolioLoadDaily: "./data/portfolio-load-daily.json",
   portfolioLoadHourly: "./data/portfolio-load-hourly.json",
+  priceForecastResult: "./data/price-forecast-result.json",
   dataQuality: "./data/data-quality.json",
   marketFeatures: "./data/market-features.json",
   customerProfiles: "./data/customer-profiles.json",
@@ -2665,7 +2666,7 @@ const DATA_SOURCES = {
 
 const MODULES = [
   { name: "盘前工作台", status: "ok", text: "集中展示关键指标、风险提示、执行窗口和市场状态。" },
-  { name: "预测评估", status: "partial", text: "使用真实历史价格与组合负荷运行时序回测基线，保留正式模型接口。" },
+  { name: "预测评估", status: "partial", text: "接入价格预测模型，展示24点P10/P50/P90、价差风险、回测指标和人工复核边界。" },
   { name: "现货市场", status: "partial", text: "读取预测结果并结合山东小时日前/实时价格，形成出清分析、复盘和价差判断。" },
   { name: "中长期", status: "partial", text: "承接合约曲线优化、长周期电价预测和曲线价值测算。" },
   { name: "政策 AI", status: "wait", text: "预留政策文件上传、结构化解读、风险提示和版本差异接口。" },
@@ -2785,7 +2786,7 @@ const INTERFACES = [
   { path: "/api/v1/data-dictionary", use: "算法核心数据字典", method: "GET", input: "无", output: "字段、类型、单位、时段、主键和空值规则", status: "真实后端已接入" },
   { path: "/api/v1/hourly-data", use: "统一24点价格与负荷输入", method: "GET", input: "market_code,market_date,customer_id,data_version", output: "24点小时数据、来源版本和缺失计数", status: "真实后端已接入" },
   { path: "/api/v1/data-assets/prices", use: "版本化价格数据上传", method: "POST", input: "request_id,data_version,updated_at,records", output: "数据资产ID、质量状态和缺失计数", status: "真实后端已接入" },
-  { path: "/api/v1/models/price-forecast/runs", use: "创建价格预测运行", method: "POST", input: "request_id,market_date,model_id,model_version,data_version", output: "run_id、状态、结果和回调地址", status: "基线可运行；外部模型地址待接" },
+  { path: "/api/v1/models/price-forecast/runs", use: "创建价格预测运行", method: "POST", input: "request_id,market_date,model_id,model_version,data_version", output: "run_id、状态、结果和回调地址", status: "价格预测模型已接入；策略仍需人工复核" },
   { path: "/api/v1/model-runs/{run_id}", use: "模型运行状态", method: "GET", input: "run_id", output: "状态、版本、输入摘要、错误和时间", status: "真实后端已接入" },
   { path: "/api/v1/model-runs/{run_id}/results", use: "回传或查询固定24点结果", method: "PUT/GET", input: "日前/实时P10-P90、风险、指标、HOLD建议", output: "结果、数据快照和审核状态", status: "真实后端已接入" },
   { path: "/api/v1/model-runs", use: "运行历史", method: "GET", input: "market_code,market_date,model_id,status", output: "运行列表和180天留存口径", status: "真实后端已接入" },
@@ -2933,6 +2934,7 @@ const state = {
   selectedCustomerDate: "",
   marketDataMode: "fallback",
   forecast96: [],
+  priceForecastResult: null,
   metadata: null,
   dates: [],
   selectedDate: "",
@@ -2959,7 +2961,7 @@ const state = {
   customerAliasMap: {},
   uploads: {},
   forecastDate: "",
-  forecastModelVersion: "lag-baseline-v0.3",
+  forecastModelVersion: "price-forecast-v1.0.0",
   forecastResults: [],
   forecastSource: "山东真实历史价格与组合负荷",
   forecastProvidedMetrics: null,
@@ -2997,7 +2999,7 @@ init();
 async function init() {
   bindEvents();
   try {
-    const [settlement, loadDaily, loadHourly, forecast96, metadata, spotPrices, portfolioLoadDaily, portfolioLoadHourly, dataQuality, marketFeatures, customerProfiles, customerLoadDaily, customerLoadHourly] = await Promise.all([
+    const [settlement, loadDaily, loadHourly, forecast96, metadata, spotPrices, portfolioLoadDaily, portfolioLoadHourly, priceForecastResult, dataQuality, marketFeatures, customerProfiles, customerLoadDaily, customerLoadHourly] = await Promise.all([
       fetchJson(DATA_SOURCES.settlement),
       fetchJson(DATA_SOURCES.loadDaily),
       fetchJson(DATA_SOURCES.loadHourly),
@@ -3006,6 +3008,7 @@ async function init() {
       fetchJsonOptional(DATA_SOURCES.spotPrices, []),
       fetchJsonOptional(DATA_SOURCES.portfolioLoadDaily, []),
       fetchJsonOptional(DATA_SOURCES.portfolioLoadHourly, []),
+      fetchJsonOptional(DATA_SOURCES.priceForecastResult, null),
       fetchJsonOptional(DATA_SOURCES.dataQuality, null),
       fetchJsonOptional(DATA_SOURCES.marketFeatures, null),
       fetchJsonOptional(DATA_SOURCES.customerProfiles, []),
@@ -3023,6 +3026,7 @@ async function init() {
     state.customerLoadHourly = customerLoadHourly;
     state.marketDataMode = dataQuality?.isSynthetic ? "synthetic" : spotPrices.length ? "real" : "fallback";
     state.forecast96 = forecast96;
+    state.priceForecastResult = priceForecastResult;
     state.metadata = metadata;
     hydrateOrganizationControls();
     hydrateImportMarkets();
@@ -3229,6 +3233,9 @@ function hydrateForecastDates() {
   const select = document.querySelector("#forecastDateSelect");
   const priceDates = [...new Set(state.spotPrices.map((row) => row.date).filter(Boolean))].sort();
   const dates = priceDates.length > 2 ? priceDates.slice(2) : [...new Set(state.forecast96.map((row) => row.date).filter(Boolean))].sort();
+  const modelDate = state.priceForecastResult?.market_date;
+  if (modelDate && !dates.includes(modelDate)) dates.push(modelDate);
+  dates.sort();
   state.forecastDate = dates.at(-1) || "";
   select.innerHTML = dates.map((date) => `<option value="${date}">${date}</option>`).join("");
   select.value = state.forecastDate;
@@ -3605,7 +3612,7 @@ function renderDesk() {
     },
     {
       title: "确认预测与价差任务",
-      body: "先进入预测评估查看D-1日前、D-2实时与历史组合负荷形成的回测基线，再进入现货市场形成判断；缺失的竞价空间和边界不会被虚构。",
+      body: "先进入预测评估查看24点日前/实时价格区间、价差风险和回测指标，再进入现货市场形成判断；缺失的竞价空间、边界和交易约束不会被虚构。",
       action: "forecast",
       actionLabel: "进入预测评估",
     },
@@ -4277,25 +4284,72 @@ async function runForecastEvaluation(options = {}) {
   state.forecastModelVersion = document.querySelector("#forecastModelSelect").value;
   state.forecastProvidedMetrics = null;
   state.forecastRunMeta = null;
+  const isPriceForecast = state.forecastModelVersion.startsWith("price-forecast");
+  const apiBase = "http://127.0.0.1:8002";
   if (state.backendOnline) {
     try {
-      const response = await fetch("http://127.0.0.1:8002/api/forecast/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: state.forecastDate, model_version: state.forecastModelVersion, market_code: state.selectedMarket }),
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const payload = await response.json();
-      state.forecastResults = payload.results;
-      state.forecastSource = "本地 FastAPI 时序回测服务";
+      if (isPriceForecast) {
+        const requestId = `ui-${state.selectedMarket}-${state.forecastDate}-${Date.now()}`;
+        const response = await fetch(`${apiBase}/api/v1/models/price-forecast/runs`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            request_id: requestId,
+            market_code: state.selectedMarket,
+            market_date: state.forecastDate,
+            model_id: "price-forecast",
+            model_version: state.forecastModelVersion,
+            data_version: "sd-hourly-snapshot-2026h1-v1",
+            parameters: { quantiles: [0.1, 0.5, 0.9] },
+            input_summary: { available_domains: ["prices", "load_actual"], hourly_point_count: 24, customer_scope: "portfolio" },
+            timeout_seconds: 120,
+          }),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const run = await response.json();
+        if (run.status !== "SUCCEEDED") throw new Error(run.error?.message || `模型运行状态：${run.status}`);
+        const resultResponse = await fetch(`${apiBase}${run.result_url}`);
+        if (!resultResponse.ok) throw new Error(`结果 HTTP ${resultResponse.status}`);
+        const payload = await resultResponse.json();
+        state.forecastResults = normalizeForecastRows(payload.result?.periods || [], payload.result || {});
+        state.forecastProvidedMetrics = payload.result?.backtest || null;
+        state.forecastRunMeta = { ...run, review_status: payload.review?.status || run.review_status };
+        state.forecastSource = "本地 FastAPI 价格预测模型";
+      } else {
+        const response = await fetch(`${apiBase}/api/forecast/run`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date: state.forecastDate, model_version: state.forecastModelVersion, market_code: state.selectedMarket }),
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        state.forecastResults = payload.results;
+        state.forecastSource = "本地 FastAPI 时序回测服务";
+      }
     } catch (error) {
-      console.warn("Backend forecast failed; using local baseline.", error);
-      state.forecastResults = buildForecastResults(state.forecastDate);
-      state.forecastSource = "山东真实历史数据（浏览器回退基线）";
+      console.warn("Backend forecast failed; using the available local result.", error);
+      const staticResult = state.priceForecastResult?.market_date === state.forecastDate ? state.priceForecastResult : null;
+      if (isPriceForecast && staticResult) {
+        state.forecastResults = normalizeForecastRows(staticResult.periods || [], staticResult);
+        state.forecastProvidedMetrics = staticResult.backtest || null;
+        state.forecastRunMeta = { run_id: staticResult.run_id || null, data_version: staticResult.data_snapshot?.version || null, review_status: "DRAFT" };
+        state.forecastSource = "本地价格预测模型静态演示结果";
+      } else {
+        state.forecastResults = buildForecastResults(state.forecastDate);
+        state.forecastSource = "山东真实历史数据（浏览器回退基线）";
+      }
     }
   } else {
-    state.forecastResults = buildForecastResults(state.forecastDate);
-    state.forecastSource = "山东真实历史价格与组合负荷";
+    const staticResult = isPriceForecast && state.priceForecastResult?.market_date === state.forecastDate ? state.priceForecastResult : null;
+    if (staticResult) {
+      state.forecastResults = normalizeForecastRows(staticResult.periods || [], staticResult);
+      state.forecastProvidedMetrics = staticResult.backtest || null;
+      state.forecastRunMeta = { run_id: staticResult.run_id || null, data_version: staticResult.data_snapshot?.version || null, review_status: "DRAFT" };
+      state.forecastSource = "本地价格预测模型静态演示结果";
+    } else {
+      state.forecastResults = buildForecastResults(state.forecastDate);
+      state.forecastSource = "山东真实历史价格与组合负荷";
+    }
   }
   renderForecast();
   drawForecastChart(chartEls.forecast, state.forecastResults);
@@ -4333,6 +4387,8 @@ function renderForecast() {
   document.querySelector("#forecastPointStatus").textContent = `${rows.length} 点`;
   document.querySelector("#forecastModeStatus").textContent = state.forecastSource.includes("外部导入")
     ? "外部文件结果"
+    : state.forecastSource.includes("价格预测模型")
+      ? "价格预测模型"
     : state.forecastSource.includes("本地 FastAPI")
       ? "本地后端基线"
       : "浏览器回退基线";
@@ -4448,7 +4504,7 @@ function normalizeForecastRows(rows, context = {}) {
     const realtimeQuantiles = row.real_time_price_yuan_per_mwh;
     const dayAheadQuantiles = row.day_ahead_price_yuan_per_mwh;
     const predictedPrice = Number(realtimeQuantiles?.p50 ?? row.predictedPrice ?? row.prediction ?? row.predicted_price ?? row["预测价格"]);
-    const time = row.time ?? row.pointTime ?? row.point_time ?? row.datetime?.slice(11, 16) ?? row["时点"];
+    const time = row.time ?? row.pointTime ?? row.point_time ?? (row.period ? `${String(row.period).padStart(2, "0")}:00` : row.datetime?.slice(11, 16)) ?? row["时点"];
     if (!time || !Number.isFinite(predictedPrice)) return null;
     const dayAheadReference = Number(dayAheadQuantiles?.p50 ?? row.dayAheadReference ?? row.day_ahead_reference ?? row.dayAheadPrice ?? row["日前参考"] ?? predictedPrice);
     const lower = Number(realtimeQuantiles?.p10 ?? row.lower ?? row.lowerBound ?? row.lower_bound ?? row["置信区间下限"] ?? predictedPrice - 40);
@@ -4810,7 +4866,7 @@ function renderReport() {
     `${state.selectedDate} 电力交易辅助决策系统日报草稿`,
     "",
     `1. 盘前工作台：当日组合电量${fmt(load?.totalMwh)} MWh，日前均价${fmt(marketSummary.averageDayAheadPrice)}元/MWh，实时均价${fmt(marketSummary.averageRealtimePrice)}元/MWh，价差口径为日前减实时。`,
-    `2. 预测评估：已用D-1日前价格、D-2实时价格和历史组合负荷生成${forecastRows.length}点时序回测基线，其中${highConfidenceCount}点置信度不低于72%；${forecastMetricsResult ? `回测MAE为${fmt(forecastMetricsResult.mae)}元/MWh` : "外部结果暂无真实值可供回测"}。正式应用仍需竞价空间、边界、新能源、天气和规则数据。`,
+    `2. 预测评估：已接入${state.forecastModelVersion}并生成${forecastRows.length}点日前/实时P10-P90预测，其中${highConfidenceCount}点置信度不低于72%；${forecastMetricsResult ? `回测MAE为${fmt(forecastMetricsResult.mae)}元/MWh` : "当前结果暂无可评价真实值"}。正式策略仍需竞价空间、边界、新能源、天气和规则数据。`,
     `3. 现货判断：在读取预测结果后，识别${topSpread.time || "--"}绝对价差最大，为${fmt(Math.abs(topSpread.spreadYuanMwh))}元/MWh；${topPrice.time || "--"}实时价格最高，为${fmt(topPrice.realtimePriceYuanMwh)}元/MWh。当前结论仅供人工复核。`,
     "4. 中长期：保留合约曲线优化、长周期价格预测、曲线分解和结果导出能力。",
     "5. 政策与拓扑：政策 AI 解读、网架拓扑和阻塞诊断模块已搭建页面与接口占位，等待真实政策、拓扑、潮流和边界数据。",
