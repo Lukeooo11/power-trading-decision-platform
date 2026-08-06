@@ -2251,7 +2251,7 @@ th {
           <section class="panel">
             <div class="panel-head">
               <div>
-                <h3>山东电价分析</h3>
+                <h3 id="priceAnalysisTitle">电价分析</h3>
                 <p id="priceAnalysisSubtitle">基于当前省份已接入的日前/实时小时价格，先看市场结构与风险时段，再结合客户负荷分析</p>
               </div>
               <span class="pill partial" id="priceAnalysisStatus">待加载</span>
@@ -3684,8 +3684,10 @@ function renderPriceAnalysis() {
   const priceQuality = marketData.dataQuality?.datasets?.spotPrices;
   const monthly = marketData.marketFeatures?.price?.monthly || [];
   const status = document.querySelector("#priceAnalysisStatus");
+  const title = document.querySelector("#priceAnalysisTitle");
   const subtitle = document.querySelector("#priceAnalysisSubtitle");
-  const label = market?.name || "当前省级市场";
+  const label = state.selectedMarket === "national" ? "全国" : (market?.name || "当前省级市场");
+  if (title) title.textContent = `${label}电价分析`;
   if (subtitle) subtitle.textContent = `${label}的日前/实时小时价格、月度特征和风险时段`;
   if (!priceRows.length) {
     if (status) status.textContent = "待补数据";
