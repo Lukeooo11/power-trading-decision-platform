@@ -2252,7 +2252,7 @@ th {
             <div class="panel-head">
               <div>
                 <h3>山东电价分析</h3>
-                <p>基于已接入日前/实时小时价格，先看市场结构与风险时段，再结合客户负荷分析</p>
+                <p id="priceAnalysisSubtitle">基于当前省份已接入的日前/实时小时价格，先看市场结构与风险时段，再结合客户负荷分析</p>
               </div>
               <span class="pill partial" id="priceAnalysisStatus">待加载</span>
             </div>
@@ -2297,7 +2297,7 @@ th {
             <div class="panel-head">
               <div>
                 <h3>客户负荷分析</h3>
-                <p>使用稳定客户代号查看真实日用电量、24点分时负荷和脱敏画像</p>
+                <p id="customerAnalysisSubtitle">使用当前省份的稳定客户代号查看日用电量、24点分时负荷和脱敏画像</p>
               </div>
               <span class="pill partial" id="customerCoverageStatus">待加载</span>
             </div>
@@ -3079,7 +3079,7 @@ async function init() {
     hydrateMediumControls();
     hydrateForecastDates();
     hydrateCustomerControls();
-    state.forecastResults = buildForecastResults(state.forecastDate);
+    state.forecastResults = state.forecastDate ? buildForecastResults(state.forecastDate) : [];
     renderStaticScaffold();
     renderAll();
     checkBackend();
@@ -3263,32 +3263,43 @@ async function fetchJsonOptional(path, fallback) {
 }
 
 function hydrateDates() {
+  const marketData = selectedMarketData();
   const dates = new Set();
-  if (state.settlement?.summary?.date) dates.add(state.settlement.summary.date);
-  state.loadDaily.forEach((row) => dates.add(row.date));
-  state.spotPrices.forEach((row) => dates.add(row.date));
-  state.forecast96.forEach((row) => row.date && dates.add(row.date));
+  if (marketData.settlement?.summary?.date) dates.add(marketData.settlement.summary.date);
+  marketData.loadDaily.forEach((row) => dates.add(row.date));
+  marketData.spotPrices.forEach((row) => dates.add(row.date));
+  if (state.selectedMarket === "SD") state.forecast96.forEach((row) => row.date && dates.add(row.date));
   state.dates = [...dates].sort();
-  state.selectedDate = state.settlement?.summary?.date || state.dates.at(-1) || "";
+  state.selectedDate = marketData.settlement?.summary?.date || state.dates.at(-1) || "";
   els.dateSelect.innerHTML = state.dates.map((date) => `<option value="${date}">${date}</option>`).join("");
   els.dateSelect.value = state.selectedDate;
 }
 
 function hydrateForecastDates() {
   const select = document.querySelector("#forecastDateSelect");
-  const priceDates = [...new Set(state.spotPrices.map((row) => row.date).filter(Boolean))].sort();
-  const dates = priceDates.length > 2 ? priceDates.slice(2) : [...new Set(state.forecast96.map((row) => row.date).filter(Boolean))].sort();
-  const modelDate = state.priceForecastResult?.market_date;
+  const marketData = selectedMarketData();
+  const priceDates = [...new Set(marketData.spotPrices.map((row) => row.date).filter(Boolean))].sort();
+  const dates = state.selectedMarket === "SD" && priceDates.length > 2
+    ? priceDates.slice(2)
+    : state.selectedMarket === "SD"
+      ? [...new Set(state.forecast96.map((row) => row.date).filter(Boolean))].sort()
+      : [];
+  const modelDate = state.selectedMarket === "SD" ? state.priceForecastResult?.market_date : "";
   if (modelDate && !dates.includes(modelDate)) dates.push(modelDate);
+  const latestObservedDate = priceDates.at(-1);
+  const nextTargetDate = latestObservedDate ? shiftDate(latestObservedDate, 1) : "";
+  if (nextTargetDate && !dates.includes(nextTargetDate)) dates.push(nextTargetDate);
   dates.sort();
   state.forecastDate = dates.at(-1) || "";
-  select.innerHTML = dates.map((date) => `<option value="${date}">${date}</option>`).join("");
+  const observedDateSet = new Set(priceDates);
+  select.innerHTML = dates.map((date) => `<option value="${date}">${date} · ${observedDateSet.has(date) ? "历史可回测" : "预测目标日"}</option>`).join("");
   select.value = state.forecastDate;
 }
 
 function hydrateMediumControls() {
   const select = document.querySelector("#monthSelect");
-  const observedMonths = [...new Set(state.spotPrices.map((row) => row.date?.slice(0, 7)).filter(Boolean))].sort();
+  const marketData = selectedMarketData();
+  const observedMonths = [...new Set(marketData.spotPrices.map((row) => row.date?.slice(0, 7)).filter(Boolean))].sort();
   const latestObservedMonth = observedMonths.at(-1) || state.selectedDate.slice(0, 7);
   const months = [...new Set([
     ...observedMonths,
@@ -3326,7 +3337,7 @@ function syncMediumToAnalysisDate() {
 
 function hydrateCustomerControls() {
   const select = document.querySelector("#customerAliasSelect");
-  const aliases = state.customerProfiles
+  const aliases = selectedMarketData().customerProfiles
     .map((row) => row.customerAlias)
     .filter(Boolean)
     .sort((left, right) => left.localeCompare(right, "zh-CN", { numeric: true }));
@@ -3338,7 +3349,7 @@ function hydrateCustomerControls() {
 
 function hydrateCustomerDates() {
   const select = document.querySelector("#customerDateSelect");
-  const dates = state.customerLoadHourly
+  const dates = selectedMarketData().customerLoadHourly
     .filter((row) => row.customerAlias === state.selectedCustomerAlias)
     .map((row) => row.date)
     .filter(Boolean)
@@ -3364,7 +3375,7 @@ function hydrateImportMarkets() {
   select.innerHTML = '<option value="">请选择省级市场</option>' + MARKET_PROFILES.map((market) => `
     <option value="${market.code}">${market.name}电力市场${market.stage === "sample" ? " · 真实数据（已脱敏）" : " · 模板就绪"}</option>
   `).join("");
-  select.value = state.selectedMarket !== "national" ? state.selectedMarket : "SD";
+  select.value = state.selectedMarket !== "national" ? state.selectedMarket : "";
 }
 
 function switchView(view) {
@@ -3397,6 +3408,12 @@ function switchView(view) {
 function selectMarket(code) {
   state.selectedMarket = code;
   els.marketSelect.value = code;
+  const importMarketSelect = document.querySelector("#importMarketSelect");
+  if (importMarketSelect) importMarketSelect.value = code === "national" ? "" : code;
+  hydrateDates();
+  hydrateForecastDates();
+  hydrateMediumControls();
+  hydrateCustomerControls();
   if (code === "national") {
     switchView("company");
   } else if (code === "SD") {
@@ -3404,12 +3421,38 @@ function selectMarket(code) {
   } else {
     switchView("desk");
   }
-  renderCompany();
-  updateMarketContext();
+  renderAll();
 }
 
 function selectedMarketProfile() {
   return MARKET_PROFILES.find((market) => market.code === state.selectedMarket) || null;
+}
+
+function selectedMarketData() {
+  if (state.selectedMarket !== "SD") {
+    return {
+      settlement: null,
+      loadDaily: [],
+      loadHourly: [],
+      spotPrices: [],
+      dataQuality: null,
+      marketFeatures: null,
+      customerProfiles: [],
+      customerLoadDaily: [],
+      customerLoadHourly: [],
+    };
+  }
+  return {
+    settlement: state.settlement,
+    loadDaily: state.loadDaily,
+    loadHourly: state.loadHourly,
+    spotPrices: state.spotPrices,
+    dataQuality: state.dataQuality,
+    marketFeatures: state.marketFeatures,
+    customerProfiles: state.customerProfiles,
+    customerLoadDaily: state.customerLoadDaily,
+    customerLoadHourly: state.customerLoadHourly,
+  };
 }
 
 function updateMarketContext() {
@@ -3604,11 +3647,22 @@ function renderAll() {
 }
 
 function renderCustomerAnalysis() {
-  const profile = state.customerProfiles.find((row) => row.customerAlias === state.selectedCustomerAlias);
-  const dailyRow = state.customerLoadDaily.find((row) => row.customerAlias === state.selectedCustomerAlias && row.date === state.selectedCustomerDate);
-  const hourlyRow = state.customerLoadHourly.find((row) => row.customerAlias === state.selectedCustomerAlias && row.date === state.selectedCustomerDate);
-  const availableDates = state.customerLoadDaily.filter((row) => row.customerAlias === state.selectedCustomerAlias).length;
-  document.querySelector("#customerCoverageStatus").textContent = `${state.customerProfiles.length}家 · ${state.customerLoadDaily.length}条日记录`;
+  const marketData = selectedMarketData();
+  const market = selectedMarketProfile();
+  const subtitle = document.querySelector("#customerAnalysisSubtitle");
+  const label = market?.name || "当前省级市场";
+  if (subtitle) subtitle.textContent = `${label}的稳定客户代号、日用电量、24点分时负荷和脱敏画像`;
+  if (!marketData.customerProfiles.length) {
+    document.querySelector("#customerCoverageStatus").textContent = `${label}暂无客户负荷数据`;
+    document.querySelector("#customerProfileKpis").innerHTML = sampleItem({ title: "暂无客户数据", body: `${label}尚未接入客户负荷数据，平台不会展示山东客户数据。` });
+    document.querySelector("#customerProfileDetails").innerHTML = "";
+    return;
+  }
+  const profile = marketData.customerProfiles.find((row) => row.customerAlias === state.selectedCustomerAlias);
+  const dailyRow = marketData.customerLoadDaily.find((row) => row.customerAlias === state.selectedCustomerAlias && row.date === state.selectedCustomerDate);
+  const hourlyRow = marketData.customerLoadHourly.find((row) => row.customerAlias === state.selectedCustomerAlias && row.date === state.selectedCustomerDate);
+  const availableDates = marketData.customerLoadDaily.filter((row) => row.customerAlias === state.selectedCustomerAlias).length;
+  document.querySelector("#customerCoverageStatus").textContent = `${marketData.customerProfiles.length}家 · ${marketData.customerLoadDaily.length}条日记录`;
   document.querySelector("#customerProfileKpis").innerHTML = [
     ["客户代号", profile?.customerAlias || "--", "真实名称不进入前端"],
     ["负荷类型", profile?.segment || "--", `${availableDates}个有效日期`],
@@ -3623,14 +3677,19 @@ function renderCustomerAnalysis() {
 }
 
 function renderPriceAnalysis() {
-  const priceRows = state.spotPrices || [];
+  const marketData = selectedMarketData();
+  const market = selectedMarketProfile();
+  const priceRows = marketData.spotPrices || [];
   const validRows = priceRows.filter((row) => Number.isFinite(row.realtimePriceYuanMwh));
-  const priceQuality = state.dataQuality?.datasets?.spotPrices;
-  const monthly = state.marketFeatures?.price?.monthly || [];
+  const priceQuality = marketData.dataQuality?.datasets?.spotPrices;
+  const monthly = marketData.marketFeatures?.price?.monthly || [];
   const status = document.querySelector("#priceAnalysisStatus");
+  const subtitle = document.querySelector("#priceAnalysisSubtitle");
+  const label = market?.name || "当前省级市场";
+  if (subtitle) subtitle.textContent = `${label}的日前/实时小时价格、月度特征和风险时段`;
   if (!priceRows.length) {
     if (status) status.textContent = "待补数据";
-    document.querySelector("#priceAnalysisKpis").innerHTML = sampleItem({ title: "暂无电价数据", body: "接入山东日前/实时小时价格后显示市场分析。" });
+    document.querySelector("#priceAnalysisKpis").innerHTML = sampleItem({ title: "暂无电价数据", body: `${label}尚未接入电价数据，平台不会展示山东电价数据。` });
     document.querySelector("#priceAnalysisMonthlyTable").innerHTML = "";
     document.querySelector("#priceAnalysisRiskSummary").innerHTML = "";
     return;
@@ -4924,11 +4983,12 @@ function runResourceDiagnosis() {
 }
 
 function renderDataQuality() {
-  const dates = new Set([...state.spotPrices.map((row) => row.date), ...state.loadHourly.map((row) => row.date)]);
-  if (!dates.size && state.settlement?.summary?.date) dates.add(state.settlement.summary.date);
+  const marketData = selectedMarketData();
+  const dates = new Set([...marketData.spotPrices.map((row) => row.date), ...marketData.loadHourly.map((row) => row.date)]);
+  if (!dates.size && marketData.settlement?.summary?.date) dates.add(marketData.settlement.summary.date);
   const rows = [...dates].sort().map((date) => {
     const prices = spotPriceRows(date);
-    const loadHours = state.loadHourly.filter((row) => row.date === date).length;
+    const loadHours = marketData.loadHourly.filter((row) => row.date === date).length;
     const missingRealtime = prices.filter((row) => !Number.isFinite(row.realtimePriceYuanMwh)).length;
     const checks = [];
     checks.push(prices.length === 24 ? "价格完整" : `价格${prices.length}点`);
@@ -5027,7 +5087,7 @@ function renderCharts() {
         : []),
     ]);
   }
-  const customerHourly = state.customerLoadHourly.find((row) => row.customerAlias === state.selectedCustomerAlias && row.date === state.selectedCustomerDate);
+  const customerHourly = selectedMarketData().customerLoadHourly.find((row) => row.customerAlias === state.selectedCustomerAlias && row.date === state.selectedCustomerDate);
   drawLineChart(chartEls.customerLoad, [
     { name: `${state.selectedCustomerAlias || "客户"}分时负荷`, color: "#0e6f78", values: customerHourly?.hourlyMwh || [] },
   ]);
@@ -5121,11 +5181,11 @@ function settlementSummary() {
 }
 
 function spotPriceRows(date = state.selectedDate) {
-  return state.spotPrices.filter((row) => row.date === date).sort((left, right) => left.time.localeCompare(right.time));
+  return selectedMarketData().spotPrices.filter((row) => row.date === date).sort((left, right) => left.time.localeCompare(right.time));
 }
 
 function portfolioLoadRows(date = state.selectedDate) {
-  return state.loadHourly.filter((row) => row.date === date).sort((left, right) => left.time.localeCompare(right.time));
+  return selectedMarketData().loadHourly.filter((row) => row.date === date).sort((left, right) => left.time.localeCompare(right.time));
 }
 
 function spotMarketRows(date = state.selectedDate) {
@@ -5157,6 +5217,7 @@ function spotMarketSummary(date = state.selectedDate) {
 
 function shiftDate(date, offset) {
   const value = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(value.getTime())) return "";
   value.setUTCDate(value.getUTCDate() + offset);
   return value.toISOString().slice(0, 10);
 }
@@ -5487,7 +5548,9 @@ function exportResourceDiagnosis() {
 }
 
 function exportImportRecords() {
-  const rows = state.importRecords.map((row) => [row.time, row.customer || "", row.domain, row.fileName, row.version, row.status, row.message]);
+  const rows = state.importRecords
+    .filter((row) => (row.marketCode || "SD") === state.selectedMarket)
+    .map((row) => [row.time, row.customer || "", row.domain, row.fileName, row.version, row.status, row.message]);
   downloadCsv("客户数据导入记录.csv", [["时间", "客户", "数据域", "文件名", "版本", "状态", "校验信息"], ...rows]);
 }
 
@@ -5590,6 +5653,7 @@ function addImportRecord(domain, fileName, status, message, customer = CUSTOMER.
   state.importRecords.unshift({
     time: new Date().toLocaleString("zh-CN", { hour12: false }),
     customer,
+    marketCode: state.selectedMarket,
     domain,
     fileName,
     version: `v${state.importRecords.filter((row) => row.domain === domain).length + 1}`,
@@ -5601,7 +5665,8 @@ function addImportRecord(domain, fileName, status, message, customer = CUSTOMER.
 function renderImportRecords() {
   const table = document.querySelector("#importRecordTable");
   if (!table) return;
-  table.innerHTML = state.importRecords.map((row) => `
+  const records = state.importRecords.filter((row) => (row.marketCode || "SD") === state.selectedMarket);
+  table.innerHTML = records.length ? records.map((row) => `
     <tr>
       <td>${escapeHtml(row.time)}</td>
       <td>${escapeHtml(row.customer || "--")}</td>
@@ -5611,7 +5676,7 @@ function renderImportRecords() {
       <td><span class="tag ${importStatusClass(row.status)}">${escapeHtml(row.status)}</span></td>
       <td>${escapeHtml(row.message)}</td>
     </tr>
-  `).join("");
+  `).join("") : `<tr><td colspan="7">${state.selectedMarket === "national" ? "全国视图不展示省级导入记录，请先选择具体省份。" : "该省份暂无数据导入记录。"}</td></tr>`;
 }
 
 function importStatusClass(status) {
