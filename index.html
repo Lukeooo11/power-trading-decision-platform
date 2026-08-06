@@ -2251,6 +2251,51 @@ th {
           <section class="panel">
             <div class="panel-head">
               <div>
+                <h3>山东电价分析</h3>
+                <p>基于已接入日前/实时小时价格，先看市场结构与风险时段，再结合客户负荷分析</p>
+              </div>
+              <span class="pill partial" id="priceAnalysisStatus">待加载</span>
+            </div>
+            <div class="metric-row" id="priceAnalysisKpis"></div>
+            <div class="grid two-one top-gap">
+              <div>
+                <div class="panel-head compact-head">
+                  <div>
+                    <h4>月度价格特征</h4>
+                    <p>日前/实时均价、价差、负价和高价时段</p>
+                  </div>
+                </div>
+                <div class="table-wrap compact-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>月份</th>
+                        <th>日前均价</th>
+                        <th>实时均价</th>
+                        <th>平均价差</th>
+                        <th>负价点数</th>
+                        <th>高价点数</th>
+                      </tr>
+                    </thead>
+                    <tbody id="priceAnalysisMonthlyTable"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div>
+                <div class="panel-head compact-head">
+                  <div>
+                    <h4>小时风险摘要</h4>
+                    <p>用于后续叠加客户负荷，不直接代表交易建议</p>
+                  </div>
+                </div>
+                <div class="sample-list" id="priceAnalysisRiskSummary"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
                 <h3>客户负荷分析</h3>
                 <p>使用稳定客户代号查看真实日用电量、24点分时负荷和脱敏画像</p>
               </div>
@@ -3547,6 +3592,7 @@ function renderAll() {
   if (!state.mediumResults.length) runMediumOptimization({ silent: true });
   else renderMediumResults();
   renderDataQuality();
+  renderPriceAnalysis();
   renderCustomerAnalysis();
   renderLossAnalysis();
   document.querySelector("#dataInventoryTable").innerHTML = buildInventoryRows();
@@ -3573,6 +3619,71 @@ function renderCustomerAnalysis() {
     sampleItem({ title: "峰值时段", body: profile ? `${profile.peakHour}，平均峰值${fmt(profile.peakHourlyAverageMwh)} MWh。` : "暂无画像。" }),
     sampleItem({ title: "工作日与周末", body: profile ? `工作日均值${fmt(profile.weekdayAverageMwh)} MWh，周末均值${fmt(profile.weekendAverageMwh)} MWh。` : "暂无画像。" }),
     sampleItem({ title: "数据边界", body: hourlyRow ? "当前曲线来自客户真实分时负荷，客户名称已替换为稳定代号。" : "该客户当前日期缺少分时负荷。" }),
+  ].join("");
+}
+
+function renderPriceAnalysis() {
+  const priceRows = state.spotPrices || [];
+  const validRows = priceRows.filter((row) => Number.isFinite(row.realtimePriceYuanMwh));
+  const priceQuality = state.dataQuality?.datasets?.spotPrices;
+  const monthly = state.marketFeatures?.price?.monthly || [];
+  const status = document.querySelector("#priceAnalysisStatus");
+  if (!priceRows.length) {
+    if (status) status.textContent = "待补数据";
+    document.querySelector("#priceAnalysisKpis").innerHTML = sampleItem({ title: "暂无电价数据", body: "接入山东日前/实时小时价格后显示市场分析。" });
+    document.querySelector("#priceAnalysisMonthlyTable").innerHTML = "";
+    document.querySelector("#priceAnalysisRiskSummary").innerHTML = "";
+    return;
+  }
+  const dayAheadAverage = mean(validRows.map((row) => row.dayAheadPriceYuanMwh));
+  const realtimeAverage = mean(validRows.map((row) => row.realtimePriceYuanMwh));
+  const averageSpread = mean(validRows.map((row) => row.spreadYuanMwh));
+  const negativeCount = validRows.filter((row) => row.realtimePriceYuanMwh < 0).length;
+  const highCount = validRows.filter((row) => row.realtimePriceYuanMwh >= 500).length;
+  const monthlyHighCounts = validRows.reduce((counts, row) => {
+    const month = row.date?.slice(0, 7);
+    if (month) counts[month] = (counts[month] || 0) + (row.realtimePriceYuanMwh >= 500 ? 1 : 0);
+    return counts;
+  }, {});
+  if (status) status.textContent = `${priceRows.length}点 · ${priceQuality?.dateRange?.join(" 至 ") || "山东小时价格"}`;
+  document.querySelector("#priceAnalysisKpis").innerHTML = [
+    ["价格点数", `${priceRows.length} 点`, `${priceQuality?.missingRealtimeCount || 0} 个实时点缺失`],
+    ["日前均价", `${fmt(dayAheadAverage)} 元/MWh`, "有效实时价格点口径"],
+    ["实时均价", `${fmt(realtimeAverage)} 元/MWh`, `负价${fmt((negativeCount / Math.max(1, validRows.length)) * 100)}%`],
+    ["平均价差", `${signed(averageSpread)} 元/MWh`, `高价${fmt((highCount / Math.max(1, validRows.length)) * 100)}%`],
+  ].map(([label, value, note]) => `<article><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+  document.querySelector("#priceAnalysisMonthlyTable").innerHTML = monthly.map((row) => `
+    <tr>
+      <td>${row.month?.replace("2026-", "") || "--"}</td>
+      <td>${fmt(row.averageDayAheadPriceYuanMwh)}</td>
+      <td>${fmt(row.averageRealtimePriceYuanMwh)}</td>
+      <td>${signed(row.averageSpreadYuanMwh)}</td>
+      <td>${row.negativeRealtimePricePointCount ?? "--"}</td>
+      <td>${monthlyHighCounts[row.month] ?? "--"}</td>
+    </tr>
+  `).join("");
+  const hourMap = new Map();
+  validRows.forEach((row) => {
+    const bucket = hourMap.get(row.time) || { time: row.time, points: 0, negative: 0, high: 0, absoluteSpread: [] };
+    bucket.points += 1;
+    if (row.realtimePriceYuanMwh < 0) bucket.negative += 1;
+    if (row.realtimePriceYuanMwh >= 500) bucket.high += 1;
+    bucket.absoluteSpread.push(Math.abs(row.spreadYuanMwh));
+    hourMap.set(row.time, bucket);
+  });
+  const hourRisk = [...hourMap.values()].map((row) => ({
+    ...row,
+    negativeRatio: row.negative / row.points,
+    highRatio: row.high / row.points,
+    averageAbsoluteSpread: mean(row.absoluteSpread),
+  }));
+  const topNegative = [...hourRisk].sort((a, b) => b.negativeRatio - a.negativeRatio).slice(0, 3);
+  const topHigh = [...hourRisk].sort((a, b) => b.highRatio - a.highRatio).slice(0, 3);
+  const topSpread = [...hourRisk].sort((a, b) => b.averageAbsoluteSpread - a.averageAbsoluteSpread).slice(0, 3);
+  document.querySelector("#priceAnalysisRiskSummary").innerHTML = [
+    sampleItem({ title: "负价窗口", body: `${topNegative.map((row) => `${row.time}（${fmt(row.negativeRatio * 100)}%）`).join("、")}；建议叠加新能源和客户负荷复核。` }),
+    sampleItem({ title: "高价窗口", body: `${topHigh.map((row) => `${row.time}（${fmt(row.highRatio * 100)}%）`).join("、")}；建议叠加持仓和合同覆盖复核。` }),
+    sampleItem({ title: "大价差窗口", body: `${topSpread.map((row) => `${row.time}（平均绝对价差${fmt(row.averageAbsoluteSpread)}）`).join("、")}；仅作数据层风险提示。` }),
   ].join("");
 }
 
