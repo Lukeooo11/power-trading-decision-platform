@@ -2990,6 +2990,7 @@ const ORG_ROLES = {
 };
 
 const MARKET_DEPENDENT_VIEWS = new Set(["desk", "spot", "forecast", "medium", "grid", "report", "loss"]);
+const DAILY_STRATEGY_CONTROL_VIEWS = new Set(["desk", "spot", "medium"]);
 
 const DATA_SOURCES = {
   settlement: "#demo-settlement",
@@ -3789,7 +3790,7 @@ function switchView(view) {
   document.querySelector("#marketPendingState").hidden = !pending;
   if (!pending) document.querySelector(`#${view}View`).classList.add("active");
   els.viewTitle.textContent = pending ? `${market ? market.name : "全国"} · ${titles[view]}` : titles[view];
-  document.querySelector("#globalControls").hidden = view === "company" || view === "forecast" || pending;
+  document.querySelector("#globalControls").hidden = !DAILY_STRATEGY_CONTROL_VIEWS.has(view) || pending;
   updateMarketContext();
   renderCharts();
 }
