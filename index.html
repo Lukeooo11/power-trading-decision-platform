@@ -286,6 +286,12 @@ h3 {
   font-weight: 700;
 }
 
+.primary-action:disabled,
+.secondary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .inline-actions {
   display: flex;
   flex-wrap: wrap;
@@ -797,6 +803,12 @@ canvas {
   padding: 13px;
 }
 
+.desk-entry.active {
+  border-color: var(--teal);
+  background: #eaf4f1;
+  box-shadow: inset 0 0 0 1px rgba(14, 111, 120, 0.12);
+}
+
 .desk-entry p,
 .sop-step p {
   margin: 0;
@@ -810,10 +822,160 @@ canvas {
   margin-top: auto;
 }
 
+.terminal-integration-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.82fr) minmax(420px, 1.18fr);
+  gap: 18px;
+  padding: 14px 0 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.terminal-overview,
+.terminal-readiness-block {
+  min-width: 0;
+}
+
+.terminal-meta {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.terminal-meta > div {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 12px;
+  background: #fbfcfb;
+  border-bottom: 1px solid var(--line);
+}
+
+.terminal-meta > div:last-child {
+  border-bottom: 0;
+}
+
+.terminal-meta span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.terminal-meta strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.terminal-actions {
+  justify-content: flex-start;
+  margin-top: 12px;
+}
+
+.subsection-head,
+.terminal-flow-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.subsection-head {
+  min-height: 32px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.subsection-head h4,
+.terminal-flow-head h4 {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+.subsection-head span {
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.terminal-readiness-list {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.terminal-readiness-item {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 10px;
+  background: #fbfcfb;
+  border-bottom: 1px solid var(--line);
+}
+
+.terminal-readiness-item:last-child {
+  border-bottom: 0;
+}
+
+.terminal-readiness-item strong,
+.terminal-readiness-item small {
+  display: block;
+}
+
+.terminal-readiness-item strong {
+  font-size: 13px;
+}
+
+.terminal-readiness-item small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.readiness-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.readiness-dot.ok {
+  background: var(--green);
+}
+
+.readiness-dot.partial {
+  background: var(--amber);
+}
+
+.readiness-dot.missing {
+  background: var(--red);
+}
+
+.terminal-flow-head {
+  margin: 16px 0 10px;
+}
+
+.terminal-flow-head p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .sop-flow {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
+}
+
+.terminal-sop-flow {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .sop-step {
@@ -1477,6 +1639,143 @@ th {
   min-height: 360px;
 }
 
+.report-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.report-kpi {
+  min-width: 0;
+  min-height: 104px;
+  padding: 13px;
+  border-left: 3px solid var(--teal);
+  background: #f5f8f6;
+}
+
+.report-kpi.pending {
+  border-left-color: var(--amber);
+}
+
+.report-kpi span,
+.report-kpi strong,
+.report-kpi small {
+  display: block;
+}
+
+.report-kpi span,
+.report-kpi small {
+  color: var(--muted);
+}
+
+.report-kpi span {
+  font-size: 12px;
+}
+
+.report-kpi strong {
+  margin: 12px 0 6px;
+  overflow-wrap: anywhere;
+  font-size: 22px;
+  line-height: 1.05;
+}
+
+.report-kpi small {
+  font-size: 11px;
+}
+
+.report-chart-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chart-frame-report {
+  height: 300px;
+  min-height: 300px;
+}
+
+.report-metric-notes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.report-metric-notes span {
+  min-width: 0;
+  padding: 8px 9px;
+  background: #f3f7f5;
+}
+
+.report-metric-notes small,
+.report-metric-notes strong {
+  display: block;
+}
+
+.report-metric-notes small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.report-metric-notes strong {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.report-table {
+  min-width: 680px;
+}
+
+.report-comparison-wrap .report-table {
+  min-width: 540px;
+}
+
+.report-data-list {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.report-data-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 10px 11px;
+  background: #fbfcfb;
+  border-bottom: 1px solid var(--line);
+}
+
+.report-data-item:last-child {
+  border-bottom: 0;
+}
+
+.report-data-item p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.report-text-details {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.report-text-details summary {
+  cursor: pointer;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.report-text-details .report-preview {
+  margin-top: 12px;
+  min-height: 0;
+}
+
 .toast {
   position: fixed;
   right: 18px;
@@ -1536,12 +1835,20 @@ th {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .report-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .desk-entry-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .sop-flow {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .terminal-sop-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .review-console {
@@ -1613,6 +1920,27 @@ th {
   .architecture-flow,
   .company-foundation {
     grid-template-columns: 1fr;
+  }
+
+  .terminal-integration-layout,
+  .report-chart-grid,
+  .report-kpi-grid,
+  .report-metric-notes {
+    grid-template-columns: 1fr;
+  }
+
+  .terminal-meta > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .terminal-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .terminal-actions button {
+    width: 100%;
   }
 
   .sidebar-context,
@@ -1781,39 +2109,6 @@ th {
           <section class="panel">
             <div class="panel-head">
               <div>
-                <h3>交易流程入口</h3>
-                <p>按当前省份和交易主体加载对应市场流程，未接入的流程只保留接口</p>
-              </div>
-              <span class="pill partial" id="deskSopStatus">辅助决策</span>
-            </div>
-            <div class="desk-entry-grid" id="deskTradingEntries"></div>
-            <div class="sop-flow" id="deskSopFlow"></div>
-            <div class="review-console">
-              <div class="review-status-block">
-                <span>策略审核状态</span>
-                <strong id="deskReviewStatus">尚未运行预测</strong>
-                <small id="deskReviewMeta">运行预测后可提交人工复核</small>
-              </div>
-              <label class="field compact-field">
-                <span>审核人</span>
-                <input id="deskReviewerInput" type="text" placeholder="交易员姓名" />
-              </label>
-              <label class="field review-reason-field">
-                <span>修改或拒绝原因</span>
-                <input id="deskReviewReasonInput" type="text" placeholder="修改、拒绝时必填" />
-              </label>
-              <div class="inline-actions review-actions">
-                <button class="secondary-action" type="button" data-review-action="SUBMIT">提交复核</button>
-                <button class="secondary-action" type="button" data-review-action="APPROVE">批准</button>
-                <button class="secondary-action" type="button" data-review-action="MODIFY">修改</button>
-                <button class="secondary-action" type="button" data-review-action="REJECT">拒绝</button>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
-              <div>
                 <h3>公司级上线底座</h3>
                 <p>业务模块已按全国多市场组织，正式全员使用还需接入企业基础设施</p>
               </div>
@@ -1861,6 +2156,73 @@ th {
                <small>真实数据域</small>
             </article>
           </div>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>交易工作台入口</h3>
+                <p>按交易品种进入策略与执行流程；当前阶段只生成辅助建议并保留人工复核</p>
+              </div>
+              <span class="pill partial" id="deskSopStatus">交易终端待接入</span>
+            </div>
+            <div class="desk-entry-grid" id="deskTradingEntries"></div>
+          </section>
+
+          <section class="panel trading-terminal-panel">
+            <div class="panel-head">
+              <div>
+                <h3>交易策略与执行终端</h3>
+                <p>承接日滚动交易 SOP、策略计算、人工调整、订单记录和真实结果复盘</p>
+              </div>
+              <span class="pill wait" id="tradingTerminalStatus">等待服务地址</span>
+            </div>
+            <div class="terminal-integration-layout">
+              <div class="terminal-overview">
+                <div class="terminal-meta" id="tradingTerminalMeta"></div>
+                <div class="inline-actions terminal-actions">
+                  <button class="secondary-action" id="checkTradingTerminalBtn" type="button">检查连接</button>
+                  <button class="secondary-action" id="viewTradingContractBtn" type="button">查看接口</button>
+                  <button class="primary-action" id="openTradingTerminalBtn" type="button" disabled>进入交易流程</button>
+                </div>
+              </div>
+              <div class="terminal-readiness-block">
+                <div class="subsection-head">
+                  <h4>运行输入准备度</h4>
+                  <span id="tradingReadinessCount">0/5</span>
+                </div>
+                <div class="terminal-readiness-list" id="tradingReadinessList"></div>
+              </div>
+            </div>
+            <div class="terminal-flow-head">
+              <div>
+                <h4 id="tradingFlowTitle">日前 / 日滚动交易链路</h4>
+                <p id="tradingFlowBoundary">当前仅展示接入结构，未连接交易中心，不执行自动下单。</p>
+              </div>
+              <span class="tag wait" id="tradingFlowStatus">规则适配待确认</span>
+            </div>
+            <div class="sop-flow terminal-sop-flow" id="deskSopFlow"></div>
+            <div class="review-console">
+              <div class="review-status-block">
+                <span>策略审核状态</span>
+                <strong id="deskReviewStatus">尚未运行预测</strong>
+                <small id="deskReviewMeta">运行预测后可提交人工复核</small>
+              </div>
+              <label class="field compact-field">
+                <span>审核人</span>
+                <input id="deskReviewerInput" type="text" placeholder="交易员姓名" />
+              </label>
+              <label class="field review-reason-field">
+                <span>修改或拒绝原因</span>
+                <input id="deskReviewReasonInput" type="text" placeholder="修改、拒绝时必填" />
+              </label>
+              <div class="inline-actions review-actions">
+                <button class="secondary-action" type="button" data-review-action="SUBMIT">提交复核</button>
+                <button class="secondary-action" type="button" data-review-action="APPROVE">批准</button>
+                <button class="secondary-action" type="button" data-review-action="MODIFY">修改</button>
+                <button class="secondary-action" type="button" data-review-action="REJECT">拒绝</button>
+              </div>
+            </div>
+          </section>
 
           <div class="grid two-one">
             <section class="panel">
@@ -2539,31 +2901,121 @@ th {
         </section>
 
         <section class="view" id="reportView">
+          <section class="panel report-summary-panel">
+            <div class="panel-head">
+              <div>
+                <h3>复盘总览</h3>
+                <p id="reportSubtitle">按价差、预测误差、真实收益和仿真收益直接对比</p>
+              </div>
+              <div class="inline-actions">
+                <span class="pill partial" id="reportDataStatus">真实数据（已脱敏）</span>
+                <button class="secondary-action" id="copyReportBtn" type="button">复制文字底稿</button>
+                <button class="primary-action" id="exportReportBtn" type="button">导出 Markdown</button>
+              </div>
+            </div>
+            <div class="report-kpi-grid" id="reportKpis"></div>
+          </section>
+
+          <div class="grid report-chart-grid">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>24点价差</h3>
+                  <p id="reportSpreadSubtitle">日前价格减实时价格，正负方向分色展示</p>
+                </div>
+                <span class="pill ok">真实价格</span>
+              </div>
+              <div class="chart-frame chart-frame-report">
+                <canvas id="reportSpreadChart" height="300" data-chart-height="300"></canvas>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>预测误差</h3>
+                  <p id="reportErrorSubtitle">最近30天滚动回测，单位为元/MWh</p>
+                </div>
+                <span class="pill partial">历史回测</span>
+              </div>
+              <div class="chart-frame chart-frame-report">
+                <canvas id="reportErrorChart" height="300" data-chart-height="300"></canvas>
+              </div>
+              <div class="report-metric-notes" id="reportMetricNotes"></div>
+            </section>
+          </div>
+
           <div class="grid two-one">
             <section class="panel">
               <div class="panel-head">
                 <div>
-                  <h3>报告复盘</h3>
-                    <p>当前生成浏览器报告草稿；真实运行、审核、成交和结算接入后再落库复盘</p>
+                  <h3>收益趋势</h3>
+                  <p>真实月度结算收益与后续仿真策略收益使用同一口径比较</p>
                 </div>
-                <div class="inline-actions">
-                  <button class="secondary-action" id="copyReportBtn" type="button">复制报告文本</button>
-                  <button class="primary-action" id="exportReportBtn" type="button">导出 Markdown</button>
-                </div>
+                <span class="pill wait" id="reportProfitStatus">仿真收益待接入</span>
               </div>
-              <div class="report-preview" id="reportPreview"></div>
+              <div class="chart-frame chart-frame-report">
+                <canvas id="reportProfitChart" height="300" data-chart-height="300"></canvas>
+              </div>
             </section>
+
             <section class="panel">
               <div class="panel-head">
                 <div>
-                  <h3>客户案例摘要</h3>
-                    <p>客户结算案例-001作为平台能力的附加业务案例</p>
+                  <h3>真实交易与仿真策略</h3>
+                  <p>同一交易日、同一结算口径下再计算增益</p>
                 </div>
               </div>
-              <div class="sample-list" id="executionSampleList"></div>
-              <div class="sample-list top-gap" id="templateSampleList"></div>
+              <div class="table-wrap report-comparison-wrap">
+                <table class="report-table">
+                  <thead><tr><th>指标</th><th>真实交易</th><th>仿真策略</th><th>差额</th></tr></thead>
+                  <tbody id="reportComparisonTable"></tbody>
+                </table>
+              </div>
             </section>
           </div>
+
+          <div class="grid two-one">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>关键差异时段</h3>
+                  <p>优先呈现价差和预测偏差最大的时段，便于调整次日 SOP</p>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="report-table">
+                  <thead><tr><th>时段</th><th>日前价</th><th>实时价</th><th>价差</th><th>预测误差</th><th>复盘关注</th></tr></thead>
+                  <tbody id="reportDifferenceTable"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>数据边界</h3>
+                  <p>区分已接入事实与仍待补充的策略、执行数据</p>
+                </div>
+              </div>
+              <div class="report-data-list" id="executionSampleList"></div>
+              <div class="report-data-list top-gap" id="templateSampleList"></div>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>复盘结论</h3>
+                <p>把主要差异转成下一交易日可执行的复核事项</p>
+              </div>
+            </div>
+            <div class="sample-grid report-findings" id="reportFindings"></div>
+            <details class="report-text-details">
+              <summary>查看文字底稿</summary>
+              <div class="report-preview" id="reportPreview"></div>
+            </details>
+          </section>
         </section>
 
         <section class="view" id="lossView">
@@ -3162,6 +3614,11 @@ const INTERFACES = [
   { path: "/api/integration/forecast-results", use: "接收旧版预测结果", method: "POST", input: "predictionBatchId,modelVersion,intervalMinutes,points", output: "质量状态、可否进入现货判断、结果编号", status: "旧版兼容" },
   { path: "/api/integration/strategy-results", use: "接收旧版交易辅助策略", method: "POST", input: "strategyBatchId,predictionBatchId,points", output: "质量状态、人工复核状态、结果编号", status: "旧版兼容" },
   { path: "/api/adapters/normalize", use: "外部系统字段适配", method: "POST", input: "sourceSystem,dataDomain,fieldMapping,records", output: "统一字段、校验错误、脱敏说明", status: "已接入" },
+  { path: "/api/integration/trading-terminal/status", use: "交易终端连接与能力检查", method: "GET", input: "market_code,trading_subject", output: "服务版本、支持品种、鉴权和插件状态", status: "契约预留；等待终端服务地址" },
+  { path: "/api/integration/trading-days", use: "创建外部交易日", method: "POST", input: "market_code,business_date,trade_type,initial_position,data_version", output: "trade_day_id、输入质量和流程状态", status: "契约预留；等待终端Input样例" },
+  { path: "/api/integration/trading-days/{trade_day_id}/strategy-runs", use: "运行交易策略链路", method: "POST", input: "prediction_run_id,market_events,risk_limits,parameters", output: "strategy_run_id、建议、依据和人工复核状态", status: "契约预留；输入不全必须HOLD" },
+  { path: "/api/integration/trading-days/{trade_day_id}/events", use: "回传申报成交与人工调整", method: "POST", input: "event_type,period,price,energy,operator,reason", output: "event_id、仓位和审计版本", status: "契约预留；未接交易中心" },
+  { path: "/api/integration/trading-days/{trade_day_id}/comparison", use: "真实交易与仿真策略复盘", method: "GET", input: "trade_day_id,settlement_version", output: "真实收益、仿真收益、差额、归因和SOP建议", status: "契约预留；等待执行与结算数据" },
   { path: "/api/strategy/review", use: "策略陪跑与复盘", method: "POST", input: "date,strategy,manualAdjustments,result", output: "执行评价、归因、次日建议", status: "等待执行数据" },
   { path: "/api/finance/settlement", use: "批零收益与财务口径", method: "GET/POST", input: "month,settlementItems", output: "收入、成本、偏差、净收益", status: "接口预留" },
   { path: "/api/analytics/profit-loss-analysis", use: "结算成本与盈亏情景分析", method: "GET", input: "market_code,date,revenue_price,other_cost", output: "成本拆解、基准差额、小时贡献、收入情景", status: "后端已实现；网页当前本地同口径计算" },
@@ -3267,6 +3724,73 @@ const SPOT_PAGES = [
   { key: "data", name: "客户案例", desc: "结算单附加分析" },
 ];
 
+const TRADING_WORKBENCHES = {
+  dayAhead: {
+    name: "日前 / 日滚动",
+    shortName: "日前交易",
+    status: "流程已定义",
+    description: "确认初始仓位，引用市场数据与价格预测，生成集中竞价和撮合建议。",
+    steps: [
+      ["01", "创建交易日", "确定交易日期、市场、主体和日滚动批次。"],
+      ["02", "确认初始仓位", "上传或手工确认年月旬交易形成的初始仓位。"],
+      ["03", "准备市场数据", "校验历史事实、统调负荷、新能源、联络线和分区价格。"],
+      ["04", "解析市场事件", "登记新能源波动、检修等非结构化事件并保留来源。"],
+      ["05", "引用价格预测", "读取24/96点预测、回测指标、相似日和模型依据。"],
+      ["06", "生成竞价策略", "形成集中竞价方案；允许人工修改并保存原因。"],
+      ["07", "跟踪撮合执行", "记录订单、撤单、盘口快照、成交和仓位变化。"],
+      ["08", "关闭并复盘", "对比真实交易与仿真策略，形成次日SOP调整。"],
+    ],
+  },
+  tenDay: {
+    name: "旬交易",
+    shortName: "旬交易",
+    status: "规则待适配",
+    description: "承接旬度需求、持仓缺口、集中竞价与分解曲线，复用通用交易链路。",
+    steps: [
+      ["01", "创建旬交易批次", "确定交易旬、市场规则版本和授权主体。"],
+      ["02", "确认旬度持仓", "读取已有年月合约和旬度初始敞口。"],
+      ["03", "准备需求预测", "汇总负荷或出力预测及关键边界条件。"],
+      ["04", "识别约束事件", "登记检修、阻塞和供需变化等受控事件。"],
+      ["05", "形成价格研判", "引用中长期与现货预测，评估分时风险。"],
+      ["06", "生成交易方案", "输出电量、价格和分解曲线建议。"],
+      ["07", "人工复核执行", "保存调整、审批、成交和持仓变化。"],
+      ["08", "旬度复盘", "比较计划、成交与结算结果并更新参数。"],
+    ],
+  },
+  monthly: {
+    name: "月度交易",
+    shortName: "月度交易",
+    status: "规则待适配",
+    description: "承接月度合同电量、价格预测、曲线优化、交易执行和收益复盘。",
+    steps: [
+      ["01", "创建月度批次", "确定交易月份、交易品种和规则版本。"],
+      ["02", "汇总合同持仓", "读取年度、月度和零售用电义务。"],
+      ["03", "准备月度预测", "汇总负荷、价格和供需边界预测。"],
+      ["04", "评估月度敞口", "按小时检查缺口、限额和偏差风险。"],
+      ["05", "优化交易曲线", "生成月度电量、价格和24点分解建议。"],
+      ["06", "形成报价方案", "输出可解释方案并保留备选情景。"],
+      ["07", "复核成交结果", "记录人工调整、申报、成交和持仓更新。"],
+      ["08", "月度复盘", "比较真实经营与仿真策略收益。"],
+    ],
+  },
+  annual: {
+    name: "年度交易",
+    shortName: "年度交易",
+    status: "规则待适配",
+    description: "承接年度预算、合同组合、风险限额和分月分时计划。",
+    steps: [
+      ["01", "创建年度批次", "确定年度交易范围和规则版本。"],
+      ["02", "汇总年度预算", "读取客户需求、资源计划和既有合同。"],
+      ["03", "准备长期预测", "形成年度负荷、价格和供需情景。"],
+      ["04", "设置风险限额", "配置价格、敞口、信用和偏差边界。"],
+      ["05", "优化合同组合", "比较年度品种、期限和曲线组合。"],
+      ["06", "生成年度方案", "输出主方案、备选方案和敏感性分析。"],
+      ["07", "审批与执行", "保存审批、交易结果和合同版本。"],
+      ["08", "滚动复盘", "按月更新预测、持仓和年度计划。"],
+    ],
+  },
+};
+
 const state = {
   settlement: null,
   loadDaily: [],
@@ -3300,6 +3824,8 @@ const state = {
   lossRevenuePrice: null,
   lossOtherCost: 0,
   activeLossTab: "monthly",
+  activeTradingEntry: "dayAhead",
+  tradingTerminalUrl: "",
   lossMonth: "",
   lossMonthlyStatus: "all",
   lossMonthlySort: "profit-asc",
@@ -3348,6 +3874,9 @@ const chartEls = {
   lossCustomer: document.querySelector("#lossCustomerChart"),
   settlementMonthly: document.querySelector("#settlementMonthlyChart"),
   customerLoad: document.querySelector("#customerLoadChart"),
+  reportSpread: document.querySelector("#reportSpreadChart"),
+  reportError: document.querySelector("#reportErrorChart"),
+  reportProfit: document.querySelector("#reportProfitChart"),
 };
 
 init();
@@ -3441,9 +3970,14 @@ function bindEvents() {
     if (button) switchView(button.dataset.deskAction);
   });
   document.querySelector("#deskTradingEntries").addEventListener("click", (event) => {
-    const button = event.target.closest("[data-desk-action]");
-    if (button) switchView(button.dataset.deskAction);
+    const button = event.target.closest("[data-trading-entry]");
+    if (!button) return;
+    state.activeTradingEntry = button.dataset.tradingEntry;
+    renderDesk();
   });
+  document.querySelector("#checkTradingTerminalBtn").addEventListener("click", checkTradingTerminalConnection);
+  document.querySelector("#viewTradingContractBtn").addEventListener("click", () => switchView("interfaces"));
+  document.querySelector("#openTradingTerminalBtn").addEventListener("click", openTradingTerminal);
   document.querySelector(".review-actions").addEventListener("click", (event) => {
     const button = event.target.closest("[data-review-action]");
     if (button) reviewForecastRun(button.dataset.reviewAction);
@@ -4203,6 +4737,8 @@ function renderSpotTabs() {
 function renderDesk() {
   const marketData = selectedMarketData();
   const market = selectedMarketProfile();
+  renderTradingWorkbenchEntries();
+  renderTradingTerminal();
   if (!hasConnectedMarketData()) {
     setText("#deskDayAvg", "--");
     setText("#deskRtAvg", "--");
@@ -4212,8 +4748,6 @@ function renderDesk() {
     setText("#deskMarketSubtitle", `${market?.name || "当前省级市场"} · 数据待接入`);
     document.querySelector("#deskMarketStatus").textContent = "数据待接入";
     document.querySelector("#deskWorklist").innerHTML = `<article class="work-item"><strong>${market?.name || "当前省级市场"}模板已就绪</strong><p>当前省份和交易主体没有已接入的真实价格、负荷或结算数据，平台不会复用山东数据。</p></article>`;
-    document.querySelector("#deskTradingEntries").innerHTML = `<article class="desk-entry"><span class="tag wait">接口预留</span><strong>等待数据接入</strong><p>接入本市场的规则、价格、负荷、持仓和交易执行数据后启用交易流程。</p></article>`;
-    document.querySelector("#deskSopFlow").innerHTML = "";
     els.platformReadiness.textContent = `${TRADING_SUBJECTS[state.selectedSubject].name} · 模板就绪`;
     els.platformCoverage.textContent = "该省份与交易主体没有载入其他市场数据。";
     renderDeskReview();
@@ -4261,35 +4795,96 @@ function renderDesk() {
       ${task.action ? `<button class="table-action top-gap" type="button" data-desk-action="${task.action}">${task.actionLabel}</button>` : ""}
     </article>
   `).join("");
+  renderDeskReview();
+}
 
-  const entries = [
-    { title: "现货与日前", status: "部分接入", body: "读取价格预测、风险区间和市场信息，形成可复核的现货判断。", action: "spot" },
-    { title: "旬交易", status: "接口预留", body: "确认初始持仓、旬度需求和分解曲线，等待省级规则与真实持仓。", action: "medium" },
-    { title: "月度交易", status: "接口预留", body: "承接月度合同电量、价格和曲线优化，保留人工调整记录。", action: "medium" },
-    { title: "年度交易", status: "接口预留", body: "承接年度电量预算、合同组合和风险限额，等待年度交易规则。", action: "medium" },
+function renderTradingWorkbenchEntries() {
+  const connected = hasConnectedMarketData();
+  document.querySelector("#deskTradingEntries").innerHTML = Object.entries(TRADING_WORKBENCHES).map(([key, entry]) => {
+    const active = state.activeTradingEntry === key;
+    const status = key === "dayAhead" && connected ? entry.status : connected ? "接口预留" : "数据待接入";
+    return `
+      <article class="desk-entry ${active ? "active" : ""}">
+        <span class="tag ${status === "流程已定义" ? "partial" : "wait"}">${status}</span>
+        <strong>${entry.name}</strong>
+        <p>${entry.description}</p>
+        <button class="table-action" type="button" data-trading-entry="${key}" aria-pressed="${active}">${active ? "当前流程" : "查看流程"}</button>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderTradingTerminal() {
+  const workflow = TRADING_WORKBENCHES[state.activeTradingEntry] || TRADING_WORKBENCHES.dayAhead;
+  const market = selectedMarketProfile();
+  const marketData = selectedMarketData();
+  const subject = TRADING_SUBJECTS[state.selectedSubject];
+  const scopeMatchesReference = state.selectedMarket === "HA" && state.selectedSubject === "station";
+  const hasPriceAndLoad = marketData.spotPrices.length > 0 && marketData.loadHourly.length > 0;
+  const forecastResult = state.priceForecastResult;
+  const hasForecast = forecastResult?.periods?.length === 24 || state.forecastResults.length === 24;
+  const forecastDate = forecastResult?.market_date || state.forecastDate || "--";
+  const terminalConfigured = Boolean(state.tradingTerminalUrl);
+  const readiness = [
+    { name: "初始仓位", status: state.uploads.mediumPosition ? "ok" : "missing", detail: state.uploads.mediumPosition ? "已登记中长期持仓文件" : "待提供年月旬持仓或初始仓位" },
+    { name: "市场披露", status: hasPriceAndLoad ? "partial" : "missing", detail: hasPriceAndLoad ? "价格与组合负荷已接；统调、新能源、联络线待补" : "待接历史事实与运行预测数据" },
+    { name: "价格预测", status: hasForecast ? "partial" : "missing", detail: hasForecast ? `${forecastDate}的24点结果可引用；需按交易日校验版本` : "待生成24/96点预测与回测依据" },
+    { name: "市场事件", status: state.uploads.marketEvents ? "ok" : "missing", detail: state.uploads.marketEvents ? "已登记受控事件" : "待补新能源波动、检修等非结构化事件" },
+    { name: "执行与盘口", status: terminalConfigured ? "partial" : "missing", detail: terminalConfigured ? "服务地址已配置，仍需校验交易授权" : "待提供终端地址、鉴权和盘口插件" },
   ];
-  document.querySelector("#deskTradingEntries").innerHTML = entries.map((entry) => `
-    <article class="desk-entry">
-      <span class="tag ${entry.status === "部分接入" ? "partial" : "wait"}">${entry.status}</span>
-      <strong>${entry.title}</strong>
-      <p>${entry.body}</p>
-      <button class="table-action" type="button" data-desk-action="${entry.action}">进入</button>
-    </article>
+  const availableCount = readiness.filter((item) => item.status !== "missing").length;
+  const marketLabel = market?.name || "未选择省份";
+
+  document.querySelector("#deskSopStatus").textContent = terminalConfigured ? "交易终端已配置" : "交易终端待接入";
+  document.querySelector("#tradingTerminalStatus").className = `pill ${terminalConfigured ? "partial" : "wait"}`;
+  document.querySelector("#tradingTerminalStatus").textContent = terminalConfigured ? "待鉴权验证" : "等待服务地址";
+  document.querySelector("#tradingTerminalMeta").innerHTML = [
+    ["当前工作范围", `${marketLabel} · ${subject.name} · ${workflow.name}`],
+    ["参考流程版本", "河南 · 新能源场站 · 日滚动交易 SOP"],
+    ["接入方式", "REST API + fieldMapping + 终端深链"],
+    ["服务与鉴权", terminalConfigured ? "地址已配置，鉴权待验证" : "服务地址、鉴权方式待提供"],
+    ["执行边界", "自动下单关闭；策略必须经过人工复核"],
+  ].map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join("");
+  document.querySelector("#tradingReadinessCount").textContent = `${availableCount}/${readiness.length} 可用或部分可用`;
+  document.querySelector("#tradingReadinessList").innerHTML = readiness.map((item) => `
+    <div class="terminal-readiness-item">
+      <span class="readiness-dot ${item.status}"></span>
+      <div><strong>${item.name}</strong><small>${item.detail}</small></div>
+      <span class="tag ${item.status === "ok" ? "ok" : item.status === "partial" ? "partial" : "missing"}">${item.status === "ok" ? "已就绪" : item.status === "partial" ? "部分" : "待补"}</span>
+    </div>
   `).join("");
-
-  const sopSteps = [
-    ["01", "创建交易日", "选择省份和主体，确认交易日期、交易品种与初始仓位。"],
-    ["02", "准备数据", "导入市场披露、历史价格、负荷/出力预测和受控事件。"],
-    ["03", "运行预测", "生成24点价格区间、价差风险与模型质量提示。"],
-    ["04", "生成策略", "结合仓位、合同和限额生成建议；输入不全时只能HOLD。"],
-    ["05", "人工复核", "交易员提交、修改、批准或拒绝，保存人员、时间与原因。"],
-    ["06", "执行复盘", "记录申报成交、盘中调整和结算结果，关闭交易日并回测。"],
-  ];
-  document.querySelector("#deskSopFlow").innerHTML = sopSteps.map(([index, title, body]) => `
+  setText("#tradingFlowTitle", `${workflow.name}链路`);
+  setText(
+    "#tradingFlowBoundary",
+    scopeMatchesReference
+      ? "当前范围与参考流程一致，仍需完成真实接口、数据授权和交易权限校验。"
+      : `参考流程来自河南新能源场站；当前${marketLabel}${subject.name}需要补充本省规则和主体逻辑后才能运行。`,
+  );
+  document.querySelector("#tradingFlowStatus").className = `tag ${scopeMatchesReference ? "partial" : "wait"}`;
+  document.querySelector("#tradingFlowStatus").textContent = scopeMatchesReference ? "接口待联调" : "规则与主体待适配";
+  document.querySelector("#deskSopFlow").innerHTML = workflow.steps.map(([index, title, body]) => `
     <article class="sop-step"><span>${index}</span><strong>${title}</strong><p>${body}</p></article>
   `).join("");
-  document.querySelector("#deskSopStatus").textContent = "日滚动SOP · 人工复核";
-  renderDeskReview();
+
+  const openButton = document.querySelector("#openTradingTerminalBtn");
+  openButton.disabled = !terminalConfigured;
+  openButton.title = terminalConfigured ? "进入已配置的交易终端" : "等待终端服务地址、鉴权方式和真实Input/Output样例";
+}
+
+function checkTradingTerminalConnection() {
+  if (!state.tradingTerminalUrl) {
+    showToast("交易终端尚未配置：待提供服务地址、鉴权方式、真实Input/Output样例和盘口插件边界。");
+    return;
+  }
+  showToast("交易终端地址已登记，正式联调还需完成鉴权和能力检查接口。");
+}
+
+function openTradingTerminal() {
+  if (!state.tradingTerminalUrl) {
+    showToast("交易终端尚未配置，当前不能进入或执行交易。");
+    return;
+  }
+  window.open(state.tradingTerminalUrl, "_blank", "noopener,noreferrer");
 }
 
 function renderDeskReview() {
@@ -5498,32 +6093,31 @@ function renderGridSamples() {
 }
 
 function renderExecutionSamples() {
-  const settlement = selectedMarketData().settlement;
+  const marketData = selectedMarketData();
+  const settlement = marketData.settlement;
+  const reportDataItem = (title, status, body, tone) => `
+    <div class="report-data-item">
+      <div><strong>${title}</strong><p>${body}</p></div>
+      <span class="tag ${tone}">${status}</span>
+    </div>
+  `;
   if (!settlement?.summary) {
-    document.querySelector("#executionSampleList").innerHTML = sampleItem({ title: "执行与结算待接入", body: "当前省份和交易主体没有可用的成交、执行或结算记录。" });
+    document.querySelector("#executionSampleList").innerHTML = reportDataItem("价格、执行与结算", "待接入", "当前省份和交易主体没有可用事实数据。", "missing");
     document.querySelector("#templateSampleList").innerHTML = [
-      sampleItem({ title: "现货日报模板", body: "章节：盘前建议、出清分析、执行记录、异常时段、次日建议。" }),
-      sampleItem({ title: "客户案例附录", body: "接入本市场客户结算数据后启用，不复用其他市场案例。" }),
+      reportDataItem("复盘模板", "已预留", "价格、误差、收益和关键时段图表结构已就绪。", "wait"),
+      reportDataItem("跨市场隔离", "已启用", "不会复用其他省份或交易主体的数据。", "ok"),
     ].join("");
     return;
   }
   document.querySelector("#executionSampleList").innerHTML = [
-    sampleItem({
-      title: `${settlement.summary.date} · ${settlement.summary.company}`,
-      body: `真实结算单已接入：总电量 ${fmt(settlement.summary.totalEnergyMwh)} MWh，总金额 ${fmt(settlement.summary.totalSettlementAmountYuan)} 元，均价 ${fmt(settlement.summary.avgSettlementPriceYuanMwh)} 元/MWh。`,
-    }),
-    ...settlement.hourly
-      .slice()
-      .sort((a, b) => (b.totalSettlementAmountYuan || 0) - (a.totalSettlementAmountYuan || 0))
-      .slice(0, 3)
-      .map((row) => sampleItem({
-        title: `${row.time} · 结算金额 ${fmt(row.totalSettlementAmountYuan)} 元`,
-        body: `实时电量 ${fmt(row.realtimeEnergyMwh)} MWh，实时价格 ${fmt(row.realtimePriceYuanMwh)} 元/MWh，日前电量 ${fmt(row.dayAheadEnergyMwh)} MWh，结算均价 ${fmt(row.averageSettlementPriceYuanMwh)} 元/MWh。`,
-      })),
+    reportDataItem("现货价格", "真实数据", `${marketData.spotPrices.length}个小时点，可用于价差和异常时段复盘。`, "ok"),
+    reportDataItem("月度经营结算", "真实数据", `${marketData.settlementSummaryMonthly?.monthly?.length || 0}个月、${marketData.customerSettlementMonthly.length}条脱敏客户月度记录。`, "ok"),
+    reportDataItem("历史交易决策", "待补数据", "缺少连续申报、成交、人工调整和策略版本。", "missing"),
+    reportDataItem("仿真策略结果", "待接终端", "等待交易终端回传同日策略、模拟成交和收益。", "wait"),
   ].join("");
   document.querySelector("#templateSampleList").innerHTML = [
-    sampleItem({ title: "现货日报模板", body: "章节：盘前建议、出清分析、执行记录、异常时段、次日建议。" }),
-    sampleItem({ title: "客户案例附录", body: "章节：结算结构、合同/偏差待补数据、亏损归因假设和模型迭代建议。" }),
+    reportDataItem("对比成立条件", "口径锁定", "真实与仿真必须使用同一交易日、仓位、价格和结算规则版本。", "partial"),
+    reportDataItem("客户案例附录", "已接入", `${settlement.summary.date}结算案例保留为附加复盘，不代替公司完整交易结果。`, "partial"),
   ].join("");
 }
 
@@ -5765,9 +6359,22 @@ function renderDataQuality() {
 }
 
 function renderReport() {
+  const market = selectedMarketProfile();
+  const subject = TRADING_SUBJECTS[state.selectedSubject];
   if (!hasConnectedMarketData()) {
-    const market = selectedMarketProfile();
-    document.querySelector("#reportPreview").textContent = `${market?.name || "当前省级市场"} · ${TRADING_SUBJECTS[state.selectedSubject].name}\n\n当前只保留报告模板。价格、负荷、持仓、申报成交、审核与结算数据接入后再生成业务日报，平台不会复用山东售电侧结果。`;
+    const marketLabel = market?.name || "当前省级市场";
+    setText("#reportSubtitle", `${marketLabel} · ${subject.name} · 数据接入后生成图表复盘`);
+    document.querySelector("#reportDataStatus").className = "pill wait";
+    setText("#reportDataStatus", "数据待接入");
+    document.querySelector("#reportKpis").innerHTML = ["平均绝对价差", "最大价差", "回测 MAE", "真实收益", "仿真收益"]
+      .map((label) => `<article class="report-kpi"><span>${label}</span><strong>--</strong><small>待本市场数据</small></article>`).join("");
+    setText("#reportSpreadSubtitle", `${marketLabel}暂无24点价格数据`);
+    setText("#reportErrorSubtitle", "预测结果和真实值接入后计算");
+    document.querySelector("#reportMetricNotes").innerHTML = "";
+    document.querySelector("#reportComparisonTable").innerHTML = '<tr><td colspan="4">真实交易决策、仿真策略和结算数据尚未接入。</td></tr>';
+    document.querySelector("#reportDifferenceTable").innerHTML = '<tr><td colspan="6">暂无可复盘时段。</td></tr>';
+    document.querySelector("#reportFindings").innerHTML = sampleItem({ title: "复盘待生成", body: "接入价格、预测、申报成交、策略执行和结算数据后生成图表，不复用其他省份结果。" });
+    document.querySelector("#reportPreview").textContent = `${marketLabel} · ${subject.name}\n\n当前只保留报告模板。价格、负荷、持仓、申报成交、审核与结算数据接入后再生成业务日报，平台不会复用山东售电侧结果。`;
     return;
   }
   const caseSummary = settlementSummary();
@@ -5777,8 +6384,79 @@ function renderReport() {
   const topPrice = maxBy(rows.filter((row) => Number.isFinite(row.realtimePriceYuanMwh)), (row) => row.realtimePriceYuanMwh);
   const load = selectedMarketData().loadDaily.find((row) => row.date === state.selectedDate);
   const forecastRows = state.forecastResults || [];
-  const forecastMetricsResult = forecastMetrics(forecastRows);
-  const highConfidenceCount = forecastRows.filter((row) => row.confidence >= 0.72).length;
+  const forecastSummary = reportForecastMetrics();
+  const forecastPointRows = forecastRows.length ? forecastRows : state.priceForecastResult?.periods || [];
+  const highConfidenceCount = forecastPointRows.filter((row) => Number(row.confidence) >= 0.72).length;
+  const averageAbsoluteSpread = mean(rows.map((row) => Math.abs(row.spreadYuanMwh)));
+  const monthlyRows = selectedMarketData().settlementSummaryMonthly?.monthly || [];
+  const selectedMonth = state.selectedDate.slice(0, 7);
+  const currentMonth = monthlyRows.find((row) => row.settlementMonth === selectedMonth) || monthlyRows.at(-1) || null;
+  const alignedForecasts = new Map(forecastRows
+    .filter((row) => row.date === state.selectedDate)
+    .map((row) => [row.time, row]));
+  const differenceRows = rows
+    .filter((row) => Number.isFinite(row.spreadYuanMwh))
+    .map((row) => {
+      const forecast = alignedForecasts.get(row.time);
+      const forecastError = forecast && Number.isFinite(row.realtimePriceYuanMwh)
+        ? forecast.predictedPrice - row.realtimePriceYuanMwh
+        : null;
+      const focus = Math.abs(row.spreadYuanMwh) >= state.riskThreshold
+        ? row.spreadYuanMwh < 0 ? "实时上行，复核实时敞口" : "日前高估，复核覆盖节奏"
+        : "价差平稳，保留观察";
+      return { ...row, forecastError, focus };
+    })
+    .sort((left, right) => Math.abs(right.spreadYuanMwh) - Math.abs(left.spreadYuanMwh))
+    .slice(0, 8);
+
+  setText("#reportSubtitle", `${market?.name || "当前市场"} · ${subject.name} · ${state.selectedDate}复盘`);
+  document.querySelector("#reportDataStatus").className = "pill partial";
+  setText("#reportDataStatus", "价格与结算真实 · 策略待接入");
+  setText("#reportSpreadSubtitle", `${state.selectedDate} · 日前减实时 · ${rows.length}个小时点`);
+  setText(
+    "#reportErrorSubtitle",
+    forecastSummary.windowStart
+      ? `预测日${forecastSummary.modelDate} · 回测${forecastSummary.windowStart}至${forecastSummary.windowEnd}`
+      : "当前模型尚无可用回测窗口",
+  );
+  document.querySelector("#reportKpis").innerHTML = [
+    ["平均绝对价差", `${fmt(averageAbsoluteSpread)} 元/MWh`, "真实24点价格"],
+    ["最大价差", `${fmt(Math.abs(topSpread.spreadYuanMwh))} 元/MWh`, topSpread.time || "--"],
+    ["回测 MAE", Number.isFinite(forecastSummary.mae) ? `${fmt(forecastSummary.mae)} 元/MWh` : "待回测", forecastSummary.modelVersion],
+    ["当月真实毛利", currentMonth ? `${fmt(currentMonth.grossProfitYuan / 1000)} 千元` : "待结算", currentMonth?.settlementMonth || selectedMonth],
+    ["仿真策略收益", "待接入", "需同日同口径结果"],
+  ].map(([label, value, note], index) => `
+    <article class="report-kpi ${index === 4 ? "pending" : ""}"><span>${label}</span><strong>${value}</strong><small>${note}</small></article>
+  `).join("");
+  document.querySelector("#reportMetricNotes").innerHTML = [
+    ["Bias", Number.isFinite(forecastSummary.bias) ? `${signed(forecastSummary.bias)} 元/MWh` : "待回测"],
+    ["负价方向准确率", Number.isFinite(forecastSummary.negativeAccuracy) ? `${fmt(forecastSummary.negativeAccuracy * 100)}%` : "待样本"],
+    ["极端高价召回率", Number.isFinite(forecastSummary.extremeRecall) ? `${fmt(forecastSummary.extremeRecall * 100)}%` : "待样本"],
+  ].map(([label, value]) => `<span><small>${label}</small><strong>${value}</strong></span>`).join("");
+
+  document.querySelector("#reportComparisonTable").innerHTML = [
+    ["月度收益", currentMonth ? `${fmt(currentMonth.grossProfitYuan)} 元` : "待结算", "待接入策略运行结果", "--"],
+    ["结算电量", currentMonth ? `${fmt(currentMonth.settledEnergyMwh)} MWh` : "待结算", "待接入仿真成交电量", "--"],
+    ["单位收益", currentMonth ? `${fmt(currentMonth.averageUnitProfitYuanMwh)} 元/MWh` : "待结算", "待接入仿真单位收益", "--"],
+    ["交易决策", "历史申报与人工调整待补", "待接入策略批次与参数", "--"],
+  ].map(([metric, actual, simulated, delta]) => `<tr><td><strong>${metric}</strong></td><td>${actual}</td><td><span class="tag wait">${simulated}</span></td><td>${delta}</td></tr>`).join("");
+  document.querySelector("#reportDifferenceTable").innerHTML = differenceRows.map((row) => `
+    <tr>
+      <td><strong>${row.time}</strong></td>
+      <td>${fmt(row.dayAheadPriceYuanMwh)}</td>
+      <td>${fmt(row.realtimePriceYuanMwh)}</td>
+      <td class="${Math.abs(row.spreadYuanMwh) >= state.riskThreshold ? "text-risk" : ""}">${signed(row.spreadYuanMwh)}</td>
+      <td>${Number.isFinite(row.forecastError) ? signed(row.forecastError) : "--"}</td>
+      <td>${row.focus}</td>
+    </tr>
+  `).join("") || '<tr><td colspan="6">当日价格不足，无法形成差异时段。</td></tr>';
+
+  document.querySelector("#reportFindings").innerHTML = [
+    sampleItem({ title: "价差关注", body: `${topSpread.time || "--"}绝对价差最大，为${fmt(Math.abs(topSpread.spreadYuanMwh))}元/MWh；优先核查预测方向、敞口和市场披露变化。` }),
+    sampleItem({ title: "预测质量", body: Number.isFinite(forecastSummary.mae) ? `最近滚动回测MAE为${fmt(forecastSummary.mae)}元/MWh，Bias为${signed(forecastSummary.bias)}元/MWh；需继续关注极端高价召回。` : "预测结果缺少真实值，当前不能计算误差。" }),
+    sampleItem({ title: "策略收益", body: "真实月度结算已接入，但历史交易决策和仿真策略结果尚未接入；补齐后才能计算策略增益并据此调整SOP。" }),
+  ].join("");
+
   const loss = buildLossAnalysis();
   const lossText = Number.isFinite(loss.actualCostYuan)
     ? `${loss.exactSettlement ? "批发侧结算成本" : "组合成本代理"}${fmt(loss.actualCostYuan)}元，相对全量日前价格基准${loss.deltaVsDayAheadYuan <= 0 ? "降低" : "增加"}${fmt(Math.abs(loss.deltaVsDayAheadYuan))}元`
@@ -5787,14 +6465,30 @@ function renderReport() {
     `${state.selectedDate} 电力交易辅助决策系统日报草稿`,
     "",
     `1. 盘前工作台：当日组合电量${fmt(load?.totalMwh)} MWh，日前均价${fmt(marketSummary.averageDayAheadPrice)}元/MWh，实时均价${fmt(marketSummary.averageRealtimePrice)}元/MWh，价差口径为日前减实时。`,
-    `2. 预测评估：已接入${state.forecastModelVersion}并生成${forecastRows.length}点日前/实时P10-P90预测，其中${highConfidenceCount}点置信度不低于72%；${forecastMetricsResult ? `回测MAE为${fmt(forecastMetricsResult.mae)}元/MWh` : "当前结果暂无可评价真实值"}。正式策略仍需竞价空间、边界、新能源、天气和规则数据。`,
+    `2. 预测评估：已接入${forecastSummary.modelVersion}并生成${forecastPointRows.length}点日前/实时P10-P90预测，其中${highConfidenceCount}点置信度不低于72%；${Number.isFinite(forecastSummary.mae) ? `最近滚动回测MAE为${fmt(forecastSummary.mae)}元/MWh` : "当前结果暂无可评价真实值"}。正式策略仍需竞价空间、边界、新能源、天气和规则数据。`,
     `3. 现货判断：在读取预测结果后，识别${topSpread.time || "--"}绝对价差最大，为${fmt(Math.abs(topSpread.spreadYuanMwh))}元/MWh；${topPrice.time || "--"}实时价格最高，为${fmt(topPrice.realtimePriceYuanMwh)}元/MWh。当前结论仅供人工复核。`,
-    "4. 中长期：保留合约曲线优化、长周期价格预测、曲线分解和结果导出能力。",
-    "5. 政策与拓扑：政策 AI 解读、网架拓扑和阻塞诊断模块已搭建页面与接口占位，等待真实政策、拓扑、潮流和边界数据。",
+    `4. 收益复盘：${currentMonth ? `${currentMonth.settlementMonth}真实毛利${fmt(currentMonth.grossProfitYuan)}元、单位收益${fmt(currentMonth.averageUnitProfitYuanMwh)}元/MWh` : "当前月份暂无真实结算"}；仿真策略收益尚未接入，当前不计算策略增益。`,
+    "5. 交易终端：已预留交易日创建、策略运行、人工复核、执行事件和真实/仿真对比接口；未配置交易终端服务地址，不执行自动下单。",
     `6. 客户案例附录：${CUSTOMER.company}${caseSummary.date}结算单已接入，总电量${fmt(caseSummary.totalEnergyMwh)} MWh，总金额${fmt(caseSummary.totalSettlementAmountYuan)}元，平均结算价${fmt(caseSummary.avgSettlementPriceYuanMwh)}元/MWh；仅用于附加复盘。`,
-    `7. 盈亏分析附录：${lossText}；零售收入、完整合同持仓、申报成交和其他财务费用待补，当前不确认真实利润或亏损。`,
+    `7. 盈亏分析附录：${lossText}；完整合同持仓、申报成交和人工调整待补，策略归因尚未成立。`,
   ].join("\n");
   document.querySelector("#reportPreview").textContent = text;
+}
+
+function reportForecastMetrics() {
+  const calculated = forecastMetrics(state.forecastResults || []);
+  const provided = state.forecastProvidedMetrics || state.priceForecastResult?.backtest || null;
+  return {
+    mae: provided?.mae_yuan_per_mwh ?? calculated?.mae ?? null,
+    rmse: provided?.rmse_yuan_per_mwh ?? calculated?.rmse ?? null,
+    bias: provided?.bias_yuan_per_mwh ?? calculated?.bias ?? null,
+    negativeAccuracy: provided?.negative_price_direction_accuracy ?? calculated?.negativeAccuracy ?? null,
+    extremeRecall: provided?.extreme_high_price_recall ?? calculated?.extremeHighRecall ?? null,
+    windowStart: provided?.window_start || null,
+    windowEnd: provided?.window_end || null,
+    modelDate: state.priceForecastResult?.market_date || state.forecastDate || "--",
+    modelVersion: state.priceForecastResult?.model?.version || state.forecastModelVersion || "--",
+  };
 }
 
 function renderCharts() {
@@ -5803,6 +6497,17 @@ function renderCharts() {
   drawLineChart(chartEls.desk, [
     { name: "日前价格", color: "#b57b1b", values: marketRows.map((row) => row.dayAheadPriceYuanMwh) },
     { name: "实时价格", color: "#0e6f78", values: marketRows.map((row) => row.realtimePriceYuanMwh) },
+  ]);
+  drawSignedBarChart(
+    chartEls.reportSpread,
+    marketRows.map((row) => row.spreadYuanMwh),
+    marketRows.map((row) => row.time),
+  );
+  const reportMetrics = reportForecastMetrics();
+  drawMetricBarChart(chartEls.reportError, [
+    { label: "MAE", value: reportMetrics.mae, color: "#0e6f78" },
+    { label: "RMSE", value: reportMetrics.rmse, color: "#b57b1b" },
+    { label: "|Bias|", value: Number.isFinite(reportMetrics.bias) ? Math.abs(reportMetrics.bias) : null, color: "#c95341" },
   ]);
   drawLineChart(chartEls.spotPrice, [
     { name: "日前价格", color: "#b57b1b", values: marketRows.map((row) => row.dayAheadPriceYuanMwh) },
@@ -5825,6 +6530,14 @@ function renderCharts() {
     ...(loss.exactSettlement ? [{ name: "实时价格", color: "#0e6f78", values: loss.hourly.map((row) => row.realtimePriceYuanMwh) }] : []),
   ]);
   const monthlySettlement = selectedMarketData().settlementSummaryMonthly?.monthly || [];
+  drawGroupedBarChart(
+    chartEls.reportProfit,
+    monthlySettlement.map((row) => row.settlementMonth.slice(5)),
+    [
+      { name: "真实毛利", color: "#0e6f78", values: monthlySettlement.map((row) => (row.grossProfitYuan || 0) / 1000) },
+      { name: "真实纯利润", color: "#b57b1b", values: monthlySettlement.map((row) => (row.pureProfitYuan || 0) / 1000) },
+    ],
+  );
   drawLineChart(chartEls.settlementMonthly, [
     { name: "毛利（千元）", color: "#c95341", values: monthlySettlement.map((row) => (row.grossProfitYuan || 0) / 1000) },
     { name: "纯利润（千元）", color: "#0e6f78", values: monthlySettlement.map((row) => (row.pureProfitYuan || 0) / 1000) },
@@ -6099,6 +6812,133 @@ function drawForecastChart(canvas, rows) {
     { name: "置信区间", color: "rgba(14, 111, 120, 0.35)" },
   ], pad.left, 18);
   drawXAxis(ctx, width, height, pad);
+}
+
+function drawSignedBarChart(canvas, values, labels = []) {
+  if (!canvas) return;
+  const ctx = setupCanvas(canvas);
+  const width = canvas.__chartWidth;
+  const height = canvas.__chartHeight;
+  const pad = { left: 56, right: 18, top: 34, bottom: 42 };
+  const clean = values.filter(Number.isFinite);
+  if (!clean.length) {
+    drawChartEmptyState(ctx, "暂无当日价差数据", pad.left, 64);
+    return;
+  }
+  let min = Math.min(0, ...clean);
+  let max = Math.max(0, ...clean);
+  if (min === max) max = min + 1;
+  const scaleY = (value) => height - pad.bottom - ((value - min) / Math.max(1, max - min)) * (height - pad.top - pad.bottom);
+  drawGrid(ctx, width, height, pad, min, max, scaleY);
+  const zeroY = scaleY(0);
+  ctx.strokeStyle = "#83908b";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(pad.left, zeroY);
+  ctx.lineTo(width - pad.right, zeroY);
+  ctx.stroke();
+  const slot = (width - pad.left - pad.right) / Math.max(1, values.length);
+  const barWidth = Math.max(4, Math.min(18, slot * 0.62));
+  values.forEach((value, index) => {
+    if (!Number.isFinite(value)) return;
+    const x = pad.left + index * slot + (slot - barWidth) / 2;
+    const y = scaleY(value);
+    const isRisk = Math.abs(value) >= state.riskThreshold;
+    ctx.fillStyle = isRisk ? "#c95341" : value >= 0 ? "#b57b1b" : "#0e6f78";
+    ctx.fillRect(x, Math.min(y, zeroY), barWidth, Math.max(1, Math.abs(zeroY - y)));
+  });
+  drawLegend(ctx, [
+    { name: "日前高于实时", color: "#b57b1b" },
+    { name: "实时高于日前", color: "#0e6f78" },
+    { name: "阈值外", color: "#c95341" },
+  ], pad.left, 18);
+  drawCategoryXAxis(ctx, width, height, pad, labels, 6);
+}
+
+function drawMetricBarChart(canvas, items) {
+  if (!canvas) return;
+  const ctx = setupCanvas(canvas);
+  const width = canvas.__chartWidth;
+  const height = canvas.__chartHeight;
+  const pad = { left: 58, right: 22, top: 28, bottom: 54 };
+  const valid = items.filter((item) => Number.isFinite(item.value));
+  if (!valid.length) {
+    drawChartEmptyState(ctx, "暂无可用回测指标", pad.left, 64);
+    return;
+  }
+  const max = Math.max(...valid.map((item) => item.value), 1) * 1.18;
+  const scaleY = (value) => height - pad.bottom - (value / max) * (height - pad.top - pad.bottom);
+  drawGrid(ctx, width, height, pad, 0, max, scaleY);
+  const groupWidth = (width - pad.left - pad.right) / valid.length;
+  const barWidth = Math.min(74, groupWidth * 0.48);
+  valid.forEach((item, index) => {
+    const x = pad.left + index * groupWidth + (groupWidth - barWidth) / 2;
+    const y = scaleY(item.value);
+    ctx.fillStyle = item.color;
+    ctx.fillRect(x, y, barWidth, height - pad.bottom - y);
+    ctx.fillStyle = "#24312d";
+    ctx.font = "700 12px Microsoft YaHei, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(fmt(item.value), x + barWidth / 2, Math.max(pad.top + 10, y - 8));
+    ctx.fillStyle = "#64706c";
+    ctx.font = "12px Microsoft YaHei, sans-serif";
+    ctx.fillText(item.label, x + barWidth / 2, height - 18);
+  });
+  ctx.textAlign = "left";
+}
+
+function drawGroupedBarChart(canvas, labels, series) {
+  if (!canvas) return;
+  const ctx = setupCanvas(canvas);
+  const width = canvas.__chartWidth;
+  const height = canvas.__chartHeight;
+  const pad = { left: 58, right: 20, top: 34, bottom: 48 };
+  const values = series.flatMap((item) => item.values).filter(Number.isFinite);
+  if (!values.length) {
+    drawChartEmptyState(ctx, "暂无月度收益数据", pad.left, 64);
+    return;
+  }
+  let min = Math.min(0, ...values);
+  let max = Math.max(0, ...values);
+  if (min === max) max = min + 1;
+  const scaleY = (value) => height - pad.bottom - ((value - min) / Math.max(1, max - min)) * (height - pad.top - pad.bottom);
+  drawGrid(ctx, width, height, pad, min, max, scaleY);
+  const zeroY = scaleY(0);
+  const groupWidth = (width - pad.left - pad.right) / Math.max(1, labels.length);
+  const barWidth = Math.max(5, Math.min(26, (groupWidth * 0.72) / Math.max(1, series.length)));
+  labels.forEach((_label, labelIndex) => {
+    const totalWidth = barWidth * series.length;
+    const startX = pad.left + labelIndex * groupWidth + (groupWidth - totalWidth) / 2;
+    series.forEach((item, seriesIndex) => {
+      const value = item.values[labelIndex];
+      if (!Number.isFinite(value)) return;
+      const y = scaleY(value);
+      ctx.fillStyle = item.color;
+      ctx.fillRect(startX + seriesIndex * barWidth, Math.min(y, zeroY), Math.max(3, barWidth - 2), Math.max(1, Math.abs(zeroY - y)));
+    });
+  });
+  drawLegend(ctx, series, pad.left, 18);
+  drawCategoryXAxis(ctx, width, height, pad, labels.map((label) => `${label}月`), 1);
+}
+
+function drawCategoryXAxis(ctx, width, height, pad, labels, step = 1) {
+  if (!labels.length) return;
+  const slot = (width - pad.left - pad.right) / Math.max(1, labels.length);
+  ctx.fillStyle = "#64706c";
+  ctx.font = "11px Microsoft YaHei, sans-serif";
+  ctx.textAlign = "center";
+  labels.forEach((label, index) => {
+    if (index % step !== 0 && index !== labels.length - 1) return;
+    const x = pad.left + index * slot + slot / 2;
+    ctx.fillText(String(label), x, height - 16);
+  });
+  ctx.textAlign = "left";
+}
+
+function drawChartEmptyState(ctx, message, x, y) {
+  ctx.fillStyle = "#64706c";
+  ctx.font = "14px Microsoft YaHei, sans-serif";
+  ctx.fillText(message, x, y);
 }
 
 function setupCanvas(canvas) {
