@@ -74,6 +74,31 @@ button {
   line-height: 1.25;
 }
 
+.sidebar-context {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.sidebar-field {
+  display: grid;
+  gap: 5px;
+  color: #aab9b4;
+  font-size: 11px;
+}
+
+.sidebar-field select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: #19332d;
+  color: #f5fbf7;
+  padding: 0 10px;
+}
+
 .side-status p,
 .muted {
   color: #aab9b4;
@@ -712,7 +737,7 @@ canvas {
 
 .loss-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
   margin: 14px 0 4px;
   border-bottom: 1px solid var(--line);
@@ -752,6 +777,101 @@ canvas {
   grid-template-columns: repeat(3, minmax(150px, 1fr));
   gap: 8px;
   min-width: min(100%, 620px);
+}
+
+.desk-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+
+.desk-entry {
+  min-height: 132px;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+  padding: 13px;
+}
+
+.desk-entry p,
+.sop-step p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.desk-entry .table-action {
+  justify-self: start;
+  margin-top: auto;
+}
+
+.sop-flow {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sop-step {
+  position: relative;
+  min-height: 116px;
+  border-left: 3px solid var(--teal);
+  background: #f3f7f5;
+  padding: 11px;
+}
+
+.sop-step span {
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.sop-step strong {
+  display: block;
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.review-console {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(150px, 0.6fr) minmax(220px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.review-status-block {
+  display: grid;
+  gap: 4px;
+}
+
+.review-status-block span,
+.review-status-block small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.review-status-block strong {
+  font-size: 15px;
+}
+
+.review-reason-field input {
+  width: 100%;
+}
+
+.review-actions {
+  flex-wrap: nowrap;
+}
+
+.review-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .compact-field {
@@ -1416,6 +1536,18 @@ th {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .desk-entry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sop-flow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .review-console {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .loss-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1483,6 +1615,13 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .sidebar-context,
+  .desk-entry-grid,
+  .sop-flow,
+  .review-console {
+    grid-template-columns: 1fr;
+  }
+
   .loss-kpi-grid {
     grid-template-columns: 1fr;
   }
@@ -1535,6 +1674,16 @@ th {
           <div>
             <h1>全国电力交易辅助决策平台</h1>
           </div>
+          <div class="sidebar-context" aria-label="市场与交易主体">
+            <label class="sidebar-field">
+              <span>省份</span>
+              <select id="marketSelect"></select>
+            </label>
+            <label class="sidebar-field">
+              <span>交易主体</span>
+              <select id="subjectSelect"></select>
+            </label>
+          </div>
         </div>
 
         <nav class="nav" aria-label="交易辅助平台模块">
@@ -1566,10 +1715,6 @@ th {
           </div>
           <div class="topbar-actions">
             <div class="controls context-controls">
-              <label class="field">
-                <span>运营范围</span>
-                <select id="marketSelect"></select>
-              </label>
               <label class="field">
                 <span>当前角色</span>
                 <select id="roleSelect"></select>
@@ -1632,6 +1777,39 @@ th {
               <div class="permission-list" id="permissionList"></div>
             </section>
           </div>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>交易流程入口</h3>
+                <p>按当前省份和交易主体加载对应市场流程，未接入的流程只保留接口</p>
+              </div>
+              <span class="pill partial" id="deskSopStatus">辅助决策</span>
+            </div>
+            <div class="desk-entry-grid" id="deskTradingEntries"></div>
+            <div class="sop-flow" id="deskSopFlow"></div>
+            <div class="review-console">
+              <div class="review-status-block">
+                <span>策略审核状态</span>
+                <strong id="deskReviewStatus">尚未运行预测</strong>
+                <small id="deskReviewMeta">运行预测后可提交人工复核</small>
+              </div>
+              <label class="field compact-field">
+                <span>审核人</span>
+                <input id="deskReviewerInput" type="text" placeholder="交易员姓名" />
+              </label>
+              <label class="field review-reason-field">
+                <span>修改或拒绝原因</span>
+                <input id="deskReviewReasonInput" type="text" placeholder="修改、拒绝时必填" />
+              </label>
+              <div class="inline-actions review-actions">
+                <button class="secondary-action" type="button" data-review-action="SUBMIT">提交复核</button>
+                <button class="secondary-action" type="button" data-review-action="APPROVE">批准</button>
+                <button class="secondary-action" type="button" data-review-action="MODIFY">修改</button>
+                <button class="secondary-action" type="button" data-review-action="REJECT">拒绝</button>
+              </div>
+            </div>
+          </section>
 
           <section class="panel">
             <div class="panel-head">
@@ -1723,7 +1901,7 @@ th {
             <div class="panel-head">
               <div>
                 <h3>数据与模型摘要</h3>
-                <p>山东价格与125家客户组合负荷已接入；结算单保留为附加客户案例</p>
+                <p>山东价格与127家客户组合负荷已接入；结算单保留为附加客户案例</p>
               </div>
               <span class="pill partial">客户案例</span>
             </div>
@@ -2251,7 +2429,7 @@ th {
           <section class="panel">
             <div class="panel-head">
               <div>
-                <h3>山东电价分析</h3>
+                <h3 id="priceAnalysisTitle">电价分析</h3>
                 <p id="priceAnalysisSubtitle">基于当前省份已接入的日前/实时小时价格，先看市场结构与风险时段，再结合客户负荷分析</p>
               </div>
               <span class="pill partial" id="priceAnalysisStatus">待加载</span>
@@ -2401,7 +2579,8 @@ th {
               </div>
             </div>
             <div class="loss-tabs" role="tablist" aria-label="盈亏分析视图">
-              <button class="loss-tab active" type="button" role="tab" aria-selected="true" data-loss-tab="portfolio">组合盈亏</button>
+              <button class="loss-tab active" type="button" role="tab" aria-selected="true" data-loss-tab="monthly">月度实绩</button>
+              <button class="loss-tab" type="button" role="tab" aria-selected="false" data-loss-tab="portfolio">日度成本</button>
               <button class="loss-tab" type="button" role="tab" aria-selected="false" data-loss-tab="customers">客户贡献</button>
               <button class="loss-tab" type="button" role="tab" aria-selected="false" data-loss-tab="detail">客户详情</button>
             </div>
@@ -2409,7 +2588,108 @@ th {
             <p class="loss-boundary-note" id="lossBoundaryNote"></p>
           </section>
 
-          <div id="lossPortfolioPanel" data-loss-panel="portfolio">
+          <div id="lossMonthlyPanel" data-loss-panel="monthly">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>公司月度经营实绩</h3>
+                  <p>基于1至6月单户利润结算表，展示已脱敏的成本、收入、毛利与客户分布</p>
+                </div>
+                <label class="field compact-field">
+                  <span>结算月份</span>
+                  <select id="lossMonthSelect"></select>
+                </label>
+              </div>
+              <div class="loss-kpi-grid" id="lossMonthlyKpis"></div>
+              <p class="loss-boundary-note" id="lossMonthlyQualityNote"></p>
+            </section>
+
+            <div class="grid two-one">
+              <section class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>月度毛利走势</h3>
+                    <p>金额单位为千元，负值表示当月毛利为负</p>
+                  </div>
+                </div>
+                <div class="chart-frame chart-frame-large">
+                  <canvas id="settlementMonthlyChart" height="320" data-chart-height="320"></canvas>
+                </div>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h3>经营提示</h3>
+                    <p>只陈述结算事实，不虚构持仓、申报或策略原因</p>
+                  </div>
+                </div>
+                <div class="sample-list" id="lossMonthlyInsights"></div>
+              </section>
+            </div>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>客户月度盈亏</h3>
+                  <p id="lossMonthlyCustomerSubtitle">仅显示稳定客户代号</p>
+                </div>
+                <div class="loss-customer-filters">
+                  <label class="field compact-field">
+                    <span>盈亏状态</span>
+                    <select id="lossMonthlyStatusFilter">
+                      <option value="all">全部</option>
+                      <option value="loss">亏损</option>
+                      <option value="profit">盈利</option>
+                      <option value="flat">持平/待核验</option>
+                    </select>
+                  </label>
+                  <label class="field compact-field">
+                    <span>排序</span>
+                    <select id="lossMonthlySort">
+                      <option value="profit-asc">毛利从低到高</option>
+                      <option value="profit-desc">毛利从高到低</option>
+                      <option value="energy-desc">电量从高到低</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div class="table-wrap tall customer-contribution-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>序号</th><th>客户代号</th><th>结算电量</th><th>总成本</th><th>零售收入</th>
+                      <th>平均成本</th><th>到户均价</th><th>毛利</th><th>度电毛利</th><th>套餐</th><th>状态</th>
+                    </tr>
+                  </thead>
+                  <tbody id="lossMonthlyCustomerTable"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>客户半年趋势</h3>
+                  <p id="lossMonthlyCustomerTrendSubtitle">选择客户后查看各月结算表现</p>
+                </div>
+                <label class="field compact-field customer-detail-selector">
+                  <span>客户代号</span>
+                  <select id="lossMonthlyCustomerSelect"></select>
+                </label>
+              </div>
+              <div class="loss-kpi-grid" id="lossMonthlyCustomerKpis"></div>
+              <div class="table-wrap compact-table top-gap">
+                <table>
+                  <thead>
+                    <tr><th>月份</th><th>结算电量</th><th>总成本</th><th>零售收入</th><th>毛利</th><th>度电毛利</th><th>状态</th></tr>
+                  </thead>
+                  <tbody id="lossMonthlyCustomerTrendTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <div id="lossPortfolioPanel" data-loss-panel="portfolio" hidden>
             <div class="grid two-one">
               <section class="panel">
                 <div class="panel-head">
@@ -2667,6 +2947,25 @@ const MARKET_PROFILES = [
   api: code === "SD" ? "本地数据联通" : "接口预留",
 }));
 
+const TRADING_SUBJECTS = {
+  retail: {
+    name: "售电侧",
+    description: "面向售电公司开展客户负荷、现货价格、中长期持仓、申报策略和结算经营分析。",
+  },
+  generation: {
+    name: "发电侧",
+    description: "面向发电企业开展出力预测、仓位确认、集中竞价、撮合交易和偏差复盘。",
+  },
+  station: {
+    name: "新能源场站",
+    description: "面向风电、光伏场站开展出力预测、日滚动交易、限电风险和执行记录。",
+  },
+  storage: {
+    name: "储能主体",
+    description: "面向独立储能开展充放电计划、价差机会、容量约束和收益复盘。",
+  },
+};
+
 const ORG_ROLES = {
   management: {
     name: "公司管理层",
@@ -2707,6 +3006,8 @@ const DATA_SOURCES = {
   customerProfiles: "./data/customer-profiles.json",
   customerLoadDaily: "./data/customer-load-daily.json",
   customerLoadHourly: "./data/customer-load-hourly.json",
+  customerSettlementMonthly: "./data/customer-settlement-monthly.json",
+  settlementSummaryMonthly: "./data/settlement-summary.json",
 };
 
 const MODULES = [
@@ -2745,7 +3046,7 @@ const DATA_REQUIREMENTS = [
     domain: "客户负荷与用户画像",
     priority: "P0 最低可启动",
     status: "部分接入",
-    need: "已收到125家客户小时负荷并按组合口径脱敏接入；仍缺户号、计量点、行业、合同容量、停产/检修信息。",
+    need: "已收到客户小时负荷并按组合口径脱敏接入；仍缺户号、计量点、行业、合同容量、停产/检修信息。",
     use: "做客户级负荷预测和异常用电识别。",
     frequency: "历史 6-12 个月；陪跑期每日。",
     target: "/api/customer/load-profile",
@@ -2843,7 +3144,7 @@ const INTERFACES = [
   { path: "/api/trade/settlement", use: "解析客户结算单", method: "POST", input: "file,customerId,date", output: "小时结算明细、总电量、均价、金额", status: "客户案例已接入" },
   { path: "/api/trade/execution", use: "申报成交全链路", method: "GET/POST", input: "date,customerId,declared,cleared,actual", output: "偏差、执行评价、亏损归因", status: "待补数据" },
   { path: "/api/customer/load-profile", use: "组合及客户负荷曲线", method: "GET", input: "marketCode,dateRange,interval,aggregation,customerAlias", output: "组合负荷或按稳定代号查询的24点客户负荷", status: "真实数据已接入" },
-  { path: "/api/customer/profiles", use: "脱敏客户画像", method: "GET", input: "marketCode,segment", output: "客户代号、波动类型、峰值时段和工作日/周末特征", status: "125家已接入" },
+  { path: "/api/customer/profiles", use: "脱敏客户画像", method: "GET", input: "marketCode,segment", output: "客户代号、波动类型、峰值时段和工作日/周末特征", status: "按市场动态返回" },
   { path: "/api/markets", use: "全国市场注册表", method: "GET", input: "region,stage", output: "市场编码、区域、接入状态", status: "已接入" },
   { path: "/api/markets/{marketCode}/capabilities", use: "市场能力与缺口", method: "GET", input: "marketCode", output: "规则、数据、模型、接口状态", status: "已接入" },
   { path: "/api/auth/session", use: "企业登录会话占位", method: "GET", input: "SSO token", output: "用户、部门、角色、授权市场", status: "接口预留" },
@@ -2975,6 +3276,8 @@ const state = {
   customerProfiles: [],
   customerLoadDaily: [],
   customerLoadHourly: [],
+  customerSettlementMonthly: [],
+  settlementSummaryMonthly: null,
   selectedCustomerAlias: "",
   selectedCustomerDate: "",
   marketDataMode: "fallback",
@@ -2995,7 +3298,11 @@ const state = {
   lossCustomerAnalysis: null,
   lossRevenuePrice: null,
   lossOtherCost: 0,
-  activeLossTab: "portfolio",
+  activeLossTab: "monthly",
+  lossMonth: "",
+  lossMonthlyStatus: "all",
+  lossMonthlySort: "profit-asc",
+  lossMonthlyCustomerAlias: "",
   lossCustomerAlias: "",
   lossCustomerSearch: "",
   lossCustomerStatus: "all",
@@ -3013,6 +3320,7 @@ const state = {
   forecastRunMeta: null,
   backendOnline: false,
   selectedMarket: "national",
+  selectedSubject: "retail",
   selectedRole: "trader",
   marketFilter: "all",
   activeView: "company",
@@ -3023,6 +3331,7 @@ const els = {
   dateSelect: document.querySelector("#dateSelect"),
   riskSlider: document.querySelector("#riskSlider"),
   marketSelect: document.querySelector("#marketSelect"),
+  subjectSelect: document.querySelector("#subjectSelect"),
   roleSelect: document.querySelector("#roleSelect"),
   platformReadiness: document.querySelector("#platformReadiness"),
   platformCoverage: document.querySelector("#platformCoverage"),
@@ -3036,6 +3345,7 @@ const chartEls = {
   medium: document.querySelector("#mediumCurveChart"),
   loss: document.querySelector("#lossChart"),
   lossCustomer: document.querySelector("#lossCustomerChart"),
+  settlementMonthly: document.querySelector("#settlementMonthlyChart"),
   customerLoad: document.querySelector("#customerLoadChart"),
 };
 
@@ -3044,7 +3354,7 @@ init();
 async function init() {
   bindEvents();
   try {
-    const [settlement, loadDaily, loadHourly, forecast96, metadata, spotPrices, portfolioLoadDaily, portfolioLoadHourly, priceForecastResult, dataQuality, marketFeatures, customerProfiles, customerLoadDaily, customerLoadHourly] = await Promise.all([
+    const [settlement, loadDaily, loadHourly, forecast96, metadata, spotPrices, portfolioLoadDaily, portfolioLoadHourly, priceForecastResult, dataQuality, marketFeatures, customerProfiles, customerLoadDaily, customerLoadHourly, customerSettlementMonthly, settlementSummaryMonthly] = await Promise.all([
       fetchJson(DATA_SOURCES.settlement),
       fetchJson(DATA_SOURCES.loadDaily),
       fetchJson(DATA_SOURCES.loadHourly),
@@ -3059,6 +3369,8 @@ async function init() {
       fetchJsonOptional(DATA_SOURCES.customerProfiles, []),
       fetchJsonOptional(DATA_SOURCES.customerLoadDaily, []),
       fetchJsonOptional(DATA_SOURCES.customerLoadHourly, []),
+      fetchJsonOptional(DATA_SOURCES.customerSettlementMonthly, []),
+      fetchJsonOptional(DATA_SOURCES.settlementSummaryMonthly, null),
     ]);
     state.settlement = settlement;
     state.loadDaily = portfolioLoadDaily.length ? portfolioLoadDaily : loadDaily;
@@ -3069,6 +3381,8 @@ async function init() {
     state.customerProfiles = customerProfiles;
     state.customerLoadDaily = customerLoadDaily;
     state.customerLoadHourly = customerLoadHourly;
+    state.customerSettlementMonthly = customerSettlementMonthly;
+    state.settlementSummaryMonthly = settlementSummaryMonthly;
     state.marketDataMode = dataQuality?.isSynthetic ? "synthetic" : spotPrices.length ? "real" : "fallback";
     state.forecast96 = forecast96;
     state.priceForecastResult = priceForecastResult;
@@ -3079,6 +3393,7 @@ async function init() {
     hydrateMediumControls();
     hydrateForecastDates();
     hydrateCustomerControls();
+    hydrateLossControls();
     state.forecastResults = state.forecastDate ? buildForecastResults(state.forecastDate) : [];
     renderStaticScaffold();
     renderAll();
@@ -3104,6 +3419,7 @@ function bindEvents() {
     renderAll();
   });
   els.marketSelect.addEventListener("change", () => selectMarket(els.marketSelect.value));
+  els.subjectSelect.addEventListener("change", () => selectSubject(els.subjectSelect.value));
   els.roleSelect.addEventListener("change", () => {
     state.selectedRole = els.roleSelect.value;
     renderCompany();
@@ -3122,6 +3438,14 @@ function bindEvents() {
   document.querySelector("#deskWorklist").addEventListener("click", (event) => {
     const button = event.target.closest("[data-desk-action]");
     if (button) switchView(button.dataset.deskAction);
+  });
+  document.querySelector("#deskTradingEntries").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-desk-action]");
+    if (button) switchView(button.dataset.deskAction);
+  });
+  document.querySelector(".review-actions").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-review-action]");
+    if (button) reviewForecastRun(button.dataset.reviewAction);
   });
   document.querySelector("#openMarketInterfacesBtn").addEventListener("click", () => switchView("interfaces"));
   document.querySelector("#exportDailyBtn").addEventListener("click", exportDailyStrategy);
@@ -3176,6 +3500,23 @@ function bindEvents() {
     renderLossAnalysis();
     renderCharts();
   }));
+  document.querySelector("#lossMonthSelect").addEventListener("change", (event) => {
+    state.lossMonth = event.target.value;
+    renderLossAnalysis();
+    renderCharts();
+  });
+  document.querySelector("#lossMonthlyStatusFilter").addEventListener("change", (event) => {
+    state.lossMonthlyStatus = event.target.value;
+    renderLossAnalysis();
+  });
+  document.querySelector("#lossMonthlySort").addEventListener("change", (event) => {
+    state.lossMonthlySort = event.target.value;
+    renderLossAnalysis();
+  });
+  document.querySelector("#lossMonthlyCustomerSelect").addEventListener("change", (event) => {
+    state.lossMonthlyCustomerAlias = event.target.value;
+    renderLossAnalysis();
+  });
   document.querySelector("#lossCustomerSearch").addEventListener("input", (event) => {
     state.lossCustomerSearch = event.target.value;
     renderLossAnalysis();
@@ -3268,7 +3609,7 @@ function hydrateDates() {
   if (marketData.settlement?.summary?.date) dates.add(marketData.settlement.summary.date);
   marketData.loadDaily.forEach((row) => dates.add(row.date));
   marketData.spotPrices.forEach((row) => dates.add(row.date));
-  if (state.selectedMarket === "SD") state.forecast96.forEach((row) => row.date && dates.add(row.date));
+  if (hasConnectedMarketData()) state.forecast96.forEach((row) => row.date && dates.add(row.date));
   state.dates = [...dates].sort();
   state.selectedDate = marketData.settlement?.summary?.date || state.dates.at(-1) || "";
   els.dateSelect.innerHTML = state.dates.map((date) => `<option value="${date}">${date}</option>`).join("");
@@ -3279,12 +3620,12 @@ function hydrateForecastDates() {
   const select = document.querySelector("#forecastDateSelect");
   const marketData = selectedMarketData();
   const priceDates = [...new Set(marketData.spotPrices.map((row) => row.date).filter(Boolean))].sort();
-  const dates = state.selectedMarket === "SD" && priceDates.length > 2
+  const dates = hasConnectedMarketData() && priceDates.length > 2
     ? priceDates.slice(2)
-    : state.selectedMarket === "SD"
+    : hasConnectedMarketData()
       ? [...new Set(state.forecast96.map((row) => row.date).filter(Boolean))].sort()
       : [];
-  const modelDate = state.selectedMarket === "SD" ? state.priceForecastResult?.market_date : "";
+  const modelDate = hasConnectedMarketData() ? state.priceForecastResult?.market_date : "";
   if (modelDate && !dates.includes(modelDate)) dates.push(modelDate);
   const latestObservedDate = priceDates.at(-1);
   const nextTargetDate = latestObservedDate ? shiftDate(latestObservedDate, 1) : "";
@@ -3359,12 +3700,34 @@ function hydrateCustomerDates() {
   select.value = state.selectedCustomerDate;
 }
 
+function hydrateLossControls() {
+  const marketData = selectedMarketData();
+  const months = [...new Set((marketData.settlementSummaryMonthly?.monthly || []).map((row) => row.settlementMonth).filter(Boolean))].sort();
+  state.lossMonth = months.includes(state.lossMonth) ? state.lossMonth : months.at(-1) || "";
+  const monthSelect = document.querySelector("#lossMonthSelect");
+  monthSelect.innerHTML = months.map((month) => `<option value="${month}">${month}</option>`).join("");
+  monthSelect.value = state.lossMonth;
+
+  const aliases = [...new Set(marketData.customerSettlementMonthly.map((row) => row.customerAlias).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, "zh-CN", { numeric: true }));
+  state.lossMonthlyCustomerAlias = aliases.includes(state.lossMonthlyCustomerAlias)
+    ? state.lossMonthlyCustomerAlias
+    : aliases[0] || "";
+  const customerSelect = document.querySelector("#lossMonthlyCustomerSelect");
+  customerSelect.innerHTML = aliases.map((alias) => `<option value="${escapeHtml(alias)}">${escapeHtml(alias)}</option>`).join("");
+  customerSelect.value = state.lossMonthlyCustomerAlias;
+}
+
 function hydrateOrganizationControls() {
   els.marketSelect.innerHTML = [
     '<option value="national">全国公司运营</option>',
     ...MARKET_PROFILES.map((market) => `<option value="${market.code}">${market.name}电力市场 · ${market.stage === "sample" ? "真实数据（已脱敏）" : "模板就绪"}</option>`),
   ].join("");
   els.marketSelect.value = state.selectedMarket;
+  els.subjectSelect.innerHTML = Object.entries(TRADING_SUBJECTS)
+    .map(([key, subject]) => `<option value="${key}">${subject.name}</option>`)
+    .join("");
+  els.subjectSelect.value = state.selectedSubject;
   els.roleSelect.innerHTML = Object.entries(ORG_ROLES).map(([key, role]) => `<option value="${key}">${role.name}</option>`).join("");
   els.roleSelect.value = state.selectedRole;
 }
@@ -3396,7 +3759,7 @@ function switchView(view) {
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
   document.querySelectorAll(".view").forEach((item) => item.classList.remove("active"));
   const market = selectedMarketProfile();
-  const pending = MARKET_DEPENDENT_VIEWS.has(view) && (!market || market.stage !== "sample");
+  const pending = MARKET_DEPENDENT_VIEWS.has(view) && !hasConnectedMarketData();
   document.querySelector("#marketPendingState").hidden = !pending;
   if (!pending) document.querySelector(`#${view}View`).classList.add("active");
   els.viewTitle.textContent = pending ? `${market ? market.name : "全国"} · ${titles[view]}` : titles[view];
@@ -3406,6 +3769,7 @@ function switchView(view) {
 }
 
 function selectMarket(code) {
+  if (code !== state.selectedMarket) clearMarketScopedState();
   state.selectedMarket = code;
   els.marketSelect.value = code;
   const importMarketSelect = document.querySelector("#importMarketSelect");
@@ -3414,6 +3778,7 @@ function selectMarket(code) {
   hydrateForecastDates();
   hydrateMediumControls();
   hydrateCustomerControls();
+  hydrateLossControls();
   if (code === "national") {
     switchView("company");
   } else if (code === "SD") {
@@ -3424,12 +3789,47 @@ function selectMarket(code) {
   renderAll();
 }
 
+function selectSubject(subject) {
+  if (!TRADING_SUBJECTS[subject]) return;
+  if (subject !== state.selectedSubject) clearMarketScopedState();
+  state.selectedSubject = subject;
+  els.subjectSelect.value = subject;
+  hydrateDates();
+  hydrateForecastDates();
+  hydrateMediumControls();
+  hydrateCustomerControls();
+  hydrateLossControls();
+  if (state.selectedMarket === "national") switchView("company");
+  else switchView("desk");
+  renderAll();
+}
+
 function selectedMarketProfile() {
   return MARKET_PROFILES.find((market) => market.code === state.selectedMarket) || null;
 }
 
+function hasConnectedMarketData() {
+  return state.selectedMarket === "SD" && state.selectedSubject === "retail";
+}
+
+function clearMarketScopedState() {
+  state.forecastResults = [];
+  state.forecastProvidedMetrics = null;
+  state.forecastRunMeta = null;
+  state.mediumResults = [];
+  state.mediumMonthlyResults = [];
+  state.mediumSummary = null;
+  state.diagnosisRows = [];
+  state.lossAnalysis = null;
+  state.lossCustomerAnalysis = null;
+  state.lossMonthlyCustomerAlias = "";
+  state.lossCustomerAlias = "";
+  state.selectedCustomerAlias = "";
+  state.selectedCustomerDate = "";
+}
+
 function selectedMarketData() {
-  if (state.selectedMarket !== "SD") {
+  if (!hasConnectedMarketData()) {
     return {
       settlement: null,
       loadDaily: [],
@@ -3440,6 +3840,8 @@ function selectedMarketData() {
       customerProfiles: [],
       customerLoadDaily: [],
       customerLoadHourly: [],
+      customerSettlementMonthly: [],
+      settlementSummaryMonthly: null,
     };
   }
   return {
@@ -3452,48 +3854,51 @@ function selectedMarketData() {
     customerProfiles: state.customerProfiles,
     customerLoadDaily: state.customerLoadDaily,
     customerLoadHourly: state.customerLoadHourly,
+    customerSettlementMonthly: state.customerSettlementMonthly,
+    settlementSummaryMonthly: state.settlementSummaryMonthly,
   };
 }
 
 function updateMarketContext() {
   const market = selectedMarketProfile();
   const role = ORG_ROLES[state.selectedRole];
+  const subject = TRADING_SUBJECTS[state.selectedSubject];
   const title = document.querySelector("#marketContextTitle");
   const text = document.querySelector("#marketContextText");
   const status = document.querySelector("#marketContextStatus");
   if (!market) {
     title.textContent = "全国公司运营视图";
-    text.textContent = `${role.name}视角 · 统一查看 31 个省级市场的接入、规则、数据、模型与接口状态。`;
+    text.textContent = `${role.name}视角 · ${subject.name} · 统一查看31个省级市场的接入、规则、数据、模型与接口状态。`;
     status.textContent = "公司级";
     status.className = "pill wait";
-  } else if (market.stage === "sample") {
-    title.textContent = `${market.name}电力市场 · 真实数据（已脱敏）已接入`;
-    text.textContent = `${role.name}视角 · 已接入2026年上半年小时价格和125家客户脱敏组合负荷；竞价空间、申报成交和市场规则仍待补。`;
+  } else if (hasConnectedMarketData()) {
+    title.textContent = `${market.name}电力市场 · ${subject.name}`;
+    text.textContent = `${role.name}视角 · 已接入2026年上半年小时价格、127家客户脱敏负荷和1至6月月度结算；竞价空间、申报成交和市场规则仍待补。`;
     status.textContent = "真实数据（已脱敏）";
     status.className = "pill partial";
   } else {
-    title.textContent = `${market.name}电力市场 · 接入模板`;
-    text.textContent = `${role.name}视角 · 业务模块与接口规范已就绪，真实规则和市场数据尚未接入。`;
+    title.textContent = `${market.name}电力市场 · ${subject.name}`;
+    text.textContent = `${role.name}视角 · ${subject.description} 当前仅保留业务流程与接口，真实规则和数据尚未接入。`;
     status.textContent = "数据待接入";
     status.className = "pill missing";
   }
   const pendingTitle = document.querySelector("#pendingMarketTitle");
   const pendingText = document.querySelector("#pendingMarketText");
   if (pendingTitle && pendingText) {
-    pendingTitle.textContent = market ? `${market.name}市场模板已就绪` : "请先选择具体省级市场";
+    pendingTitle.textContent = market ? `${market.name} · ${subject.name}模板已就绪` : "请先选择具体省级市场";
     pendingText.textContent = market
-      ? `平台不会调用山东数据代替${market.name}数据。请接入该市场的规则、日前/实时价格、负荷与新能源、申报成交、结算及中长期持仓后再运行本模块。`
-      : "全国视图只展示公司级运营汇总。请选择已接入真实数据（已脱敏）的山东市场或待建设的省级市场进入业务工作台。";
+      ? `平台不会跨省份或跨交易主体复用数据。请接入${market.name}${subject.name}的规则、日前/实时价格、负荷与新能源、申报成交、结算及中长期持仓后再运行本模块。`
+      : "全国视图只展示公司级运营汇总。请选择具体省份和交易主体进入业务工作台。";
   }
   if (!market) {
     els.platformReadiness.textContent = "全国多市场 · 公司级框架";
     els.platformCoverage.textContent = `已配置 ${MARKET_PROFILES.length} 个省级市场模板，山东为当前首个真实数据（已脱敏）接入市场。`;
-  } else if (market.stage === "sample") {
-    els.platformReadiness.textContent = "山东市场 · 真实数据（已脱敏）";
-    els.platformCoverage.textContent = `价格和脱敏组合负荷已接入；${CUSTOMER.company} 结算单保留为附加客户案例。`;
+  } else if (hasConnectedMarketData()) {
+    els.platformReadiness.textContent = `${subject.name} · 真实数据（已脱敏）`;
+    els.platformCoverage.textContent = `价格、127家客户脱敏负荷和6个月经营结算已接入；${CUSTOMER.company} 单日结算保留为附加案例。`;
   } else {
-    els.platformReadiness.textContent = `${market.name}市场 · 模板就绪`;
-    els.platformCoverage.textContent = "该市场数据隔离空间和接口已预留，当前未载入任何山东真实数据。";
+    els.platformReadiness.textContent = `${subject.name} · 模板就绪`;
+    els.platformCoverage.textContent = "该省份与交易主体的数据隔离空间和接口已预留，当前未载入其他业务数据。";
   }
 }
 
@@ -3510,8 +3915,9 @@ function renderStaticScaffold() {
   ).join("");
   document.querySelector("#mediumFiles").innerHTML = [
     { name: "客户结算单", domain: "结算复盘", status: "已接入", path: "data/settlement_2026-06-21.json" },
-    { name: "山东脱敏组合负荷", domain: "负荷画像", status: "真实聚合已接入", path: "data/portfolio_load_hourly_2026h1.json" },
-    { name: "山东现货价格", domain: "预测与回测", status: "真实小时数据已接入", path: "data/spot_prices_2026h1.json" },
+    { name: "脱敏组合负荷", domain: "负荷画像", status: "真实聚合已接入", path: "data/portfolio_load_hourly_2026h1.json" },
+    { name: "现货价格", domain: "预测与回测", status: "真实小时数据已接入", path: "data/spot_prices_2026h1.json" },
+    { name: "客户月度结算", domain: "经营盈亏", status: "1至6月已接入", path: "data/customer_settlement_monthly_anon_2026h1.json" },
     { name: "零售合同与持仓", domain: "合同策略", status: "待补数据", path: "/api/retail/contracts、/api/medium-contract/positions" },
   ].map((file) => `
     <article class="file-item">
@@ -3567,6 +3973,15 @@ function renderStaticScaffold() {
       version: "v1",
       status: "已接入",
       message: "已解析 24 小时结算明细。",
+    },
+    {
+      time: new Date().toLocaleString("zh-CN", { hour12: false }),
+      customer: "客户代号集合",
+      domain: "月度经营结算",
+      fileName: "2026年1-6月单户利润结算.xlsx",
+      version: "v1",
+      status: state.settlementSummaryMonthly ? "已接入" : "待补数据",
+      message: state.settlementSummaryMonthly ? `已接入 ${state.customerSettlementMonthly.length} 条客户月度结算记录；原表辅助公式错误已记录为质量提示。` : "月度结算数据未找到。",
     },
     {
       time: new Date().toLocaleString("zh-CN", { hour12: false }),
@@ -3632,7 +4047,8 @@ function renderAll() {
   renderSpot();
   renderSpotWorkspace();
   renderForecast();
-  if (!state.mediumResults.length) runMediumOptimization({ silent: true });
+  if (!hasConnectedMarketData()) renderMediumResults();
+  else if (!state.mediumResults.length) runMediumOptimization({ silent: true });
   else renderMediumResults();
   renderDataQuality();
   renderPriceAnalysis();
@@ -3684,8 +4100,10 @@ function renderPriceAnalysis() {
   const priceQuality = marketData.dataQuality?.datasets?.spotPrices;
   const monthly = marketData.marketFeatures?.price?.monthly || [];
   const status = document.querySelector("#priceAnalysisStatus");
+  const title = document.querySelector("#priceAnalysisTitle");
   const subtitle = document.querySelector("#priceAnalysisSubtitle");
-  const label = market?.name || "当前省级市场";
+  const label = state.selectedMarket === "national" ? "全国" : (market?.name || "当前省级市场");
+  if (title) title.textContent = `${label}电价分析`;
   if (subtitle) subtitle.textContent = `${label}的日前/实时小时价格、月度特征和风险时段`;
   if (!priceRows.length) {
     if (status) status.textContent = "待补数据";
@@ -3704,7 +4122,7 @@ function renderPriceAnalysis() {
     if (month) counts[month] = (counts[month] || 0) + (row.realtimePriceYuanMwh >= 500 ? 1 : 0);
     return counts;
   }, {});
-  if (status) status.textContent = `${priceRows.length}点 · ${priceQuality?.dateRange?.join(" 至 ") || "山东小时价格"}`;
+  if (status) status.textContent = `${priceRows.length}点 · ${priceQuality?.dateRange?.join(" 至 ") || `${market?.name || "当前市场"}小时价格`}`;
   document.querySelector("#priceAnalysisKpis").innerHTML = [
     ["价格点数", `${priceRows.length} 点`, `${priceQuality?.missingRealtimeCount || 0} 个实时点缺失`],
     ["日前均价", `${fmt(dayAheadAverage)} 元/MWh`, "有效实时价格点口径"],
@@ -3756,18 +4174,36 @@ function renderSpotTabs() {
 }
 
 function renderDesk() {
+  const marketData = selectedMarketData();
+  const market = selectedMarketProfile();
+  if (!hasConnectedMarketData()) {
+    setText("#deskDayAvg", "--");
+    setText("#deskRtAvg", "--");
+    setText("#deskSpreadAvg", "--");
+    setText("#deskRiskCount", "--");
+    setText("#readyCount", "0");
+    setText("#deskMarketSubtitle", `${market?.name || "当前省级市场"} · 数据待接入`);
+    document.querySelector("#deskMarketStatus").textContent = "数据待接入";
+    document.querySelector("#deskWorklist").innerHTML = `<article class="work-item"><strong>${market?.name || "当前省级市场"}模板已就绪</strong><p>当前省份和交易主体没有已接入的真实价格、负荷或结算数据，平台不会复用山东数据。</p></article>`;
+    document.querySelector("#deskTradingEntries").innerHTML = `<article class="desk-entry"><span class="tag wait">接口预留</span><strong>等待数据接入</strong><p>接入本市场的规则、价格、负荷、持仓和交易执行数据后启用交易流程。</p></article>`;
+    document.querySelector("#deskSopFlow").innerHTML = "";
+    els.platformReadiness.textContent = `${TRADING_SUBJECTS[state.selectedSubject].name} · 模板就绪`;
+    els.platformCoverage.textContent = "该省份与交易主体没有载入其他市场数据。";
+    renderDeskReview();
+    return;
+  }
   const rows = spotMarketRows();
   const summary = spotMarketSummary();
-  const load = state.loadDaily.find((row) => row.date === state.selectedDate);
+  const load = marketData.loadDaily.find((row) => row.date === state.selectedDate);
   const highRisk = highRiskSpotRows();
   setText("#deskDayAvg", fmt(load?.totalMwh));
   setText("#deskRtAvg", fmt(summary.averageDayAheadPrice));
   setText("#deskSpreadAvg", fmt(summary.averageSpread));
   setText("#deskRiskCount", highRisk.length);
-  setText("#readyCount", state.spotPrices.length ? "3" : "1");
-  els.platformReadiness.textContent = "山东工作台 · 真实数据（已脱敏）";
-  els.platformCoverage.textContent = "已接入小时现货价格、脱敏组合负荷和客户结算案例；其他交易数据通过统一接口继续补充。";
-  setText("#deskMarketSubtitle", `${state.selectedDate} · 日前/实时价格与脱敏组合负荷`);
+  setText("#readyCount", marketData.spotPrices.length ? "4" : "0");
+  els.platformReadiness.textContent = `${TRADING_SUBJECTS[state.selectedSubject].name}工作台 · 真实数据（已脱敏）`;
+  els.platformCoverage.textContent = "已接入小时现货价格、脱敏组合负荷和月度经营结算；策略仍需人工复核。";
+  setText("#deskMarketSubtitle", `${market?.name || "当前省级市场"} ${state.selectedDate} · 日前/实时价格与组合负荷`);
   document.querySelector("#deskMarketStatus").textContent = marketDataModeLabel();
   const largestSpread = maxBy(rows.filter((row) => Number.isFinite(row.spreadYuanMwh)), (row) => Math.abs(row.spreadYuanMwh));
   const peakRealtime = maxBy(rows.filter((row) => Number.isFinite(row.realtimePriceYuanMwh)), (row) => row.realtimePriceYuanMwh);
@@ -3798,6 +4234,106 @@ function renderDesk() {
       ${task.action ? `<button class="table-action top-gap" type="button" data-desk-action="${task.action}">${task.actionLabel}</button>` : ""}
     </article>
   `).join("");
+
+  const entries = [
+    { title: "现货与日前", status: "部分接入", body: "读取价格预测、风险区间和市场信息，形成可复核的现货判断。", action: "spot" },
+    { title: "旬交易", status: "接口预留", body: "确认初始持仓、旬度需求和分解曲线，等待省级规则与真实持仓。", action: "medium" },
+    { title: "月度交易", status: "接口预留", body: "承接月度合同电量、价格和曲线优化，保留人工调整记录。", action: "medium" },
+    { title: "年度交易", status: "接口预留", body: "承接年度电量预算、合同组合和风险限额，等待年度交易规则。", action: "medium" },
+  ];
+  document.querySelector("#deskTradingEntries").innerHTML = entries.map((entry) => `
+    <article class="desk-entry">
+      <span class="tag ${entry.status === "部分接入" ? "partial" : "wait"}">${entry.status}</span>
+      <strong>${entry.title}</strong>
+      <p>${entry.body}</p>
+      <button class="table-action" type="button" data-desk-action="${entry.action}">进入</button>
+    </article>
+  `).join("");
+
+  const sopSteps = [
+    ["01", "创建交易日", "选择省份和主体，确认交易日期、交易品种与初始仓位。"],
+    ["02", "准备数据", "导入市场披露、历史价格、负荷/出力预测和受控事件。"],
+    ["03", "运行预测", "生成24点价格区间、价差风险与模型质量提示。"],
+    ["04", "生成策略", "结合仓位、合同和限额生成建议；输入不全时只能HOLD。"],
+    ["05", "人工复核", "交易员提交、修改、批准或拒绝，保存人员、时间与原因。"],
+    ["06", "执行复盘", "记录申报成交、盘中调整和结算结果，关闭交易日并回测。"],
+  ];
+  document.querySelector("#deskSopFlow").innerHTML = sopSteps.map(([index, title, body]) => `
+    <article class="sop-step"><span>${index}</span><strong>${title}</strong><p>${body}</p></article>
+  `).join("");
+  document.querySelector("#deskSopStatus").textContent = "日滚动SOP · 人工复核";
+  renderDeskReview();
+}
+
+function renderDeskReview() {
+  const meta = state.forecastRunMeta || {};
+  const status = meta.review_status || "NOT_RUN";
+  const labels = {
+    NOT_RUN: "尚未运行预测",
+    DRAFT: "草稿",
+    PENDING_REVIEW: "待复核",
+    APPROVED: "已批准",
+    MODIFIED: "已修改",
+    REJECTED: "已拒绝",
+  };
+  const allowed = {
+    DRAFT: ["SUBMIT"],
+    PENDING_REVIEW: ["APPROVE", "MODIFY", "REJECT"],
+  }[status] || [];
+  setText("#deskReviewStatus", labels[status] || status);
+  setText(
+    "#deskReviewMeta",
+    !state.backendOnline
+      ? "审核后端未连接，公开页面不伪造审批记录"
+      : meta.run_id
+        ? `运行ID ${meta.run_id} · 执行权限始终关闭`
+        : "请先运行一次预测，生成可审核的运行记录",
+  );
+  document.querySelectorAll("[data-review-action]").forEach((button) => {
+    button.disabled = !state.backendOnline || !meta.run_id || !allowed.includes(button.dataset.reviewAction);
+  });
+}
+
+async function reviewForecastRun(action) {
+  const meta = state.forecastRunMeta || {};
+  if (!state.backendOnline || !meta.run_id) {
+    showToast("请先启动后端并运行预测，平台不会生成虚假审核记录。");
+    return;
+  }
+  const reviewer = document.querySelector("#deskReviewerInput").value.trim();
+  const reason = document.querySelector("#deskReviewReasonInput").value.trim();
+  if (!reviewer) {
+    showToast("请填写审核人。");
+    return;
+  }
+  if (["MODIFY", "REJECT"].includes(action) && !reason) {
+    showToast("修改或拒绝必须填写原因。");
+    return;
+  }
+  const body = { action, reviewer, reason: reason || null };
+  if (action === "MODIFY") {
+    body.modified_suggestions = state.forecastResults.map((row, index) => ({
+      period: row.period || row.pointIndex || index + 1,
+      action: "HOLD",
+      reason,
+    }));
+  }
+  try {
+    const response = await fetch(`http://127.0.0.1:8002/api/v1/model-runs/${encodeURIComponent(meta.run_id)}/review`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload?.error?.message || `HTTP ${response.status}`);
+    state.forecastRunMeta = { ...meta, ...payload, review_status: payload.review_status };
+    document.querySelector("#deskReviewReasonInput").value = "";
+    renderDeskReview();
+    renderForecast();
+    showToast(`审核状态已更新为${payload.review_status}。`);
+  } catch (error) {
+    showToast(`审核失败：${error.message}`);
+  }
 }
 
 function renderSamples() {
@@ -3809,26 +4345,28 @@ function renderSamples() {
 }
 
 function renderDeskSampleSummary() {
+  const marketData = selectedMarketData();
   const summary = settlementSummary();
-  const latestLoad = state.loadDaily.at(-1);
-  const priceQuality = state.dataQuality?.datasets?.spotPrices;
-  const loadQuality = state.dataQuality?.datasets?.portfolioLoad;
-  const featureSummary = state.marketFeatures;
+  const latestLoad = marketData.loadDaily.at(-1);
+  const priceQuality = marketData.dataQuality?.datasets?.spotPrices;
+  const loadQuality = marketData.dataQuality?.datasets?.portfolioLoad;
+  const featureSummary = marketData.marketFeatures;
+  const monthlySettlement = marketData.settlementSummaryMonthly;
   const mostVolatileMonth = maxBy(featureSummary?.price?.monthly || [], (row) => row.realtimePriceStandardDeviationYuanMwh);
   const stableSegment = featureSummary?.customerLoad?.segmentSummary?.find((row) => row.segment === "稳定型");
   const highVolatilitySegment = featureSummary?.customerLoad?.segmentSummary?.find((row) => row.segment === "高波动型");
   const items = [
     sampleItem({
-      title: "山东现货价格",
+      title: "现货价格",
       body: priceQuality ? `真实数据覆盖${priceQuality.dateRange.join(" 至 ")}，共${priceQuality.rowCount}个小时点；${priceQuality.missingRealtimeCount}个实时价格点缺失。` : "本地真实价格数据未加载。",
     }),
     sampleItem({
       title: "脱敏组合负荷",
-      body: latestLoad ? `已聚合${loadQuality?.customerCount || 125}家客户、${state.loadDaily.length}个有效日；最近日期${latestLoad.date}，日用电量${fmt(latestLoad.totalMwh)} MWh。` : "待补客户负荷数据。",
+      body: latestLoad ? `已聚合${loadQuality?.customerCount || 127}家客户、${marketData.loadDaily.length}个有效日；最近日期${latestLoad.date}，日用电量${fmt(latestLoad.totalMwh)} MWh。` : "待补客户负荷数据。",
     }),
     sampleItem({
-      title: "客户结算案例",
-      body: `已接入${summary.date}结算单作为附加案例，总电量${fmt(summary.totalEnergyMwh)} MWh；不作为平台主数据口径。`,
+      title: "月度经营结算",
+      body: monthlySettlement ? `已接入${monthlySettlement.monthly.length}个月、${monthlySettlement.totals.customerMonthRecordCount}条脱敏客户月结算记录；半年毛利${signed(monthlySettlement.totals.grossProfitYuan)}元。` : `单日结算案例${summary.date}已接入，月度结算待加载。`,
     }),
     sampleItem({
       title: "市场与负荷特征",
@@ -3841,7 +4379,15 @@ function renderDeskSampleSummary() {
 }
 
 function renderSpot() {
-  setText("#spotMarketSubtitle", `${state.selectedDate} 山东小时日前/实时价格与脱敏组合负荷；价差口径为日前减实时。`);
+  const market = selectedMarketProfile();
+  if (!hasConnectedMarketData()) {
+    setText("#spotMarketSubtitle", `${market?.name || "当前省级市场"} · 现货价格与负荷数据待接入`);
+    document.querySelector("#spotMarketStatus").textContent = "数据待接入";
+    document.querySelector("#spotSignals").innerHTML = sampleItem({ title: "暂无现货数据", body: "当前省份和交易主体尚未接入现货价格、负荷与交易执行数据。" });
+    document.querySelector("#spotStrategyTable").innerHTML = '<tr><td colspan="8">暂无可分析的现货数据。</td></tr>';
+    return;
+  }
+  setText("#spotMarketSubtitle", `${state.selectedDate} ${market?.name || "当前省级市场"}小时日前/实时价格与脱敏组合负荷；价差口径为日前减实时。`);
   document.querySelector("#spotMarketStatus").textContent = state.marketDataMode === "real" ? "真实小时价格" : marketDataModeLabel();
   document.querySelector("#spotSignals").innerHTML = buildSignals().map((signal) => `
     <article class="signal-item"><strong>${signal.title}</strong><p>${signal.body}</p></article>
@@ -3866,6 +4412,10 @@ function renderSpot() {
 function renderSpotWorkspace() {
   renderSpotTabs();
   const workspace = document.querySelector("#spotWorkspace");
+  if (!hasConnectedMarketData()) {
+    workspace.innerHTML = `<div class="placeholder-block"><strong>现货工作区待接入</strong><p>当前省份和交易主体只保留页面与接口，不展示其他市场的数据。</p></div>`;
+    return;
+  }
   const tab = state.activeSpotTab;
   if (tab === "settlement") {
     const summary = spotMarketSummary();
@@ -3884,7 +4434,7 @@ function renderSpotWorkspace() {
     return;
   }
   if (tab === "load") {
-    const rows = state.loadDaily.slice(-6).reverse();
+    const rows = selectedMarketData().loadDaily.slice(-6).reverse();
     workspace.innerHTML = `<div class="business-grid">${rows.map((row) => sampleItem({
       title: `${row.date} · 日电量 ${fmt(row.totalMwh)} MWh`,
       body: `峰值 ${fmt(row.peakHourlyMwh)} MWh，峰值小时 ${row.peakHour}；谷值 ${fmt(row.valleyHourlyMwh)} MWh，谷值小时 ${row.valleyHour}。`,
@@ -4037,8 +4587,9 @@ function buildLossAnalysis(date = state.selectedDate) {
 }
 
 function buildCustomerContributionAnalysis(portfolioAnalysis = buildLossAnalysis()) {
-  const customerRows = state.customerLoadHourly.filter((row) => row.date === portfolioAnalysis.date);
-  const profileMap = new Map(state.customerProfiles.map((row) => [row.customerAlias, row]));
+  const marketData = selectedMarketData();
+  const customerRows = marketData.customerLoadHourly.filter((row) => row.date === portfolioAnalysis.date);
+  const profileMap = new Map(marketData.customerProfiles.map((row) => [row.customerAlias, row]));
   const portfolioByTime = new Map(portfolioAnalysis.hourly.map((row) => [row.time, row]));
   const customerEnergyByAlias = new Map(customerRows.map((row) => [
     row.customerAlias,
@@ -4147,6 +4698,129 @@ function buildCustomerContributionAnalysis(portfolioAnalysis = buildLossAnalysis
     negativeCount: customers.filter((row) => Number.isFinite(row.grossMarginYuan) && row.grossMarginYuan < -1).length,
     positiveCount: customers.filter((row) => Number.isFinite(row.grossMarginYuan) && row.grossMarginYuan > 1).length,
   };
+}
+
+function filteredMonthlySettlementRows(rows) {
+  let filtered = rows;
+  if (state.lossMonthlyStatus === "loss") filtered = filtered.filter((row) => row.profitStatus === "亏损");
+  if (state.lossMonthlyStatus === "profit") filtered = filtered.filter((row) => row.profitStatus === "盈利");
+  if (state.lossMonthlyStatus === "flat") filtered = filtered.filter((row) => !["盈利", "亏损"].includes(row.profitStatus));
+  return filtered.slice().sort((left, right) => {
+    if (state.lossMonthlySort === "profit-desc") return (right.grossProfitYuan || 0) - (left.grossProfitYuan || 0);
+    if (state.lossMonthlySort === "energy-desc") return (right.settledEnergyMwh || 0) - (left.settledEnergyMwh || 0);
+    return (left.grossProfitYuan || 0) - (right.grossProfitYuan || 0);
+  });
+}
+
+function monthlyProfitStatusClass(status) {
+  if (status === "亏损") return "buy";
+  if (status === "盈利") return "sell";
+  return "hold";
+}
+
+function renderMonthlySettlementAnalysis() {
+  const marketData = selectedMarketData();
+  const summary = marketData.settlementSummaryMonthly;
+  const allRows = marketData.customerSettlementMonthly || [];
+  const monthly = summary?.monthly || [];
+  const selectedSummary = monthly.find((row) => row.settlementMonth === state.lossMonth);
+  const selectedRows = allRows.filter((row) => row.settlementMonth === state.lossMonth);
+
+  if (!summary || !selectedSummary) {
+    document.querySelector("#lossMonthlyKpis").innerHTML = sampleItem({ title: "月结算待接入", body: "当前省份和交易主体没有可用的客户月度结算数据。" });
+    document.querySelector("#lossMonthlyQualityNote").textContent = "接入月度结算、稳定客户映射和财务口径后显示经营实绩。";
+    document.querySelector("#lossMonthlyInsights").innerHTML = "";
+    document.querySelector("#lossMonthlyCustomerTable").innerHTML = '<tr><td colspan="11">暂无月度结算数据。</td></tr>';
+    document.querySelector("#lossMonthlyCustomerKpis").innerHTML = "";
+    document.querySelector("#lossMonthlyCustomerTrendTable").innerHTML = '<tr><td colspan="7">暂无客户趋势数据。</td></tr>';
+    if (state.activeLossTab === "monthly") {
+      document.querySelector("#lossSubtitle").textContent = "月度经营实绩待接入";
+      document.querySelector("#lossBasisPill").textContent = "待补数据";
+      document.querySelector("#lossBasisPill").className = "pill wait";
+      document.querySelector("#lossKpis").innerHTML = "";
+      document.querySelector("#lossBoundaryNote").textContent = "当前选择没有月度结算数据，平台不会复用其他省份或其他交易主体的数据。";
+    }
+    return;
+  }
+
+  document.querySelector("#lossMonthlyKpis").innerHTML = [
+    ["结算电量", `${fmt(selectedSummary.settledEnergyMwh)} MWh`, `${selectedSummary.customerCount}家客户`],
+    ["总成本", `${fmt(selectedSummary.totalCostYuan)} 元`, `均价${fmt(selectedSummary.averageUnitCostYuanMwh)}元/MWh`],
+    ["零售收入", `${fmt(selectedSummary.retailRevenueYuan)} 元`, `到户均价${fmt(selectedSummary.averageRetailUnitPriceYuanMwh)}元/MWh`],
+    ["当月毛利", `${signed(selectedSummary.grossProfitYuan)} 元`, `毛利率${fmt(selectedSummary.grossMarginRate * 100)}%`],
+    ["客户分布", `${selectedSummary.lossCustomerCount}亏 / ${selectedSummary.profitableCustomerCount}盈`, `持平或待核验${selectedSummary.breakEvenCustomerCount + selectedSummary.unresolvedCustomerCount}家`],
+  ].map(([label, value, note]) => `<article><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+
+  const quality = summary.quality || {};
+  document.querySelector("#lossMonthlyQualityNote").textContent = `已接入${quality.monthCount || monthly.length}个月、${quality.customerMonthRecordCount || allRows.length}条客户月结算记录。原表检测到${quality.formulaErrorCellCount || 0}个辅助公式错误，核心成本/收入/毛利字段错误${quality.financialFormulaErrorCellCount || 0}个；真实名称未进入页面。`;
+  const worstMonth = monthly.slice().sort((left, right) => left.grossProfitYuan - right.grossProfitYuan)[0];
+  const bestMonth = monthly.slice().sort((left, right) => right.grossProfitYuan - left.grossProfitYuan)[0];
+  const lowestCustomer = selectedRows.slice().sort((left, right) => left.grossProfitYuan - right.grossProfitYuan)[0];
+  document.querySelector("#lossMonthlyInsights").innerHTML = [
+    sampleItem({ title: "最低毛利月份", body: `${worstMonth.settlementMonth}毛利${signed(worstMonth.grossProfitYuan)}元，亏损客户${worstMonth.lossCustomerCount}家。` }),
+    sampleItem({ title: "最高毛利月份", body: `${bestMonth.settlementMonth}毛利${signed(bestMonth.grossProfitYuan)}元，单位毛利${fmt(bestMonth.averageUnitProfitYuanMwh)}元/MWh。` }),
+    sampleItem({ title: "本月优先复核", body: lowestCustomer ? `${lowestCustomer.customerAlias}毛利${signed(lowestCustomer.grossProfitYuan)}元，为本月最低；应结合其合同、申报、偏差和人工调整继续归因。` : "本月无客户结算记录。" }),
+    sampleItem({ title: "归因边界", body: "现有月结算可以确认结果，但不能单独解释策略原因；中长期持仓、申报成交、偏差考核和规则版本仍需补齐。" }),
+  ].join("");
+
+  document.querySelector("#lossMonthlyStatusFilter").value = state.lossMonthlyStatus;
+  document.querySelector("#lossMonthlySort").value = state.lossMonthlySort;
+  const rows = filteredMonthlySettlementRows(selectedRows);
+  document.querySelector("#lossMonthlyCustomerSubtitle").textContent = `${state.lossMonth} · 显示${rows.length}/${selectedRows.length}家 · 真实结算结果（已脱敏）`;
+  document.querySelector("#lossMonthlyCustomerTable").innerHTML = rows.map((row, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td><strong>${escapeHtml(row.customerAlias)}</strong></td>
+      <td>${fmt(row.settledEnergyMwh)} MWh</td>
+      <td>${fmt(row.totalCostYuan)} 元</td>
+      <td>${fmt(row.retailRevenueYuan)} 元</td>
+      <td>${fmt(row.unitCostYuanMwh)} 元/MWh</td>
+      <td>${fmt(row.retailUnitPriceYuanMwh)} 元/MWh</td>
+      <td class="${row.grossProfitYuan < 0 ? "text-risk" : "text-ok"}">${signed(row.grossProfitYuan)} 元</td>
+      <td>${signed(row.unitProfitYuanMwh)} 元/MWh</td>
+      <td>${escapeHtml(row.packageName)}</td>
+      <td><span class="tag ${monthlyProfitStatusClass(row.profitStatus)}">${row.profitStatus}</span></td>
+    </tr>
+  `).join("") || '<tr><td colspan="11">没有符合当前条件的客户记录。</td></tr>';
+
+  const aliases = [...new Set(allRows.map((row) => row.customerAlias))].sort((left, right) => left.localeCompare(right, "zh-CN", { numeric: true }));
+  state.lossMonthlyCustomerAlias = aliases.includes(state.lossMonthlyCustomerAlias) ? state.lossMonthlyCustomerAlias : aliases[0] || "";
+  const customerSelect = document.querySelector("#lossMonthlyCustomerSelect");
+  customerSelect.innerHTML = aliases.map((alias) => `<option value="${escapeHtml(alias)}">${escapeHtml(alias)}</option>`).join("");
+  customerSelect.value = state.lossMonthlyCustomerAlias;
+  const trendRows = allRows.filter((row) => row.customerAlias === state.lossMonthlyCustomerAlias).sort((left, right) => left.settlementMonth.localeCompare(right.settlementMonth));
+  const trendEnergy = trendRows.reduce((total, row) => total + (row.settledEnergyMwh || 0), 0);
+  const trendProfit = trendRows.reduce((total, row) => total + (row.grossProfitYuan || 0), 0);
+  document.querySelector("#lossMonthlyCustomerTrendSubtitle").textContent = `${state.lossMonthlyCustomerAlias || "客户"} · ${trendRows.length}个月真实结算记录`;
+  document.querySelector("#lossMonthlyCustomerKpis").innerHTML = [
+    ["客户代号", state.lossMonthlyCustomerAlias || "--", "稳定脱敏编号"],
+    ["覆盖月份", `${trendRows.length} 个月`, `${trendRows[0]?.settlementMonth || "--"} 至 ${trendRows.at(-1)?.settlementMonth || "--"}`],
+    ["累计电量", `${fmt(trendEnergy)} MWh`, "月结算电量合计"],
+    ["累计毛利", `${signed(trendProfit)} 元`, `亏损月份${trendRows.filter((row) => row.profitStatus === "亏损").length}个`],
+    ["加权度电毛利", `${trendEnergy ? signed(trendProfit / trendEnergy) : "--"} 元/MWh`, "累计毛利 / 累计电量"],
+  ].map(([label, value, note]) => `<article><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+  document.querySelector("#lossMonthlyCustomerTrendTable").innerHTML = trendRows.map((row) => `
+    <tr>
+      <td>${row.settlementMonth}</td><td>${fmt(row.settledEnergyMwh)} MWh</td><td>${fmt(row.totalCostYuan)} 元</td>
+      <td>${fmt(row.retailRevenueYuan)} 元</td><td class="${row.grossProfitYuan < 0 ? "text-risk" : "text-ok"}">${signed(row.grossProfitYuan)} 元</td>
+      <td>${signed(row.unitProfitYuanMwh)} 元/MWh</td><td><span class="tag ${monthlyProfitStatusClass(row.profitStatus)}">${row.profitStatus}</span></td>
+    </tr>
+  `).join("") || '<tr><td colspan="7">该客户暂无月度结算记录。</td></tr>';
+
+  if (state.activeLossTab === "monthly") {
+    document.querySelector("#lossSubtitle").textContent = `${state.lossMonth} · 公司与客户月度经营实绩`;
+    const basisPill = document.querySelector("#lossBasisPill");
+    basisPill.textContent = "真实月结算 · 客户已脱敏";
+    basisPill.className = "pill ok";
+    document.querySelector("#lossKpis").innerHTML = [
+      ["半年结算电量", `${fmt(summary.totals.settledEnergyMwh)} MWh`, `${summary.quality.customerMonthRecordCount}条客户月记录`],
+      ["半年总成本", `${fmt(summary.totals.totalCostYuan)} 元`, `均价${fmt(summary.totals.averageUnitCostYuanMwh)}元/MWh`],
+      ["半年零售收入", `${fmt(summary.totals.retailRevenueYuan)} 元`, `到户均价${fmt(summary.totals.averageRetailUnitPriceYuanMwh)}元/MWh`],
+      ["半年毛利", `${signed(summary.totals.grossProfitYuan)} 元`, `毛利率${fmt(summary.totals.grossMarginRate * 100)}%`],
+      ["选中月份", state.lossMonth, `${selectedSummary.lossCustomerCount}家亏损客户`],
+    ].map(([label, value, note]) => `<article><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+    document.querySelector("#lossBoundaryNote").textContent = "成本、零售收入和毛利来自已提供的月结算表，可确认经营结果；缺少中长期持仓、申报成交、偏差考核、人工调整与规则版本时，不对亏损原因作确定性判断。";
+  }
 }
 
 function renderLossTabs() {
@@ -4377,10 +5051,12 @@ function renderLossAnalysis() {
   `).join("");
   if (!hasEnergy) document.querySelector("#lossAttributionTable").innerHTML = '<tr><td colspan="8">该日期缺少可用负荷或结算数据。</td></tr>';
   renderCustomerContributionAnalysis(customerContribution);
+  renderMonthlySettlementAnalysis();
   renderLossTabs();
 }
 
 function buildForecastResults(date) {
+  const marketData = selectedMarketData();
   const targetRows = spotPriceRows(date);
   const lagOneDate = shiftDate(date, -1);
   const lagTwoDate = shiftDate(date, -2);
@@ -4393,14 +5069,14 @@ function buildForecastResults(date) {
     const lagOne = lagOneRows.get(target.time);
     const lagTwo = lagTwoRows.get(target.time);
     if (!lagOne || !lagTwo) return null;
-    const history = state.spotPrices
+    const history = marketData.spotPrices
       .filter((row) => row.date < date && row.time === target.time && Number.isFinite(row.realtimePriceYuanMwh))
       .slice(-14);
     const historyPrices = history.map((row) => row.realtimePriceYuanMwh);
     const historicalMean = mean(historyPrices);
     const lagTwoRealtime = Number.isFinite(lagTwo.realtimePriceYuanMwh) ? lagTwo.realtimePriceYuanMwh : historicalMean;
     const dayAheadReference = lagOne.dayAheadPriceYuanMwh;
-    const previousLoads = state.loadHourly
+    const previousLoads = marketData.loadHourly
       .filter((row) => row.date < lagOneDate && row.time === target.time && Number.isFinite(row.totalMwh))
       .slice(-7)
       .map((row) => row.totalMwh);
@@ -4447,8 +5123,8 @@ function buildForecastResults(date) {
 }
 
 async function runForecastEvaluation(options = {}) {
-  if (state.selectedMarket !== "SD") {
-    if (!options.silent) showToast("该市场尚未接入预测数据，平台不会套用山东数据。");
+  if (!hasConnectedMarketData()) {
+    if (!options.silent) showToast("当前省份和交易主体尚未接入预测数据，平台不会复用其他数据。");
     return;
   }
   state.forecastModelVersion = document.querySelector("#forecastModelSelect").value;
@@ -4532,9 +5208,24 @@ async function checkBackend() {
 }
 
 function renderForecast() {
+  if (!hasConnectedMarketData()) {
+    document.querySelector("#forecastKpis").innerHTML = sampleItem({ title: "预测数据待接入", body: "当前省份和交易主体没有可用的价格预测输入或模型结果。" });
+    document.querySelector("#forecastChartSubtitle").textContent = "不会跨省份或跨交易主体复用模型结果";
+    document.querySelector("#forecastPointStatus").textContent = "0 点";
+    document.querySelector("#forecastModeStatus").textContent = "数据待接入";
+    document.querySelector("#forecastInsights").innerHTML = "";
+    document.querySelector("#forecastBacktest").innerHTML = "";
+    document.querySelector("#forecastGovernance").innerHTML = "";
+    document.querySelector("#forecastResultTable").innerHTML = '<tr><td colspan="8">暂无预测结果。</td></tr>';
+    return;
+  }
   const rows = state.forecastResults;
   if (!rows.length) {
     document.querySelector("#forecastKpis").innerHTML = sampleItem({ title: "暂无预测结果", body: "请选择有特征数据的日期，或导入模型输出 CSV/JSON。" });
+    document.querySelector("#forecastPointStatus").textContent = "0 点";
+    document.querySelector("#forecastInsights").innerHTML = "";
+    document.querySelector("#forecastBacktest").innerHTML = "";
+    document.querySelector("#forecastGovernance").innerHTML = "";
     document.querySelector("#forecastResultTable").innerHTML = "";
     return;
   }
@@ -4780,7 +5471,15 @@ function renderGridSamples() {
 }
 
 function renderExecutionSamples() {
-  const settlement = state.settlement;
+  const settlement = selectedMarketData().settlement;
+  if (!settlement?.summary) {
+    document.querySelector("#executionSampleList").innerHTML = sampleItem({ title: "执行与结算待接入", body: "当前省份和交易主体没有可用的成交、执行或结算记录。" });
+    document.querySelector("#templateSampleList").innerHTML = [
+      sampleItem({ title: "现货日报模板", body: "章节：盘前建议、出清分析、执行记录、异常时段、次日建议。" }),
+      sampleItem({ title: "客户案例附录", body: "接入本市场客户结算数据后启用，不复用其他市场案例。" }),
+    ].join("");
+    return;
+  }
   document.querySelector("#executionSampleList").innerHTML = [
     sampleItem({
       title: `${settlement.summary.date} · ${settlement.summary.company}`,
@@ -4814,6 +5513,14 @@ function runDiagnosis(options = {}) {
 }
 
 function runMediumOptimization(options = {}) {
+  if (!hasConnectedMarketData()) {
+    state.mediumResults = [];
+    state.mediumMonthlyResults = [];
+    state.mediumSummary = null;
+    renderMediumResults();
+    if (!options.silent) showToast("当前省份和交易主体尚未接入中长期策略数据。");
+    return;
+  }
   const targetHours = parseHours(document.querySelector("#targetHoursInput")?.value || "09,10,11,16,20,21,22");
   const penalty = Math.max(0, Number(document.querySelector("#penaltyInput")?.value || 0.35));
   const dates = monthDates(state.mediumMonth);
@@ -4834,6 +5541,15 @@ function runMediumOptimization(options = {}) {
 }
 
 function renderMediumResults() {
+  if (!hasConnectedMarketData()) {
+    document.querySelector("#mediumMetrics").innerHTML = sampleItem({ title: "中长期数据待接入", body: "当前省份和交易主体没有合约、持仓或可用的市场基线数据。" });
+    document.querySelector("#mediumBasisNotice").textContent = "平台不会使用山东售电侧数据生成其他省份或其他交易主体的曲线草案。";
+    const modePill = document.querySelector("#mediumModePill");
+    modePill.textContent = "数据待接入";
+    modePill.className = "pill wait";
+    document.querySelector("#mediumResultTable").innerHTML = '<tr><td colspan="8">暂无中长期优化结果。</td></tr>';
+    return;
+  }
   const rows = state.mediumResults;
   const monthlyRows = state.mediumMonthlyResults;
   const totalBase = monthlyRows.reduce((sum, row) => sum + row.baseEnergy, 0);
@@ -4900,16 +5616,17 @@ function buildMediumDateRows(date, { targetHours, penalty }) {
 }
 
 function projectedMediumProfile(date) {
+  const marketData = selectedMarketData();
   const targetWeekday = new Date(`${date}T00:00:00Z`).getUTCDay();
-  const observedDates = [...new Set(state.loadHourly.map((row) => row.date).filter(Boolean))].sort();
+  const observedDates = [...new Set(marketData.loadHourly.map((row) => row.date).filter(Boolean))].sort();
   let referenceDates = observedDates.filter((item) => new Date(`${item}T00:00:00Z`).getUTCDay() === targetWeekday).slice(-8);
   if (!referenceDates.length) referenceDates = observedDates.slice(-14);
   const referenceSet = new Set(referenceDates);
-  const loadByTime = groupValuesByTime(state.loadHourly.filter((row) => referenceSet.has(row.date)), (row) => row.totalMwh);
-  const priceByTime = groupValuesByTime(state.spotPrices.filter((row) => referenceSet.has(row.date)), (row) => row.dayAheadPriceYuanMwh);
-  const spreadByTime = groupValuesByTime(state.spotPrices.filter((row) => referenceSet.has(row.date)), (row) => row.spreadYuanMwh);
-  const loadScale = projectedMonthScale(state.loadHourly, (row) => row.totalMwh, date.slice(0, 7), 0.97, 1.06);
-  const priceScale = projectedMonthScale(state.spotPrices, (row) => row.dayAheadPriceYuanMwh, date.slice(0, 7), 0.94, 1.08);
+  const loadByTime = groupValuesByTime(marketData.loadHourly.filter((row) => referenceSet.has(row.date)), (row) => row.totalMwh);
+  const priceByTime = groupValuesByTime(marketData.spotPrices.filter((row) => referenceSet.has(row.date)), (row) => row.dayAheadPriceYuanMwh);
+  const spreadByTime = groupValuesByTime(marketData.spotPrices.filter((row) => referenceSet.has(row.date)), (row) => row.spreadYuanMwh);
+  const loadScale = projectedMonthScale(marketData.loadHourly, (row) => row.totalMwh, date.slice(0, 7), 0.97, 1.06);
+  const priceScale = projectedMonthScale(marketData.spotPrices, (row) => row.dayAheadPriceYuanMwh, date.slice(0, 7), 0.94, 1.08);
   return hourlyTimes().map((time) => ({
     baseEnergy: mean(loadByTime.get(time) || [0]) * loadScale,
     price: mean(priceByTime.get(time) || [0]) * priceScale,
@@ -4984,6 +5701,7 @@ function runResourceDiagnosis() {
 
 function renderDataQuality() {
   const marketData = selectedMarketData();
+  const market = selectedMarketProfile();
   const dates = new Set([...marketData.spotPrices.map((row) => row.date), ...marketData.loadHourly.map((row) => row.date)]);
   if (!dates.size && marketData.settlement?.summary?.date) dates.add(marketData.settlement.summary.date);
   const rows = [...dates].sort().map((date) => {
@@ -5001,7 +5719,7 @@ function renderDataQuality() {
       loadHours: loadHours || "--",
       forecastPoints: missingRealtime || 0,
       avgPrice: mean(prices.map((row) => row.dayAheadPriceYuanMwh)),
-      source: prices.length ? "sd-spot-2026h1-v1 / sd-portfolio-load-2026h1-v1" : "本地回退数据",
+      source: prices.length ? `${state.selectedMarket.toLowerCase()}-spot / ${state.selectedMarket.toLowerCase()}-portfolio-load` : "数据待接入",
       status: checks.join("、"),
       good,
     };
@@ -5016,16 +5734,21 @@ function renderDataQuality() {
       <td>${row.source}</td>
       <td><span class="tag ${row.good ? "ok" : "missing"}">${row.status}</span></td>
     </tr>
-  `).join("");
+  `).join("") || `<tr><td colspan="7">${market?.name || "当前省级市场"}${TRADING_SUBJECTS[state.selectedSubject].name}暂无数据质量记录。</td></tr>`;
 }
 
 function renderReport() {
+  if (!hasConnectedMarketData()) {
+    const market = selectedMarketProfile();
+    document.querySelector("#reportPreview").textContent = `${market?.name || "当前省级市场"} · ${TRADING_SUBJECTS[state.selectedSubject].name}\n\n当前只保留报告模板。价格、负荷、持仓、申报成交、审核与结算数据接入后再生成业务日报，平台不会复用山东售电侧结果。`;
+    return;
+  }
   const caseSummary = settlementSummary();
   const marketSummary = spotMarketSummary();
   const rows = spotMarketRows();
   const topSpread = maxBy(rows.filter((row) => Number.isFinite(row.spreadYuanMwh)), (row) => Math.abs(row.spreadYuanMwh));
   const topPrice = maxBy(rows.filter((row) => Number.isFinite(row.realtimePriceYuanMwh)), (row) => row.realtimePriceYuanMwh);
-  const load = state.loadDaily.find((row) => row.date === state.selectedDate);
+  const load = selectedMarketData().loadDaily.find((row) => row.date === state.selectedDate);
   const forecastRows = state.forecastResults || [];
   const forecastMetricsResult = forecastMetrics(forecastRows);
   const highConfidenceCount = forecastRows.filter((row) => row.confidence >= 0.72).length;
@@ -5059,8 +5782,8 @@ function renderCharts() {
     { name: "实时价格", color: "#0e6f78", values: marketRows.map((row) => row.realtimePriceYuanMwh) },
     { name: "价差", color: "#c95341", values: marketRows.map((row) => row.spreadYuanMwh) },
   ]);
-  drawForecastChart(chartEls.forecast, state.forecastResults);
-  const medium = state.mediumResults.length ? state.mediumResults : settlement.map((row) => ({
+  drawForecastChart(chartEls.forecast, hasConnectedMarketData() ? state.forecastResults : []);
+  const medium = hasConnectedMarketData() && state.mediumResults.length ? state.mediumResults : settlement.map((row) => ({
     baseEnergy: row.realtimeEnergyMwh || 0,
     optimizedEnergy: (row.realtimeEnergyMwh || 0) * 0.7,
   }));
@@ -5073,6 +5796,11 @@ function renderCharts() {
     { name: loss.exactSettlement ? "结算单价" : "成本代理单价", color: "#c95341", values: loss.hourly.map((row) => row.actualUnitCostYuanMwh) },
     { name: "日前价格", color: "#b57b1b", values: loss.hourly.map((row) => row.dayAheadPriceYuanMwh) },
     ...(loss.exactSettlement ? [{ name: "实时价格", color: "#0e6f78", values: loss.hourly.map((row) => row.realtimePriceYuanMwh) }] : []),
+  ]);
+  const monthlySettlement = selectedMarketData().settlementSummaryMonthly?.monthly || [];
+  drawLineChart(chartEls.settlementMonthly, [
+    { name: "毛利（千元）", color: "#c95341", values: monthlySettlement.map((row) => (row.grossProfitYuan || 0) / 1000) },
+    { name: "纯利润（千元）", color: "#0e6f78", values: monthlySettlement.map((row) => (row.pureProfitYuan || 0) / 1000) },
   ]);
   if (state.activeLossTab === "detail") {
     const contribution = state.lossCustomerAnalysis?.date === state.selectedDate
@@ -5094,17 +5822,24 @@ function renderCharts() {
 }
 
 function buildInventoryRows() {
+  const marketData = selectedMarketData();
+  const market = selectedMarketProfile();
+  const marketLabel = market ? `${market.name}${TRADING_SUBJECTS[state.selectedSubject].name}` : "全国公司视图";
+  const connected = hasConnectedMarketData();
   const settlement = settlementSummary();
-  const priceQuality = state.dataQuality?.datasets?.spotPrices;
-  const loadQuality = state.dataQuality?.datasets?.portfolioLoad;
+  const priceQuality = marketData.dataQuality?.datasets?.spotPrices;
+  const loadQuality = marketData.dataQuality?.datasets?.portfolioLoad;
+  const customerCount = loadQuality?.customerCount
+    || new Set(marketData.customerProfiles.map((row) => row.customerAlias).filter(Boolean)).size;
+  const connectedStatus = connected ? "已接入" : "待补数据";
   const rows = [
-    ["结算单", "已接入", `${settlement.company} ${settlement.date} 结算单（附加案例）`, "/api/trade/settlement", "继续补连续30日以上结算单和完整财务口径"],
+    ["结算单", connectedStatus, connected ? `${settlement.company} ${settlement.date} 结算单（附加案例）` : `${marketLabel}暂无结算记录`, "/api/trade/settlement", "继续补连续30日以上结算单和完整财务口径"],
     ["申报成交", "待补数据", "暂无", "/api/trade/execution", "补日前申报、出清、实际用电和人工调整记录"],
-    ["客户负荷", "部分接入", `已聚合${loadQuality?.customerCount || 125}家客户、${state.loadDaily.length}个有效日`, "/api/customer/load-profile", "补户号、计量点、行业、合同容量和缺失11天"],
-    ["现货价格（按市场隔离）", "已接入", `山东2026年上半年${priceQuality?.rowCount || state.spotPrices.length}个小时点`, "/api/spot/prices", "补15分钟、可靠性出清和统一结算点价格"],
+    ["客户负荷", customerCount ? "部分接入" : "待补数据", customerCount ? `已聚合${customerCount}家客户、${marketData.loadDaily.length}个有效日` : `${marketLabel}暂无客户负荷`, "/api/customer/load-profile", "补户号、计量点、行业、合同容量和停产检修信息"],
+    ["现货价格（按市场隔离）", marketData.spotPrices.length ? "已接入" : "待补数据", marketData.spotPrices.length ? `${market?.name || "当前市场"}${priceQuality?.dateRange?.join(" 至 ") || "已接入时段"}，${priceQuality?.rowCount || marketData.spotPrices.length}个小时点` : `${marketLabel}暂无现货价格`, "/api/spot/prices", "补15分钟、可靠性出清和统一结算点价格"],
     ["零售合同", "待补数据", "暂无", "/api/retail/contracts", "补套餐价格、偏差规则、保底封顶和服务费"],
     ["中长期持仓", "待补数据", "暂无", "/api/medium-contract/positions", "补月度持仓、曲线分解和调仓记录"],
-    ["预测与回测", "部分接入", "真实历史价格与组合负荷时序基线", "/api/forecast/run", "补天气、边界、竞价空间、新能源和生产计划"],
+    ["预测与回测", connected ? "部分接入" : "待补数据", connected ? "真实历史价格与组合负荷时序基线" : `${marketLabel}暂无模型输入`, "/api/forecast/run", "补天气、边界、竞价空间、新能源和生产计划"],
     ["策略复盘", "待补数据", "暂无", "/api/strategy/review", "陪跑期每日记录策略建议和执行结果"],
     ["能碳资源", "待补数据", "暂无", "/api/ecosystem/resources", "二期补虚拟电厂、储能、碳资产"],
   ];
@@ -5173,11 +5908,11 @@ function settlementRisk(row) {
 }
 
 function settlementRows() {
-  return state.settlement?.hourly || [];
+  return hasConnectedMarketData() ? (state.settlement?.hourly || []) : [];
 }
 
 function settlementSummary() {
-  return state.settlement?.summary || {};
+  return hasConnectedMarketData() ? (state.settlement?.summary || {}) : {};
 }
 
 function spotPriceRows(date = state.selectedDate) {
