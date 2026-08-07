@@ -3584,13 +3584,39 @@ function bindEvents() {
   }
 }
 
-async function fetchJson(path) {
-  if (path.startsWith("#demo-")) {
-    return JSON.parse(document.querySelector(path).textContent);
+function expandPublicCompactData(data) {
+  if (data?.format === "customer-load-daily-compact-v1") {
+    return data.rows.map(([customerAlias, date, totalMwh]) => ({
+      marketCode: data.marketCode,
+      customerAlias,
+      date,
+      totalMwh,
+      sourceBatchId: data.sourceBatchId,
+    }));
   }
-  const response = await fetch(path);
-  if (!response.ok) throw new Error(`[object Object] ${response.status}`);
-  return response.json();
+  if (data?.format === "customer-load-hourly-compact-v1") {
+    return data.rows.map(([customerAlias, date, totalMwh, hourlyMwh]) => ({
+      marketCode: data.marketCode,
+      customerAlias,
+      date,
+      totalMwh,
+      hourlyMwh,
+      sourceBatchId: data.sourceBatchId,
+    }));
+  }
+  return data;
+}
+
+async function fetchJson(path) {
+  let data;
+  if (path.startsWith("#demo-")) {
+    data = JSON.parse(document.querySelector(path).textContent);
+  } else {
+    const response = await fetch(path);
+    if (!response.ok) throw new Error(`[object Object] ${response.status}`);
+    data = await response.json();
+  }
+  return expandPublicCompactData(data);
 }
 
 async function fetchJsonOptional(path, fallback) {
