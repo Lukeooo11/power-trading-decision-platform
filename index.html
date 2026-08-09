@@ -19,6 +19,8 @@
   --amber: #b57b1b;
   --nav: #10231f;
   --shadow: 0 14px 32px rgba(24, 34, 31, 0.08);
+  --shadow-soft: 0 5px 16px rgba(24, 34, 31, 0.06);
+  --focus: 0 0 0 3px rgba(14, 111, 120, 0.16);
   font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
 }
 
@@ -32,7 +34,7 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: #eef3f0;
   color: var(--ink);
 }
 
@@ -62,6 +64,7 @@ button {
   gap: 22px;
   background: var(--nav);
   color: #f5fbf7;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .brand {
@@ -144,6 +147,10 @@ button {
   color: white;
 }
 
+.nav-item.active {
+  box-shadow: inset 3px 0 0 #63c0ae;
+}
+
 .side-status {
   margin-top: auto;
   border: 1px solid rgba(255, 255, 255, 0.13);
@@ -160,6 +167,9 @@ button {
 
 .main {
   min-width: 0;
+  width: 100%;
+  max-width: 1680px;
+  margin: 0 auto;
   padding: 24px;
 }
 
@@ -168,7 +178,9 @@ button {
   justify-content: space-between;
   gap: 18px;
   align-items: flex-start;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #dce6e1;
 }
 
 .eyebrow {
@@ -232,6 +244,15 @@ h3 {
   background: var(--surface);
   color: var(--ink);
   padding: 0 12px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.field select:focus,
+.field input:focus,
+.sidebar-field select:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: var(--focus);
 }
 
 .checkbox-field {
@@ -274,6 +295,14 @@ h3 {
   background: var(--teal);
   color: white;
   padding: 0 14px;
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.primary-action:hover:not(:disabled) {
+  border-color: #0a5d64;
+  background: #0a5d64;
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
 }
 
 .secondary-action {
@@ -284,6 +313,25 @@ h3 {
   color: var(--teal);
   padding: 0 14px;
   font-weight: 700;
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.secondary-action:hover:not(:disabled),
+.table-action:hover:not(:disabled),
+.filter-button:hover:not(:disabled) {
+  border-color: #9fbeb5;
+  background: #f1f7f4;
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
+}
+
+.primary-action:focus-visible,
+.secondary-action:focus-visible,
+.table-action:focus-visible,
+.filter-button:focus-visible,
+.nav-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
 }
 
 .primary-action:disabled,
@@ -484,9 +532,27 @@ h3 {
   box-shadow: var(--shadow);
 }
 
+.panel {
+  box-shadow: 0 1px 1px rgba(24, 34, 31, 0.02), 0 10px 24px rgba(24, 34, 31, 0.055);
+}
+
 .kpi-card {
+  position: relative;
+  overflow: hidden;
   min-height: 112px;
   padding: 16px;
+}
+
+.kpi-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--teal);
+}
+
+.kpi-card.warn::before {
+  background: var(--red);
 }
 
 .kpi-card span,
@@ -516,6 +582,8 @@ h3 {
   justify-content: space-between;
   gap: 14px;
   margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #edf2ef;
 }
 
 .panel-head p {
@@ -542,12 +610,15 @@ canvas {
 }
 
 .chart-frame {
+  position: relative;
   width: 100%;
   height: 300px;
   min-height: 300px;
   overflow: hidden;
+  border: 1px solid #e1eae5;
   border-radius: 6px;
   background: #fbfcfb;
+  box-shadow: inset 0 1px 2px rgba(24, 34, 31, 0.025);
   contain: layout paint size;
 }
 
@@ -824,8 +895,9 @@ canvas {
 
 .terminal-integration-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 0.82fr) minmax(420px, 1.18fr);
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 14px;
   padding: 14px 0 18px;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -833,14 +905,22 @@ canvas {
 
 .terminal-overview,
 .terminal-readiness-block {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 312px;
+  padding: 14px;
+  border: 1px solid #dce6e1;
+  border-radius: 8px;
+  background: #f8faf9;
 }
 
 .terminal-meta {
   display: grid;
+  flex: 1;
   gap: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   overflow: hidden;
 }
 
@@ -848,8 +928,9 @@ canvas {
   display: grid;
   grid-template-columns: 116px minmax(0, 1fr);
   gap: 12px;
-  padding: 10px 12px;
-  background: #fbfcfb;
+  align-items: center;
+  padding: 10px 2px;
+  background: transparent;
   border-bottom: 1px solid var(--line);
 }
 
@@ -869,8 +950,16 @@ canvas {
 }
 
 .terminal-actions {
-  justify-content: flex-start;
-  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.terminal-actions button {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 8px;
 }
 
 .subsection-head,
@@ -882,9 +971,9 @@ canvas {
 }
 
 .subsection-head {
-  min-height: 32px;
+  min-height: 28px;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .subsection-head h4,
@@ -902,8 +991,10 @@ canvas {
 
 .terminal-readiness-list {
   display: grid;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  flex: 1;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   overflow: hidden;
 }
 
@@ -912,9 +1003,9 @@ canvas {
   grid-template-columns: 10px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  min-height: 52px;
-  padding: 8px 10px;
-  background: #fbfcfb;
+  min-height: 48px;
+  padding: 8px 2px;
+  background: transparent;
   border-bottom: 1px solid var(--line);
 }
 
@@ -958,7 +1049,8 @@ canvas {
 }
 
 .terminal-flow-head {
-  margin: 16px 0 10px;
+  margin: 18px 0 10px;
+  padding: 0 2px;
 }
 
 .terminal-flow-head p {
@@ -981,7 +1073,9 @@ canvas {
 .sop-step {
   position: relative;
   min-height: 116px;
+  border: 1px solid #e0e8e4;
   border-left: 3px solid var(--teal);
+  border-radius: 0 6px 6px 0;
   background: #f3f7f5;
   padding: 11px;
 }
@@ -1004,8 +1098,10 @@ canvas {
   gap: 10px;
   align-items: end;
   margin-top: 14px;
-  border-top: 1px solid var(--line);
-  padding-top: 14px;
+  border: 1px solid #dce6e1;
+  border-radius: 8px;
+  background: #f8faf9;
+  padding: 13px;
 }
 
 .review-status-block {
@@ -1768,6 +1864,59 @@ th {
   min-height: 300px;
 }
 
+[data-chart-tooltip-frame] canvas {
+  cursor: crosshair;
+}
+
+.chart-tooltip {
+  position: absolute;
+  z-index: 5;
+  max-width: min(260px, calc(100% - 16px));
+  min-width: 168px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(24, 34, 31, 0.96);
+  color: #f7fbf9;
+  box-shadow: 0 10px 24px rgba(24, 34, 31, 0.18);
+  font-size: 12px;
+  line-height: 1.45;
+  pointer-events: none;
+}
+
+.chart-tooltip strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.chart-tooltip-row span {
+  color: #b9c9c3;
+}
+
+.chart-tooltip-row b {
+  color: #ffffff;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chart-tooltip small {
+  display: block;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  color: #b9c9c3;
+  font-size: 10px;
+}
+
 .report-metric-notes {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2275,6 +2424,10 @@ th {
             </div>
             <div class="terminal-integration-layout">
               <div class="terminal-overview">
+                <div class="subsection-head">
+                  <h4>终端接入配置</h4>
+                  <span>辅助决策</span>
+                </div>
                 <div class="terminal-meta" id="tradingTerminalMeta"></div>
                 <div class="inline-actions terminal-actions">
                   <button class="secondary-action" id="checkTradingTerminalBtn" type="button">检查连接</button>
@@ -3065,8 +3218,9 @@ th {
                 </div>
                 <span class="pill ok">真实价格</span>
               </div>
-              <div class="chart-frame chart-frame-report">
+              <div class="chart-frame chart-frame-report" data-chart-tooltip-frame="reportSpread">
                 <canvas id="reportSpreadChart" height="300" data-chart-height="300"></canvas>
+                <div class="chart-tooltip" id="reportSpreadTooltip" role="tooltip" hidden></div>
               </div>
             </section>
 
@@ -3078,8 +3232,9 @@ th {
                 </div>
                 <span class="pill partial">历史回测</span>
               </div>
-              <div class="chart-frame chart-frame-report">
+              <div class="chart-frame chart-frame-report" data-chart-tooltip-frame="reportError">
                 <canvas id="reportErrorChart" height="300" data-chart-height="300"></canvas>
+                <div class="chart-tooltip" id="reportErrorTooltip" role="tooltip" hidden></div>
               </div>
               <div class="report-metric-notes" id="reportMetricNotes"></div>
             </section>
@@ -3094,8 +3249,9 @@ th {
                 </div>
                 <span class="pill wait" id="reportProfitStatus">公司净利润待补</span>
               </div>
-              <div class="chart-frame chart-frame-report">
+              <div class="chart-frame chart-frame-report" data-chart-tooltip-frame="reportProfit">
                 <canvas id="reportProfitChart" height="300" data-chart-height="300"></canvas>
+                <div class="chart-tooltip" id="reportProfitTooltip" role="tooltip" hidden></div>
               </div>
             </section>
 
@@ -4126,6 +4282,7 @@ async function init() {
 }
 
 function bindEvents() {
+  bindReportChartTooltips();
   document.querySelectorAll(".nav-item").forEach((button) => {
     button.addEventListener("click", () => switchView(button.dataset.view));
   });
@@ -7010,13 +7167,27 @@ function renderCharts() {
     chartEls.reportSpread,
     marketRows.map((row) => row.spreadYuanMwh),
     marketRows.map((row) => row.time),
+    marketRows.map((row) => ({
+      title: `${row.date || state.selectedDate} ${row.time}`,
+      rows: [
+        ["日前价格", `${fmt(row.dayAheadPriceYuanMwh)} 元/MWh`],
+        ["实时价格", `${fmt(row.realtimePriceYuanMwh)} 元/MWh`],
+        ["日前-实时价差", `${signed(row.spreadYuanMwh)} 元/MWh`],
+        ...(Number.isFinite(row.totalMwh) ? [["组合电量", `${fmt(row.totalMwh)} MWh`]] : []),
+      ],
+    })),
   );
   const reportMetrics = reportForecastMetrics();
   drawMetricBarChart(chartEls.reportError, [
-    { label: "MAE", value: reportMetrics.mae, color: "#0e6f78" },
-    { label: "RMSE", value: reportMetrics.rmse, color: "#b57b1b" },
-    { label: "|Bias|", value: Number.isFinite(reportMetrics.bias) ? Math.abs(reportMetrics.bias) : null, color: "#c95341" },
-  ]);
+    { label: "MAE", value: reportMetrics.mae, color: "#0e6f78", description: "平均绝对误差" },
+    { label: "RMSE", value: reportMetrics.rmse, color: "#b57b1b", description: "均方根误差" },
+    { label: "|Bias|", value: Number.isFinite(reportMetrics.bias) ? Math.abs(reportMetrics.bias) : null, color: "#c95341", description: "预测偏差绝对值" },
+  ], {
+    unit: "元/MWh",
+    footer: reportMetrics.windowStart
+      ? `回测 ${reportMetrics.windowStart} 至 ${reportMetrics.windowEnd}`
+      : "当前没有可用回测窗口",
+  });
   drawLineChart(chartEls.spotPrice, [
     { name: "日前价格", color: "#b57b1b", values: marketRows.map((row) => row.dayAheadPriceYuanMwh) },
     { name: "实时价格", color: "#0e6f78", values: marketRows.map((row) => row.realtimePriceYuanMwh) },
@@ -7046,6 +7217,7 @@ function renderCharts() {
       { name: "表内结算毛利", color: "#0e6f78", values: monthlySettlement.map((row) => (row.settlementMarginYuan ?? row.grossProfitYuan ?? 0) / 1000) },
       { name: "已记录清分扣减", color: "#b57b1b", values: monthlySettlement.map((row) => (row.clearingDeductionsYuan ?? ((row.grossProfitYuan || 0) - (row.pureProfitYuan || 0))) / 1000) },
     ],
+    { unit: "千元", titleSuffix: "结算" },
   );
   drawLineChart(chartEls.settlementMonthly, [
     { name: "表内结算毛利", color: "#c95341", values: monthlySettlement.map((row) => (row.settlementMarginYuan ?? row.grossProfitYuan ?? 0) / 1000) },
@@ -7349,11 +7521,12 @@ function drawForecastChart(canvas, rows) {
   drawXAxis(ctx, width, height, pad);
 }
 
-function drawSignedBarChart(canvas, values, labels = []) {
+function drawSignedBarChart(canvas, values, labels = [], details = []) {
   if (!canvas) return;
   const ctx = setupCanvas(canvas);
   const width = canvas.__chartWidth;
   const height = canvas.__chartHeight;
+  const hitTargets = [];
   const legendLines = [
     { name: "日前高于实时", color: "#b57b1b" },
     { name: "实时高于日前", color: "#0e6f78" },
@@ -7387,17 +7560,35 @@ function drawSignedBarChart(canvas, values, labels = []) {
     const y = scaleY(value);
     const isRisk = Math.abs(value) >= state.riskThreshold;
     ctx.fillStyle = isRisk ? "#c95341" : value >= 0 ? "#b57b1b" : "#0e6f78";
-    ctx.fillRect(x, Math.min(y, zeroY), barWidth, Math.max(1, Math.abs(zeroY - y)));
+    const barTop = Math.min(y, zeroY);
+    const barHeight = Math.max(1, Math.abs(zeroY - y));
+    ctx.fillRect(x, barTop, barWidth, barHeight);
+    hitTargets.push({
+      hitArea: {
+        x: x - 5,
+        y: pad.top,
+        width: barWidth + 10,
+        height: height - pad.top - pad.bottom,
+      },
+      anchorX: x + barWidth / 2,
+      anchorY: barTop,
+      tooltip: details[index] || {
+        title: labels[index] || `第${index + 1}时段`,
+        rows: [["日前-实时价差", `${signed(value)} 元/MWh`]],
+      },
+    });
   });
   drawLegend(ctx, legendLines, pad.left, legendY, width - pad.left - pad.right);
   drawCategoryXAxis(ctx, width, height, pad, labels, 6);
+  setChartHitTargets(canvas, hitTargets);
 }
 
-function drawMetricBarChart(canvas, items) {
+function drawMetricBarChart(canvas, items, options = {}) {
   if (!canvas) return;
   const ctx = setupCanvas(canvas);
   const width = canvas.__chartWidth;
   const height = canvas.__chartHeight;
+  const hitTargets = [];
   const pad = { left: 58, right: 22, top: 28, bottom: 54 };
   const valid = items.filter((item) => Number.isFinite(item.value));
   if (!valid.length) {
@@ -7413,7 +7604,8 @@ function drawMetricBarChart(canvas, items) {
     const x = pad.left + index * groupWidth + (groupWidth - barWidth) / 2;
     const y = scaleY(item.value);
     ctx.fillStyle = item.color;
-    ctx.fillRect(x, y, barWidth, height - pad.bottom - y);
+    const barHeight = Math.max(1, height - pad.bottom - y);
+    ctx.fillRect(x, y, barWidth, barHeight);
     ctx.fillStyle = "#24312d";
     ctx.font = "700 12px Microsoft YaHei, sans-serif";
     ctx.textAlign = "center";
@@ -7421,15 +7613,32 @@ function drawMetricBarChart(canvas, items) {
     ctx.fillStyle = "#64706c";
     ctx.font = "12px Microsoft YaHei, sans-serif";
     ctx.fillText(item.label, x + barWidth / 2, height - 18);
+    hitTargets.push({
+      hitArea: {
+        x: x - 8,
+        y: Math.max(pad.top, y - 8),
+        width: barWidth + 16,
+        height: Math.max(18, barHeight + 16),
+      },
+      anchorX: x + barWidth / 2,
+      anchorY: y,
+      tooltip: {
+        title: `${item.label}${item.description ? ` · ${item.description}` : ""}`,
+        rows: [[item.label, `${fmt(item.value)} ${options.unit || ""}`.trim()]],
+        footer: options.footer,
+      },
+    });
   });
   ctx.textAlign = "left";
+  setChartHitTargets(canvas, hitTargets);
 }
 
-function drawGroupedBarChart(canvas, labels, series) {
+function drawGroupedBarChart(canvas, labels, series, options = {}) {
   if (!canvas) return;
   const ctx = setupCanvas(canvas);
   const width = canvas.__chartWidth;
   const height = canvas.__chartHeight;
+  const hitTargets = [];
   const legendY = 10;
   const legendLayout = measureLegendLayout(ctx, series, 58, width - 58 - 20);
   const pad = { left: 58, right: 20, top: Math.max(34, legendY + legendLayout.height + 8), bottom: 48 };
@@ -7454,11 +7663,123 @@ function drawGroupedBarChart(canvas, labels, series) {
       if (!Number.isFinite(value)) return;
       const y = scaleY(value);
       ctx.fillStyle = item.color;
-      ctx.fillRect(startX + seriesIndex * barWidth, Math.min(y, zeroY), Math.max(3, barWidth - 2), Math.max(1, Math.abs(zeroY - y)));
+      const barX = startX + seriesIndex * barWidth;
+      const barTop = Math.min(y, zeroY);
+      const barHeight = Math.max(1, Math.abs(zeroY - y));
+      const renderedWidth = Math.max(3, barWidth - 2);
+      ctx.fillRect(barX, barTop, renderedWidth, barHeight);
+      hitTargets.push({
+        hitArea: {
+          x: barX - 6,
+          y: Math.max(pad.top, barTop - 6),
+          width: renderedWidth + 12,
+          height: Math.max(18, barHeight + 12),
+        },
+        anchorX: barX + renderedWidth / 2,
+        anchorY: barTop,
+        tooltip: {
+          title: `${labels[labelIndex]}月${options.titleSuffix || ""}`,
+          rows: series.map((entry) => [
+            entry.name,
+            Number.isFinite(entry.values[labelIndex])
+              ? `${fmt(entry.values[labelIndex])} ${options.unit || ""}`.trim()
+              : "--",
+          ]),
+        },
+      });
     });
   });
   drawLegend(ctx, series, pad.left, legendY, width - pad.left - pad.right);
   drawCategoryXAxis(ctx, width, height, pad, labels.map((label) => `${label}月`), 1);
+  setChartHitTargets(canvas, hitTargets);
+}
+
+function bindReportChartTooltips() {
+  document.querySelectorAll("[data-chart-tooltip-frame]").forEach((frame) => {
+    if (frame.dataset.tooltipBound === "true") return;
+    const canvas = frame.querySelector("canvas");
+    const tooltip = frame.querySelector(".chart-tooltip");
+    if (!canvas || !tooltip) return;
+    frame.dataset.tooltipBound = "true";
+
+    const hide = () => {
+      tooltip.hidden = true;
+      tooltip.innerHTML = "";
+      canvas.style.cursor = "default";
+    };
+    const show = (event) => {
+      const targets = canvas.__chartHitTargets || [];
+      const canvasRect = canvas.getBoundingClientRect();
+      if (!targets.length || !canvasRect.width || !canvasRect.height) {
+        hide();
+        return;
+      }
+      const x = (event.clientX - canvasRect.left) * ((canvas.__chartWidth || canvasRect.width) / canvasRect.width);
+      const y = (event.clientY - canvasRect.top) * ((canvas.__chartHeight || canvasRect.height) / canvasRect.height);
+      const target = chartHitTargetAt(targets, x, y);
+      if (!target) {
+        hide();
+        return;
+      }
+
+      tooltip.innerHTML = chartTooltipMarkup(target.tooltip);
+      tooltip.hidden = false;
+      canvas.style.cursor = "crosshair";
+      positionChartTooltip(frame, tooltip, event.clientX, event.clientY);
+      if (event.pointerType === "touch") {
+        window.clearTimeout(frame.__chartTooltipTimer);
+        frame.__chartTooltipTimer = window.setTimeout(hide, 2600);
+      }
+    };
+
+    canvas.addEventListener("pointermove", show);
+    canvas.addEventListener("pointerdown", show);
+    canvas.addEventListener("pointerleave", hide);
+    canvas.addEventListener("pointercancel", hide);
+  });
+}
+
+function chartHitTargetAt(targets, x, y) {
+  return targets
+    .filter((target) => {
+      const area = target.hitArea;
+      return area
+        && x >= area.x
+        && x <= area.x + area.width
+        && y >= area.y
+        && y <= area.y + area.height;
+    })
+    .sort((left, right) => {
+      const leftDistance = Math.abs(x - left.anchorX) + Math.abs(y - left.anchorY) * 0.12;
+      const rightDistance = Math.abs(x - right.anchorX) + Math.abs(y - right.anchorY) * 0.12;
+      return leftDistance - rightDistance;
+    })[0] || null;
+}
+
+function chartTooltipMarkup(detail = {}) {
+  const rows = (detail.rows || [])
+    .map(([label, value]) => `<div class="chart-tooltip-row"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`)
+    .join("");
+  const footer = detail.footer ? `<small>${escapeHtml(detail.footer)}</small>` : "";
+  return `<strong>${escapeHtml(detail.title || "数据明细")}</strong>${rows}${footer}`;
+}
+
+function positionChartTooltip(frame, tooltip, clientX, clientY) {
+  const frameRect = frame.getBoundingClientRect();
+  const offset = 12;
+  const edge = 8;
+  const pointerX = clientX - frameRect.left;
+  const pointerY = clientY - frameRect.top;
+  let left = pointerX + offset;
+  let top = pointerY + offset;
+  if (left + tooltip.offsetWidth > frameRect.width - edge) left = pointerX - tooltip.offsetWidth - offset;
+  if (top + tooltip.offsetHeight > frameRect.height - edge) top = pointerY - tooltip.offsetHeight - offset;
+  tooltip.style.left = `${Math.max(edge, Math.min(left, frameRect.width - tooltip.offsetWidth - edge))}px`;
+  tooltip.style.top = `${Math.max(edge, Math.min(top, frameRect.height - tooltip.offsetHeight - edge))}px`;
+}
+
+function setChartHitTargets(canvas, targets) {
+  canvas.__chartHitTargets = targets;
 }
 
 function drawCategoryXAxis(ctx, width, height, pad, labels, step = 1) {
@@ -7484,6 +7805,12 @@ function drawChartEmptyState(ctx, message, x, y) {
 function setupCanvas(canvas) {
   const ratio = window.devicePixelRatio || 1;
   const frame = canvas.closest(".chart-frame");
+  const tooltip = frame?.querySelector(".chart-tooltip");
+  if (tooltip) {
+    tooltip.hidden = true;
+    tooltip.innerHTML = "";
+  }
+  canvas.__chartHitTargets = [];
   const box = frame?.getBoundingClientRect() || canvas.getBoundingClientRect();
   const width = Math.max(280, Math.round(box.width || canvas.parentElement?.clientWidth || 800));
   const height = Math.max(240, Math.round(box.height || Number(canvas.dataset.chartHeight) || 300));
