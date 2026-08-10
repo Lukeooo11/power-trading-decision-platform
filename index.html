@@ -4382,7 +4382,7 @@ function bindEvents() {
   document.querySelector("#openMarketInterfacesBtn").addEventListener("click", () => switchView("interfaces"));
   document.querySelector("#exportDailyBtn").addEventListener("click", exportDailyStrategy);
   document.querySelector("#copyReportBtn").addEventListener("click", copyReportText);
-  document.querySelector("#reportDateSelect").addEventListener("change", (event) => selectAnalysisDate(event.target.value));
+  document.querySelector("#reportDateSelect").addEventListener("change", (event) => selectAnalysisDate(event.target.value, { rerunMedium: false }));
   document.querySelector("#runSpotModelBtn").addEventListener("click", runDiagnosis);
   document.querySelector("#exportSpotBtn").addEventListener("click", exportSpotResults);
   document.querySelector("#runForecastBtn").addEventListener("click", runForecastEvaluation);
@@ -4523,14 +4523,16 @@ function bindEvents() {
   }
 }
 
-function selectAnalysisDate(date) {
+function selectAnalysisDate(date, { rerunMedium = true } = {}) {
   if (!state.dates.includes(date)) return;
   state.selectedDate = date;
   els.dateSelect.value = date;
   const reportDateSelect = document.querySelector("#reportDateSelect");
   if (reportDateSelect) reportDateSelect.value = date;
-  syncMediumToAnalysisDate();
-  runMediumOptimization({ silent: true });
+  if (rerunMedium) {
+    syncMediumToAnalysisDate();
+    runMediumOptimization({ silent: true });
+  }
   renderAll();
 }
 
