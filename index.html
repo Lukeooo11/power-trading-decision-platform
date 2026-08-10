@@ -1240,10 +1240,34 @@ canvas {
 }
 
 .profit-gap-grid .missing-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   min-width: 0;
 }
 
+.profit-gap-grid .missing-card > .pill {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+
+.profit-gap-grid .missing-card > strong {
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
 .profit-gap-grid .missing-card p {
+  overflow-wrap: anywhere;
+}
+
+.profit-gap-grid .missing-card small {
+  display: block;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
@@ -1817,6 +1841,20 @@ th {
   gap: 10px;
 }
 
+.report-header-actions {
+  align-items: flex-end;
+}
+
+.report-date-field {
+  min-width: 150px;
+  text-align: left;
+}
+
+.report-date-field select {
+  width: 100%;
+  min-width: 150px;
+}
+
 .report-kpi {
   min-width: 0;
   min-height: 104px;
@@ -2121,6 +2159,18 @@ th {
 
   .topbar-actions {
     justify-items: stretch;
+  }
+
+  .report-header-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .report-date-field,
+  .report-date-field select,
+  .report-header-actions button {
+    width: 100%;
   }
 
   .context-controls .field,
@@ -3200,7 +3250,11 @@ th {
                 <h3>复盘总览</h3>
                 <p id="reportSubtitle">按价差、预测误差、表内结算毛利和仿真策略直接对比</p>
               </div>
-              <div class="inline-actions">
+              <div class="inline-actions report-header-actions">
+                <label class="field compact-field report-date-field">
+                  <span>复盘日期</span>
+                  <select id="reportDateSelect" aria-label="复盘日期"></select>
+                </label>
                 <span class="pill partial" id="reportDataStatus">真实数据（已脱敏）</span>
                 <button class="secondary-action" id="copyReportBtn" type="button">复制文字底稿</button>
                 <button class="primary-action" id="exportReportBtn" type="button">导出 Markdown</button>
@@ -4286,12 +4340,7 @@ function bindEvents() {
   document.querySelectorAll(".nav-item").forEach((button) => {
     button.addEventListener("click", () => switchView(button.dataset.view));
   });
-  els.dateSelect.addEventListener("change", () => {
-    state.selectedDate = els.dateSelect.value;
-    syncMediumToAnalysisDate();
-    runMediumOptimization({ silent: true });
-    renderAll();
-  });
+  els.dateSelect.addEventListener("change", () => selectAnalysisDate(els.dateSelect.value));
   els.riskSlider.addEventListener("input", () => {
     state.riskThreshold = Number(els.riskSlider.value);
     renderAll();
@@ -4333,6 +4382,7 @@ function bindEvents() {
   document.querySelector("#openMarketInterfacesBtn").addEventListener("click", () => switchView("interfaces"));
   document.querySelector("#exportDailyBtn").addEventListener("click", exportDailyStrategy);
   document.querySelector("#copyReportBtn").addEventListener("click", copyReportText);
+  document.querySelector("#reportDateSelect").addEventListener("change", (event) => selectAnalysisDate(event.target.value));
   document.querySelector("#runSpotModelBtn").addEventListener("click", runDiagnosis);
   document.querySelector("#exportSpotBtn").addEventListener("click", exportSpotResults);
   document.querySelector("#runForecastBtn").addEventListener("click", runForecastEvaluation);
@@ -4473,6 +4523,17 @@ function bindEvents() {
   }
 }
 
+function selectAnalysisDate(date) {
+  if (!state.dates.includes(date)) return;
+  state.selectedDate = date;
+  els.dateSelect.value = date;
+  const reportDateSelect = document.querySelector("#reportDateSelect");
+  if (reportDateSelect) reportDateSelect.value = date;
+  syncMediumToAnalysisDate();
+  runMediumOptimization({ silent: true });
+  renderAll();
+}
+
 function expandPublicCompactData(data) {
   if (data?.format === "customer-load-daily-compact-v1") {
     return data.rows.map(([customerAlias, date, totalMwh]) => ({
@@ -4527,8 +4588,15 @@ function hydrateDates() {
   if (hasConnectedMarketData()) state.forecast96.forEach((row) => row.date && dates.add(row.date));
   state.dates = [...dates].sort();
   state.selectedDate = marketData.settlement?.summary?.date || state.dates.at(-1) || "";
-  els.dateSelect.innerHTML = state.dates.map((date) => `<option value="${date}">${date}</option>`).join("");
+  const dateOptions = state.dates.map((date) => `<option value="${date}">${date}</option>`).join("");
+  els.dateSelect.innerHTML = dateOptions;
   els.dateSelect.value = state.selectedDate;
+  const reportDateSelect = document.querySelector("#reportDateSelect");
+  if (reportDateSelect) {
+    reportDateSelect.innerHTML = dateOptions;
+    reportDateSelect.value = state.selectedDate;
+    reportDateSelect.disabled = !state.dates.length;
+  }
 }
 
 function hydrateForecastDates() {
@@ -7024,6 +7092,11 @@ function renderDataQuality() {
 function renderReport() {
   const market = selectedMarketProfile();
   const subject = TRADING_SUBJECTS[state.selectedSubject];
+  const reportDateSelect = document.querySelector("#reportDateSelect");
+  if (reportDateSelect) {
+    reportDateSelect.value = state.selectedDate;
+    reportDateSelect.disabled = !hasConnectedMarketData() || !state.dates.length;
+  }
   if (!hasConnectedMarketData()) {
     const marketLabel = market?.name || "当前省级市场";
     setText("#reportSubtitle", `${marketLabel} · ${subject.name} · 数据接入后生成图表复盘`);
@@ -8084,7 +8157,7 @@ function exportImportRecords() {
 }
 
 function exportReportMarkdown() {
-  downloadFile(`交易辅助日报_${settlementSummary().date}.md`, document.querySelector("#reportPreview").textContent, "text/markdown;charset=utf-8");
+  downloadFile(`交易辅助日报_${state.selectedDate || settlementSummary().date}.md`, document.querySelector("#reportPreview").textContent, "text/markdown;charset=utf-8");
 }
 
 function copyReportText() {
