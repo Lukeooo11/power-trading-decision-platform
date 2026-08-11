@@ -34,6 +34,7 @@
 
 body {
   margin: 0;
+  overflow-x: hidden;
   background: #eef3f0;
   color: var(--ink);
 }
@@ -641,7 +642,8 @@ canvas {
   height: 300px;
 }
 
-#customerLoadChart {
+#customerLoadChart,
+#weatherChart {
   height: 300px;
 }
 
@@ -1688,6 +1690,7 @@ canvas {
 
 .table-wrap {
   width: 100%;
+  max-width: 100%;
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2283,7 +2286,8 @@ th {
   #spotPriceChart,
   #mediumCurveChart,
   #forecastChart,
-  #customerLoadChart {
+  #customerLoadChart,
+  #weatherChart {
     height: 280px;
   }
 }
@@ -2992,6 +2996,7 @@ th {
                   <option>零售合同</option>
                   <option>中长期持仓</option>
                   <option>现货价格</option>
+                  <option>天气预报</option>
                   <option>规则文件</option>
                   <option>策略复盘</option>
                 </select>
@@ -3220,6 +3225,43 @@ th {
           <section class="panel">
             <div class="panel-head">
               <div>
+                <h3 id="weatherAnalysisTitle">天气分析</h3>
+                <p id="weatherAnalysisSubtitle">基于当前省份已接入的小时天气预报查看气温、风速、辐射、云量、降水和湿度</p>
+              </div>
+              <span class="pill partial" id="weatherAnalysisStatus">待加载</span>
+            </div>
+            <div class="form-grid weather-filter-grid">
+              <label class="field">
+                <span>天气日期</span>
+                <select id="weatherDateSelect" aria-label="天气日期"></select>
+              </label>
+            </div>
+            <div class="metric-row" id="weatherAnalysisKpis"></div>
+            <div class="grid two-one top-gap">
+              <div>
+                <div class="panel-head compact-head">
+                  <div>
+                    <h4>24点气温与风速</h4>
+                    <p>原始01:00至24:00结束标签已按平台规范映射为第1至24时段</p>
+                  </div>
+                </div>
+                <div class="chart-frame"><canvas id="weatherChart" data-chart-height="300"></canvas></div>
+              </div>
+              <div>
+                <div class="panel-head compact-head">
+                  <div>
+                    <h4>天气质量与使用边界</h4>
+                    <p>区分可用天气事实、缺失范围和模型防泄漏要求</p>
+                  </div>
+                </div>
+                <div class="sample-list" id="weatherAnalysisSummary"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
                 <h3>数据质量检查</h3>
                 <p>围绕结算、负荷、价格、预测、政策和导入版本检查完整性</p>
               </div>
@@ -3231,6 +3273,7 @@ th {
                     <th>日期</th>
                     <th>价格点数</th>
                     <th>负荷点数</th>
+                    <th>天气点数</th>
                     <th>实时缺失</th>
                     <th>日前均价</th>
                     <th>来源/批次</th>
@@ -3756,7 +3799,7 @@ const MARKET_PROFILES = [
   region,
   stage: code === "SD" ? "sample" : "template",
   rules: code === "SD" ? "规则待补" : "待配置",
-  data: code === "SD" ? "价格/组合负荷已接入" : "待接入",
+  data: code === "SD" ? "价格/负荷/天气已接入" : "待接入",
   model: code === "SD" ? "历史回测基线" : "待训练",
   api: code === "SD" ? "本地数据联通" : "接口预留",
 }));
@@ -3823,6 +3866,7 @@ const DATA_SOURCES = {
   customerLoadHourly: "./data/customer-load-hourly.json",
   customerSettlementMonthly: "./data/customer-settlement-monthly.json",
   settlementSummaryMonthly: "./data/settlement-summary.json",
+  weatherHourly: "./data/weather-hourly.json",
 };
 
 const MODULES = [
@@ -3924,7 +3968,7 @@ const DATA_REQUIREMENTS = [
     domain: "市场披露与预测特征",
     priority: "P1 深度诊断",
     status: "部分接入",
-    need: "全省统调负荷、火电/新能源出力、中长期已成交、联络线、备用、机组状态、竞价空间、网格气象和节假日。",
+    need: "已接入山东省2026-05-01至2026-07-01小时GFS天气；仍需预报发布时间、全省统调负荷、火电/新能源出力、联络线、备用、机组状态、竞价空间和节假日。",
     use: "计算或校验竞价空间，解释价格异常并支撑负荷、电价和价差方向预测。",
     frequency: "历史 6-12 个月；陪跑期每日盘前更新。",
     target: "/api/forecast/features",
@@ -3973,6 +4017,7 @@ const INTERFACES = [
   { path: "/api/v1/data-assets", use: "真实与缺失数据资产清单", method: "GET", input: "market_code", output: "数据状态、版本、范围和缺口", status: "真实后端已接入" },
   { path: "/api/v1/data-dictionary", use: "算法核心数据字典", method: "GET", input: "无", output: "字段、类型、单位、时段、主键和空值规则", status: "真实后端已接入" },
   { path: "/api/v1/hourly-data", use: "统一24点价格与负荷输入", method: "GET", input: "market_code,market_date,customer_id,data_version", output: "24点小时数据、来源版本和缺失计数", status: "真实后端已接入" },
+  { path: "/api/v1/weather/hourly", use: "查询山东小时GFS天气", method: "GET", input: "market_code,start_date,end_date,date", output: "气温、10/100米风速、辐射、云量、降水、湿度和质量边界", status: "真实天气数据已接入" },
   { path: "/api/v1/data-assets/prices", use: "版本化价格数据上传", method: "POST", input: "request_id,data_version,updated_at,records", output: "数据资产ID、质量状态和缺失计数", status: "真实后端已接入" },
   { path: "/api/v1/models/price-forecast/runs", use: "创建价格预测运行", method: "POST", input: "request_id,market_date,model_id,model_version,data_version", output: "run_id、状态、结果和回调地址", status: "价格预测模型已接入；策略仍需人工复核" },
   { path: "/api/v1/model-runs/{run_id}", use: "模型运行状态", method: "GET", input: "run_id", output: "状态、版本、输入摘要、错误和时间", status: "真实后端已接入" },
@@ -3994,7 +4039,7 @@ const INTERFACES = [
   { path: "/api/spot/prices", use: "省级日前/实时价格", method: "GET", input: "marketCode,dateRange,priceType", output: "日前、实时价格与价差；其他价格类型待补", status: "真实小时数据已接入" },
   { path: "/api/retail/contracts", use: "零售合同与套餐参数", method: "GET/POST", input: "customerId,contractMonth", output: "价格、偏差规则、服务费、保底封顶", status: "接口预留" },
   { path: "/api/medium-contract/positions", use: "中长期持仓和曲线覆盖", method: "GET/POST", input: "month,customerGroup", output: "合约电量、价格、曲线、敞口", status: "接口预留" },
-  { path: "/api/forecast/features", use: "预测输入特征", method: "GET/POST", input: "date,weather,boundary,forecast", output: "负荷、电价、价差预测特征", status: "部分接入" },
+  { path: "/api/forecast/features", use: "预测输入特征", method: "GET/POST", input: "date,weather,boundary,forecast", output: "负荷、电价、天气和价差预测特征", status: "价格/负荷/天气已部分接入" },
   { path: "/api/forecast/run", use: "运行旧版日前电价与价差预测", method: "POST", input: "date,modelVersion,featureBatchId", output: "小时预测、置信区间、方向、驱动因素", status: "旧版兼容；本地后端基线" },
   { path: "/api/forecast/results", use: "查询旧版预测结果与模型版本", method: "GET", input: "date,modelVersion", output: "预测曲线、评估指标、数据血缘", status: "旧版兼容；本地后端基线" },
   { path: "/api/data/quality", use: "查询导入与模型数据质量", method: "GET", input: "date,dataDomain,batchId", output: "点数、缺失率、来源、批次、质量状态", status: "真实数据已接入" },
@@ -4200,6 +4245,8 @@ const state = {
   customerLoadHourly: [],
   customerSettlementMonthly: [],
   settlementSummaryMonthly: null,
+  weatherAsset: null,
+  weatherDate: "",
   selectedCustomerAlias: "",
   selectedCustomerDate: "",
   marketDataMode: "fallback",
@@ -4275,6 +4322,7 @@ const chartEls = {
   lossCustomer: document.querySelector("#lossCustomerChart"),
   settlementMonthly: document.querySelector("#settlementMonthlyChart"),
   customerLoad: document.querySelector("#customerLoadChart"),
+  weather: document.querySelector("#weatherChart"),
   reportSpread: document.querySelector("#reportSpreadChart"),
   reportError: document.querySelector("#reportErrorChart"),
   reportProfit: document.querySelector("#reportProfitChart"),
@@ -4285,7 +4333,7 @@ init();
 async function init() {
   bindEvents();
   try {
-    const [settlement, loadDaily, loadHourly, forecast96, metadata, spotPrices, portfolioLoadDaily, portfolioLoadHourly, priceForecastResult, dataQuality, marketFeatures, customerProfiles, customerLoadDaily, customerLoadHourly, customerSettlementMonthly, settlementSummaryMonthly] = await Promise.all([
+    const [settlement, loadDaily, loadHourly, forecast96, metadata, spotPrices, portfolioLoadDaily, portfolioLoadHourly, priceForecastResult, dataQuality, marketFeatures, customerProfiles, customerLoadDaily, customerLoadHourly, customerSettlementMonthly, settlementSummaryMonthly, weatherAsset] = await Promise.all([
       fetchJson(DATA_SOURCES.settlement),
       fetchJson(DATA_SOURCES.loadDaily),
       fetchJson(DATA_SOURCES.loadHourly),
@@ -4302,6 +4350,7 @@ async function init() {
       fetchJsonOptional(DATA_SOURCES.customerLoadHourly, []),
       fetchJsonOptional(DATA_SOURCES.customerSettlementMonthly, []),
       fetchJsonOptional(DATA_SOURCES.settlementSummaryMonthly, null),
+      fetchJsonOptional(DATA_SOURCES.weatherHourly, null),
     ]);
     state.settlement = settlement;
     state.loadDaily = portfolioLoadDaily.length ? portfolioLoadDaily : loadDaily;
@@ -4314,6 +4363,7 @@ async function init() {
     state.customerLoadHourly = customerLoadHourly;
     state.customerSettlementMonthly = customerSettlementMonthly;
     state.settlementSummaryMonthly = settlementSummaryMonthly;
+    state.weatherAsset = weatherAsset;
     state.marketDataMode = dataQuality?.isSynthetic ? "synthetic" : spotPrices.length ? "real" : "fallback";
     state.forecast96 = forecast96;
     state.priceForecastResult = priceForecastResult;
@@ -4324,6 +4374,7 @@ async function init() {
     hydrateMediumControls();
     hydrateForecastDates();
     hydrateCustomerControls();
+    hydrateWeatherControls();
     hydrateLossControls();
     hydrateDefaultForecastResult();
     renderStaticScaffold();
@@ -4495,6 +4546,11 @@ function bindEvents() {
   document.querySelector("#customerDateSelect").addEventListener("change", (event) => {
     state.selectedCustomerDate = event.target.value;
     renderCustomerAnalysis();
+    renderCharts();
+  });
+  document.querySelector("#weatherDateSelect").addEventListener("change", (event) => {
+    state.weatherDate = event.target.value;
+    renderWeatherAnalysis();
     renderCharts();
   });
   document.querySelector("#importMappingGrid").addEventListener("change", (event) => {
@@ -4709,6 +4765,21 @@ function hydrateCustomerDates() {
   select.value = state.selectedCustomerDate;
 }
 
+function hydrateWeatherControls(preferredDate = state.selectedDate) {
+  const select = document.querySelector("#weatherDateSelect");
+  if (!select) return;
+  const rows = selectedMarketData().weatherAsset?.rows || [];
+  const dates = [...new Set(rows.map((row) => row.marketDate).filter(Boolean))].sort();
+  state.weatherDate = dates.includes(preferredDate)
+    ? preferredDate
+    : dates.includes(state.weatherDate)
+      ? state.weatherDate
+      : dates.at(-1) || "";
+  select.innerHTML = dates.map((date) => `<option value="${date}">${date}</option>`).join("");
+  select.value = state.weatherDate;
+  select.disabled = !dates.length;
+}
+
 function hydrateLossControls() {
   const marketData = selectedMarketData();
   const months = [...new Set((marketData.settlementSummaryMonthly?.monthly || []).map((row) => row.settlementMonth).filter(Boolean))].sort();
@@ -4788,6 +4859,7 @@ function selectMarket(code) {
   hydrateDefaultForecastResult();
   hydrateMediumControls();
   hydrateCustomerControls();
+  hydrateWeatherControls();
   hydrateLossControls();
   if (code === "national") {
     switchView("company");
@@ -4809,6 +4881,7 @@ function selectSubject(subject) {
   hydrateDefaultForecastResult();
   hydrateMediumControls();
   hydrateCustomerControls();
+  hydrateWeatherControls();
   hydrateLossControls();
   if (state.selectedMarket === "national") switchView("company");
   else switchView("desk");
@@ -4840,6 +4913,7 @@ function clearMarketScopedState() {
   state.lossCustomerAlias = "";
   state.selectedCustomerAlias = "";
   state.selectedCustomerDate = "";
+  state.weatherDate = "";
 }
 
 function selectedMarketData() {
@@ -4856,6 +4930,7 @@ function selectedMarketData() {
       customerLoadHourly: [],
       customerSettlementMonthly: [],
       settlementSummaryMonthly: null,
+      weatherAsset: null,
     };
   }
   return {
@@ -4870,6 +4945,7 @@ function selectedMarketData() {
     customerLoadHourly: state.customerLoadHourly,
     customerSettlementMonthly: state.customerSettlementMonthly,
     settlementSummaryMonthly: state.settlementSummaryMonthly,
+    weatherAsset: state.weatherAsset,
   };
 }
 
@@ -4887,7 +4963,7 @@ function updateMarketContext() {
     status.className = "pill wait";
   } else if (hasConnectedMarketData()) {
     title.textContent = `${market.name}电力市场 · ${subject.name}`;
-    text.textContent = `${role.name}视角 · 已接入2026年上半年小时价格、127家客户脱敏负荷和1至6月月度结算；竞价空间、申报成交和市场规则仍待补。`;
+    text.textContent = `${role.name}视角 · 已接入小时价格、127家客户脱敏负荷、5月至7月GFS天气和1至6月月度结算；竞价空间、申报成交和市场规则仍待补。`;
     status.textContent = "真实数据（已脱敏）";
     status.className = "pill partial";
   } else {
@@ -4909,7 +4985,7 @@ function updateMarketContext() {
     els.platformCoverage.textContent = `已配置 ${MARKET_PROFILES.length} 个省级市场模板，山东为当前首个真实数据（已脱敏）接入市场。`;
   } else if (hasConnectedMarketData()) {
     els.platformReadiness.textContent = `${subject.name} · 真实数据（已脱敏）`;
-    els.platformCoverage.textContent = `价格、127家客户脱敏负荷和6个月经营结算已接入；${CUSTOMER.company} 单日结算保留为附加案例。`;
+    els.platformCoverage.textContent = `价格、127家客户脱敏负荷、62天GFS天气和6个月经营结算已接入；${CUSTOMER.company} 单日结算保留为附加案例。`;
   } else {
     els.platformReadiness.textContent = `${subject.name} · 模板就绪`;
     els.platformCoverage.textContent = "该省份与交易主体的数据隔离空间和接口已预留，当前未载入其他业务数据。";
@@ -4931,6 +5007,7 @@ function renderStaticScaffold() {
     { name: "客户结算单", domain: "结算复盘", status: "已接入", path: "data/settlement_2026-06-21.json" },
     { name: "脱敏组合负荷", domain: "负荷画像", status: "真实聚合已接入", path: "data/portfolio_load_hourly_2026h1.json" },
     { name: "现货价格", domain: "预测与回测", status: "真实小时数据已接入", path: "data/spot_prices_2026h1.json" },
+    { name: "山东GFS天气", domain: "预测特征", status: "5月至7月小时数据已接入", path: "data/weather_hourly_gfs_20260501_20260701.json" },
     { name: "客户月度结算", domain: "经营盈亏", status: "1至6月已接入", path: "data/customer_settlement_monthly_anon_2026h1.json" },
     { name: "零售合同与持仓", domain: "合同策略", status: "待补数据", path: "/api/retail/contracts、/api/medium-contract/positions" },
   ].map((file) => `
@@ -4978,6 +5055,17 @@ function renderStaticScaffold() {
       version: "v1",
       status: state.spotPrices.length ? "已接入" : "待补数据",
       message: state.spotPrices.length ? `已接入 ${state.spotPrices.length} 个价格点、${state.loadHourly.length} 个组合负荷点；逐户名称未进入前端。` : "本地私有数据未找到，当前使用演示回退数据。",
+    },
+    {
+      time: new Date().toLocaleString("zh-CN", { hour12: false }),
+      customer: "山东市场",
+      domain: "分时天气预报",
+      fileName: state.weatherAsset?.sourceFile || "山东省小时GFS天气.xlsx",
+      version: state.weatherAsset?.dataVersion || "待接入",
+      status: state.weatherAsset?.rows?.length ? "已接入" : "待补数据",
+      message: state.weatherAsset?.rows?.length
+        ? `已接入${state.weatherAsset.quality.acceptedRowCount}个完整小时点，覆盖${state.weatherAsset.availableRange.start}至${state.weatherAsset.availableRange.end}；预报发布时间待补。`
+        : "天气数据尚未接入。",
     },
     {
       time: new Date().toLocaleString("zh-CN", { hour12: false }),
@@ -5066,6 +5154,7 @@ function renderAll() {
   else renderMediumResults();
   renderDataQuality();
   renderPriceAnalysis();
+  renderWeatherAnalysis();
   renderCustomerAnalysis();
   renderLossAnalysis();
   document.querySelector("#dataInventoryTable").innerHTML = buildInventoryRows();
@@ -5074,6 +5163,48 @@ function renderAll() {
   renderImportRecords();
   updateMarketContext();
   renderCharts();
+}
+
+function renderWeatherAnalysis() {
+  const marketData = selectedMarketData();
+  const market = selectedMarketProfile();
+  const asset = marketData.weatherAsset;
+  const rows = (asset?.rows || []).filter((row) => row.marketDate === state.weatherDate).sort((left, right) => left.period - right.period);
+  const label = state.selectedMarket === "national" ? "全国" : (market?.name || "当前省级市场");
+  setText("#weatherAnalysisTitle", `${label}天气分析`);
+  setText("#weatherAnalysisSubtitle", `${label}小时GFS气温、风速、辐射、云量、降水和湿度`);
+  const status = document.querySelector("#weatherAnalysisStatus");
+  if (!asset?.rows?.length) {
+    status.className = "pill wait";
+    status.textContent = "待补数据";
+    document.querySelector("#weatherAnalysisKpis").innerHTML = sampleItem({ title: "暂无天气数据", body: `${label}尚未接入天气数据，平台不会展示山东天气。` });
+    document.querySelector("#weatherAnalysisSummary").innerHTML = "";
+    return;
+  }
+  status.className = "pill partial";
+  status.textContent = `${asset.quality.acceptedRowCount}点 · 预报发布时间待补`;
+  const temperatures = rows.map((row) => row.temperature2mC);
+  const wind10m = rows.map((row) => row.windSpeed10mMs);
+  const wind100m = rows.map((row) => row.windSpeed100mMs);
+  const radiation = rows.map((row) => row.shortwaveRadiationGhiWm2);
+  const cloudCover = rows.map((row) => row.cloudCoverPct);
+  const humidity = rows.map((row) => row.relativeHumidityPct);
+  const precipitation = rows.map((row) => row.precipitationMm);
+  const peakRadiation = maxBy(rows, (row) => row.shortwaveRadiationGhiWm2);
+  const peakWind = maxBy(rows, (row) => row.windSpeed100mMs);
+  document.querySelector("#weatherAnalysisKpis").innerHTML = [
+    ["平均气温", `${fmt(mean(temperatures))} °C`, `${fmt(Math.min(...temperatures))} 至 ${fmt(Math.max(...temperatures))} °C`],
+    ["10米平均风速", `${fmt(mean(wind10m))} m/s`, `100米均值${fmt(mean(wind100m))} m/s`],
+    ["峰值辐射", `${fmt(peakRadiation.shortwaveRadiationGhiWm2)} W/m²`, peakRadiation.sourceTimeLabel || "--"],
+    ["累计降水", `${fmt(precipitation.reduce((sum, value) => sum + value, 0))} mm`, `${precipitation.filter((value) => value > 0).length}个有雨时段`],
+    ["平均湿度", `${fmt(mean(humidity))}%`, `平均云量${fmt(mean(cloudCover))}%`],
+  ].map(([metric, value, note]) => `<article><span>${metric}</span><strong>${value}</strong><small>${note}</small></article>`).join("");
+  document.querySelector("#weatherAnalysisSummary").innerHTML = [
+    sampleItem({ title: "可用范围", body: `${asset.availableRange.start}至${asset.availableRange.end}，共${asset.quality.completeDateCount}个完整日、${asset.quality.acceptedRowCount}个小时点。` }),
+    sampleItem({ title: "风光提示", body: `${peakWind.sourceTimeLabel || "--"}的100米风速最高，为${fmt(peakWind.windSpeed100mMs)} m/s；${peakRadiation.sourceTimeLabel || "--"}辐射最高。天气仅是新能源与价格变化的解释变量之一。` }),
+    sampleItem({ title: "质量边界", body: `原文件请求覆盖2026-01-01至2026-07-01，但前期有${asset.quality.rejectedRowCount}条空白或不完整记录，平台未按零值导入。` }),
+    sampleItem({ title: "模型边界", body: "原表没有每次GFS预报发布时间。当前可做天气画像和接口联调；正式历史回测前需补forecast_issue_time，防止使用预测时点之后才可获得的数据。" }),
+  ].join("");
 }
 
 function renderCustomerAnalysis() {
@@ -5425,6 +5556,7 @@ function renderDeskSampleSummary() {
   const latestLoad = marketData.loadDaily.at(-1);
   const priceQuality = marketData.dataQuality?.datasets?.spotPrices;
   const loadQuality = marketData.dataQuality?.datasets?.portfolioLoad;
+  const weather = marketData.weatherAsset;
   const featureSummary = marketData.marketFeatures;
   const monthlySettlement = marketData.settlementSummaryMonthly;
   const mostVolatileMonth = maxBy(featureSummary?.price?.monthly || [], (row) => row.realtimePriceStandardDeviationYuanMwh);
@@ -7061,21 +7193,25 @@ function renderDataQuality() {
   const rows = [...dates].sort().map((date) => {
     const prices = spotPriceRows(date);
     const loadHours = marketData.loadHourly.filter((row) => row.date === date).length;
+    const weatherHours = (marketData.weatherAsset?.rows || []).filter((row) => row.marketDate === date).length;
     const missingRealtime = prices.filter((row) => !Number.isFinite(row.realtimePriceYuanMwh)).length;
     const checks = [];
     checks.push(prices.length === 24 ? "价格完整" : `价格${prices.length}点`);
     checks.push(loadHours === 24 ? "负荷完整" : loadHours ? `负荷${loadHours}点` : "负荷缺失");
+    checks.push(weatherHours === 24 ? "天气完整" : "天气无完整覆盖");
     if (missingRealtime) checks.push(`实时缺${missingRealtime}点`);
-    const good = prices.length === 24 && loadHours === 24 && missingRealtime === 0;
+    const baseGood = prices.length === 24 && loadHours === 24 && missingRealtime === 0;
+    const statusClass = baseGood && weatherHours === 24 ? "ok" : baseGood ? "partial" : "missing";
     return {
       date,
       settlementHours: prices.length || "--",
       loadHours: loadHours || "--",
+      weatherHours: weatherHours || "--",
       forecastPoints: missingRealtime || 0,
       avgPrice: mean(prices.map((row) => row.dayAheadPriceYuanMwh)),
-      source: prices.length ? `${state.selectedMarket.toLowerCase()}-spot / ${state.selectedMarket.toLowerCase()}-portfolio-load` : "数据待接入",
+      source: prices.length ? `${state.selectedMarket.toLowerCase()}-spot / ${state.selectedMarket.toLowerCase()}-portfolio-load${weatherHours ? " / sd-weather-gfs" : ""}` : "数据待接入",
       status: checks.join("、"),
-      good,
+      statusClass,
     };
   });
   document.querySelector("#qualityTable").innerHTML = rows.map((row) => `
@@ -7083,12 +7219,13 @@ function renderDataQuality() {
       <td>${row.date}</td>
       <td>${row.settlementHours}</td>
       <td>${row.loadHours}</td>
+      <td>${row.weatherHours}</td>
       <td>${row.forecastPoints}</td>
       <td>${fmt(row.avgPrice)}</td>
       <td>${row.source}</td>
-      <td><span class="tag ${row.good ? "ok" : "missing"}">${row.status}</span></td>
+      <td><span class="tag ${row.statusClass}">${row.status}</span></td>
     </tr>
-  `).join("") || `<tr><td colspan="7">${market?.name || "当前省级市场"}${TRADING_SUBJECTS[state.selectedSubject].name}暂无数据质量记录。</td></tr>`;
+  `).join("") || `<tr><td colspan="8">${market?.name || "当前省级市场"}${TRADING_SUBJECTS[state.selectedSubject].name}暂无数据质量记录。</td></tr>`;
 }
 
 function renderReport() {
@@ -7315,6 +7452,13 @@ function renderCharts() {
   drawLineChart(chartEls.customerLoad, [
     { name: `${state.selectedCustomerAlias || "客户"}分时负荷`, color: "#0e6f78", values: customerHourly?.hourlyMwh || [] },
   ]);
+  const weatherRows = (selectedMarketData().weatherAsset?.rows || [])
+    .filter((row) => row.marketDate === state.weatherDate)
+    .sort((left, right) => left.period - right.period);
+  drawLineChart(chartEls.weather, [
+    { name: "2米气温(°C)", color: "#c95341", values: weatherRows.map((row) => row.temperature2mC) },
+    { name: "10米风速(m/s)", color: "#0e6f78", values: weatherRows.map((row) => row.windSpeed10mMs) },
+  ]);
 }
 
 function buildInventoryRows() {
@@ -7325,6 +7469,7 @@ function buildInventoryRows() {
   const settlement = settlementSummary();
   const priceQuality = marketData.dataQuality?.datasets?.spotPrices;
   const loadQuality = marketData.dataQuality?.datasets?.portfolioLoad;
+  const weather = marketData.weatherAsset;
   const customerCount = loadQuality?.customerCount
     || new Set(marketData.customerProfiles.map((row) => row.customerAlias).filter(Boolean)).size;
   const connectedStatus = connected ? "已接入" : "待补数据";
@@ -7333,9 +7478,10 @@ function buildInventoryRows() {
     ["申报成交", "待补数据", "暂无", "/api/trade/execution", "补日前申报、出清、实际用电和人工调整记录"],
     ["客户负荷", customerCount ? "部分接入" : "待补数据", customerCount ? `已聚合${customerCount}家客户、${marketData.loadDaily.length}个有效日` : `${marketLabel}暂无客户负荷`, "/api/customer/load-profile", "补户号、计量点、行业、合同容量和停产检修信息"],
     ["现货价格（按市场隔离）", marketData.spotPrices.length ? "已接入" : "待补数据", marketData.spotPrices.length ? `${market?.name || "当前市场"}${priceQuality?.dateRange?.join(" 至 ") || "已接入时段"}，${priceQuality?.rowCount || marketData.spotPrices.length}个小时点` : `${marketLabel}暂无现货价格`, "/api/spot/prices", "补15分钟、可靠性出清和统一结算点价格"],
+    ["天气预报（按市场隔离）", weather?.rows?.length ? "部分接入" : "待补数据", weather?.rows?.length ? `${weather.availableRange.start}至${weather.availableRange.end}，${weather.quality.acceptedRowCount}个完整GFS小时点` : `${marketLabel}暂无天气数据`, "/api/v1/weather/hourly", weather?.forecastIssueTimeAvailable ? "持续补充每日滚动预报" : "补forecast_issue_time，确认历史回测防泄漏口径"],
     ["零售合同", "待补数据", "暂无", "/api/retail/contracts", "补套餐价格、偏差规则、保底封顶和服务费"],
     ["中长期持仓", "待补数据", "暂无", "/api/medium-contract/positions", "补月度持仓、曲线分解和调仓记录"],
-    ["预测与回测", connected ? "部分接入" : "待补数据", connected ? "真实历史价格与组合负荷时序基线" : `${marketLabel}暂无模型输入`, "/api/forecast/run", "补天气、边界、竞价空间、新能源和生产计划"],
+    ["预测与回测", connected ? "部分接入" : "待补数据", connected ? "真实历史价格与组合负荷基线；天气已接入但尚未进入当前模型" : `${marketLabel}暂无模型输入`, "/api/forecast/run", "补天气发布时间、边界、竞价空间、新能源和生产计划"],
     ["策略复盘", "待补数据", "暂无", "/api/strategy/review", "陪跑期每日记录策略建议和执行结果"],
     ["能碳资源", "待补数据", "暂无", "/api/ecosystem/resources", "二期补虚拟电厂、储能、碳资产"],
   ];
