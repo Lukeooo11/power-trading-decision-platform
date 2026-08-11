@@ -6524,15 +6524,21 @@ function renderForecast() {
   const extremeRecall = provided?.extreme_high_price_recall ?? metrics?.extremeHighRecall;
   const baselineMae = provided?.baseline_mae_yuan_per_mwh;
   const weatherImprovementPct = provided?.weather_mae_improvement_pct;
+  const realtimeMae = provided?.real_time_mae_yuan_per_mwh;
+  const realtimeBaselineMae = provided?.real_time_baseline_mae_yuan_per_mwh;
+  const realtimeWeatherImprovementPct = provided?.real_time_weather_mae_improvement_pct;
   const backtestWindow = provided?.window_start && provided?.window_end ? `${provided.window_start} 至 ${provided.window_end}` : "当前选择日回测";
   document.querySelector("#forecastBacktest").innerHTML = [
-    ["MAE", Number.isFinite(mae) ? `${fmt(mae)} 元/MWh` : "待真实值"],
-    ["RMSE", Number.isFinite(rmse) ? `${fmt(rmse)} 元/MWh` : "待真实值"],
-    ["Bias", Number.isFinite(bias) ? `${signed(bias)} 元/MWh` : "待真实值"],
-    ["负价方向准确率", Number.isFinite(negativeAccuracy) ? `${fmt(negativeAccuracy * 100)}%` : "待样本"],
-    ["极端高价召回率", Number.isFinite(extremeRecall) ? `${fmt(extremeRecall * 100)}%` : "待极端样本"],
-    ["无天气基线MAE", Number.isFinite(baselineMae) ? `${fmt(baselineMae)} 元/MWh` : "待同窗基线"],
-    ["天气MAE改善", Number.isFinite(weatherImprovementPct) ? `${signed(weatherImprovementPct)}%` : "待同窗对比"],
+    ["日前MAE", Number.isFinite(mae) ? `${fmt(mae)} 元/MWh` : "待真实值"],
+    ["日前RMSE", Number.isFinite(rmse) ? `${fmt(rmse)} 元/MWh` : "待真实值"],
+    ["日前Bias", Number.isFinite(bias) ? `${signed(bias)} 元/MWh` : "待真实值"],
+    ["日前负价方向准确率", Number.isFinite(negativeAccuracy) ? `${fmt(negativeAccuracy * 100)}%` : "待样本"],
+    ["日前极端高价召回率", Number.isFinite(extremeRecall) ? `${fmt(extremeRecall * 100)}%` : "待极端样本"],
+    ["日前无天气基线MAE", Number.isFinite(baselineMae) ? `${fmt(baselineMae)} 元/MWh` : "待同窗基线"],
+    ["日前天气MAE改善", Number.isFinite(weatherImprovementPct) ? `${signed(weatherImprovementPct)}%` : "待同窗对比"],
+    ["实时MAE", Number.isFinite(realtimeMae) ? `${fmt(realtimeMae)} 元/MWh` : "待真实值"],
+    ["实时无天气基线MAE", Number.isFinite(realtimeBaselineMae) ? `${fmt(realtimeBaselineMae)} 元/MWh` : "待同窗基线"],
+    ["实时天气MAE改善", Number.isFinite(realtimeWeatherImprovementPct) ? `${signed(realtimeWeatherImprovementPct)}%` : "待同窗对比"],
     ["回测窗口", backtestWindow],
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
   document.querySelector("#forecastGovernance").innerHTML = [
