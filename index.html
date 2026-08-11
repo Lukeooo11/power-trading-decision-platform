@@ -2660,7 +2660,7 @@ th {
               <label class="field">
                 <span>模型版本</span>
                 <select id="forecastModelSelect">
-                  <option value="price-forecast-v1.0.0">价格预测模型 v1.0.0</option>
+                  <option value="price-forecast-v1.1.0">价格预测模型 v1.1.0 · 天气增强</option>
                   <option value="lag-baseline-v0.3">时序基线 v0.3</option>
                 </select>
               </label>
@@ -2705,7 +2705,7 @@ th {
                 <h3>历史回测与模型治理</h3>
                 <p>回测窗口随预测日期动态取前30天；正式上线仍需竞价空间、边界、新能源与规则数据</p>
               </div>
-              <span class="pill partial">基线口径</span>
+              <span class="pill partial">天气增强</span>
             </div>
             <div class="metric-row" id="forecastBacktest"></div>
             <div class="model-governance" id="forecastGovernance"></div>
@@ -4284,7 +4284,7 @@ const state = {
   customerAliasMap: {},
   uploads: {},
   forecastDate: "",
-  forecastModelVersion: "price-forecast-v1.0.0",
+  forecastModelVersion: "price-forecast-v1.1.0",
   forecastResults: [],
   forecastSource: "山东真实历史价格与组合负荷",
   forecastProvidedMetrics: null,
@@ -5064,7 +5064,7 @@ function renderStaticScaffold() {
       version: state.weatherAsset?.dataVersion || "待接入",
       status: state.weatherAsset?.rows?.length ? "已接入" : "待补数据",
       message: state.weatherAsset?.rows?.length
-        ? `已接入${state.weatherAsset.quality.acceptedRowCount}个完整小时点，覆盖${state.weatherAsset.availableRange.start}至${state.weatherAsset.availableRange.end}；预报发布时间待补。`
+        ? `已接入${state.weatherAsset.quality.acceptedRowCount}个完整小时点，覆盖${state.weatherAsset.availableRange.start}至${state.weatherAsset.availableRange.end}；业务方确认均在申报前可得，已进入模型训练。`
         : "天气数据尚未接入。",
     },
     {
@@ -5182,7 +5182,7 @@ function renderWeatherAnalysis() {
     return;
   }
   status.className = "pill partial";
-  status.textContent = `${asset.quality.acceptedRowCount}点 · 预报发布时间待补`;
+  status.textContent = `${asset.quality.acceptedRowCount}点 · 已进入天气增强模型`;
   const temperatures = rows.map((row) => row.temperature2mC);
   const wind10m = rows.map((row) => row.windSpeed10mMs);
   const wind100m = rows.map((row) => row.windSpeed100mMs);
@@ -5203,7 +5203,7 @@ function renderWeatherAnalysis() {
     sampleItem({ title: "可用范围", body: `${asset.availableRange.start}至${asset.availableRange.end}，共${asset.quality.completeDateCount}个完整日、${asset.quality.acceptedRowCount}个小时点。` }),
     sampleItem({ title: "风光提示", body: `${peakWind.sourceTimeLabel || "--"}的100米风速最高，为${fmt(peakWind.windSpeed100mMs)} m/s；${peakRadiation.sourceTimeLabel || "--"}辐射最高。天气仅是新能源与价格变化的解释变量之一。` }),
     sampleItem({ title: "质量边界", body: `原文件请求覆盖2026-01-01至2026-07-01，但前期有${asset.quality.rejectedRowCount}条空白或不完整记录，平台未按零值导入。` }),
-    sampleItem({ title: "模型边界", body: "原表没有每次GFS预报发布时间。当前可做天气画像和接口联调；正式历史回测前需补forecast_issue_time，防止使用预测时点之后才可获得的数据。" }),
+    sampleItem({ title: "模型口径", body: "业务方已确认全部GFS天气预测在对应交易日申报前可获得，现已用于逐日滚动训练与回测；原表仍缺少精确forecast_issue_time，审计粒度按业务确认口径记录。" }),
   ].join("");
 }
 
@@ -6397,9 +6397,9 @@ async function runForecastEvaluation(options = {}) {
             market_date: state.forecastDate,
             model_id: "price-forecast",
             model_version: state.forecastModelVersion,
-            data_version: "sd-hourly-snapshot-2026h1-v1",
+            data_version: "sd-hourly-weather-snapshot-2026h1-v2",
             parameters: { quantiles: [0.1, 0.5, 0.9] },
-            input_summary: { available_domains: ["prices", "load_actual"], hourly_point_count: 24, customer_scope: "portfolio" },
+            input_summary: { available_domains: ["prices", "load_actual", "weather"], hourly_point_count: 24, customer_scope: "portfolio" },
             timeout_seconds: 120,
           }),
         });
@@ -6512,7 +6512,7 @@ function renderForecast() {
     { title: "风险时段", body: `负价中高风险 ${negativeRiskCount} 点，高价中高风险 ${highRiskCount} 点；风险原因码保留在小时结果中供人工复核。` },
     { title: "峰值时段", body: `${peakPoint.time} 预测价格最高，为 ${fmt(peakPoint.predictedPrice)} 元/MWh；驱动因素：${peakPoint.drivers}。` },
     { title: "最大偏离", body: `${peakSpread.time} 相对日前参考价差 ${signed(peakSpread.spread)} 元/MWh，建议作为申报复核点。` },
-    { title: "使用边界", body: "当前为真实历史数据上的时序基线；竞价空间、边界、新能源、天气和规则尚未接入，不能作为正式交易指令。" },
+    { title: "使用边界", body: "当前价格模型已使用申报前GFS天气并进行逐日滚动回测；竞价空间、供需边界、新能源预测和规则仍待接入，不能作为自动交易指令。" },
   ].map((item) => `<article class="signal-item"><strong>${item.title}</strong><p>${item.body}</p></article>`).join("");
 
   const metrics = forecastMetrics(rows);
@@ -6522,6 +6522,8 @@ function renderForecast() {
   const bias = provided?.bias_yuan_per_mwh ?? metrics?.bias;
   const negativeAccuracy = provided?.negative_price_direction_accuracy ?? metrics?.negativeAccuracy;
   const extremeRecall = provided?.extreme_high_price_recall ?? metrics?.extremeHighRecall;
+  const baselineMae = provided?.baseline_mae_yuan_per_mwh;
+  const weatherImprovementPct = provided?.weather_mae_improvement_pct;
   const backtestWindow = provided?.window_start && provided?.window_end ? `${provided.window_start} 至 ${provided.window_end}` : "当前选择日回测";
   document.querySelector("#forecastBacktest").innerHTML = [
     ["MAE", Number.isFinite(mae) ? `${fmt(mae)} 元/MWh` : "待真实值"],
@@ -6529,10 +6531,12 @@ function renderForecast() {
     ["Bias", Number.isFinite(bias) ? `${signed(bias)} 元/MWh` : "待真实值"],
     ["负价方向准确率", Number.isFinite(negativeAccuracy) ? `${fmt(negativeAccuracy * 100)}%` : "待样本"],
     ["极端高价召回率", Number.isFinite(extremeRecall) ? `${fmt(extremeRecall * 100)}%` : "待极端样本"],
+    ["无天气基线MAE", Number.isFinite(baselineMae) ? `${fmt(baselineMae)} 元/MWh` : "待同窗基线"],
+    ["天气MAE改善", Number.isFinite(weatherImprovementPct) ? `${signed(weatherImprovementPct)}%` : "待同窗对比"],
     ["回测窗口", backtestWindow],
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
   document.querySelector("#forecastGovernance").innerHTML = [
-    ["数据来源", `${state.forecastSource}；逐户名称未进入模型输入`],
+    ["数据来源", `${state.forecastSource}；价格、日历滞后与申报前GFS天气；逐户名称未进入模型输入`],
     ["输入批次", rows[0].importBatchId || "外部导入批次"],
     ["运行追踪", state.forecastRunMeta?.run_id ? `${state.forecastRunMeta.run_id} · ${state.forecastRunMeta.data_version || "待补数据版本"}` : "浏览器结果，尚未生成run_id"],
     ["上线门槛", "连续历史数据、滚动回测、规则校验和交易员确认全部通过"],
@@ -7342,7 +7346,7 @@ function renderReport() {
     `${state.selectedDate} 电力交易辅助决策系统日报草稿`,
     "",
     `1. 盘前工作台：当日组合电量${fmt(load?.totalMwh)} MWh，日前均价${fmt(marketSummary.averageDayAheadPrice)}元/MWh，实时均价${fmt(marketSummary.averageRealtimePrice)}元/MWh，价差口径为日前减实时。`,
-    `2. 预测评估：已接入${forecastSummary.modelVersion}并生成${forecastPointRows.length}点日前/实时P10-P90预测，其中${highConfidenceCount}点置信度不低于72%；${Number.isFinite(forecastSummary.mae) ? `最近滚动回测MAE为${fmt(forecastSummary.mae)}元/MWh` : "当前结果暂无可评价真实值"}。正式策略仍需竞价空间、边界、新能源、天气和规则数据。`,
+    `2. 预测评估：已接入${forecastSummary.modelVersion}天气增强模型并生成${forecastPointRows.length}点日前/实时P10-P90预测，其中${highConfidenceCount}点置信度不低于72%；${Number.isFinite(forecastSummary.mae) ? `最近逐日滚动回测MAE为${fmt(forecastSummary.mae)}元/MWh` : "当前结果暂无可评价真实值"}。正式策略仍需竞价空间、边界、新能源和规则数据。`,
     `3. 现货判断：在读取预测结果后，识别${topSpread.time || "--"}绝对价差最大，为${fmt(Math.abs(topSpread.spreadYuanMwh))}元/MWh；${topPrice.time || "--"}实时价格最高，为${fmt(topPrice.realtimePriceYuanMwh)}元/MWh。当前结论仅供人工复核。`,
     `4. 收益复盘：${currentMonth ? `${currentMonth.settlementMonth}表内结算毛利${fmt(currentMonth.settlementMarginYuan ?? currentMonth.grossProfitYuan)}元、表内单位毛利${fmt(currentMonth.averageUnitProfitYuanMwh)}元/MWh` : "当前月份暂无结算表"}；该结果不是公司净利润，财务口径与仿真策略收益尚未接入。`,
     "5. 交易终端：已预留交易日创建、策略运行、人工复核、执行事件和真实/仿真对比接口；未配置交易终端服务地址，不执行自动下单。",
@@ -7478,10 +7482,10 @@ function buildInventoryRows() {
     ["申报成交", "待补数据", "暂无", "/api/trade/execution", "补日前申报、出清、实际用电和人工调整记录"],
     ["客户负荷", customerCount ? "部分接入" : "待补数据", customerCount ? `已聚合${customerCount}家客户、${marketData.loadDaily.length}个有效日` : `${marketLabel}暂无客户负荷`, "/api/customer/load-profile", "补户号、计量点、行业、合同容量和停产检修信息"],
     ["现货价格（按市场隔离）", marketData.spotPrices.length ? "已接入" : "待补数据", marketData.spotPrices.length ? `${market?.name || "当前市场"}${priceQuality?.dateRange?.join(" 至 ") || "已接入时段"}，${priceQuality?.rowCount || marketData.spotPrices.length}个小时点` : `${marketLabel}暂无现货价格`, "/api/spot/prices", "补15分钟、可靠性出清和统一结算点价格"],
-    ["天气预报（按市场隔离）", weather?.rows?.length ? "部分接入" : "待补数据", weather?.rows?.length ? `${weather.availableRange.start}至${weather.availableRange.end}，${weather.quality.acceptedRowCount}个完整GFS小时点` : `${marketLabel}暂无天气数据`, "/api/v1/weather/hourly", weather?.forecastIssueTimeAvailable ? "持续补充每日滚动预报" : "补forecast_issue_time，确认历史回测防泄漏口径"],
+    ["天气预报（按市场隔离）", weather?.rows?.length ? "部分接入" : "待补数据", weather?.rows?.length ? `${weather.availableRange.start}至${weather.availableRange.end}，${weather.quality.acceptedRowCount}个完整GFS小时点；已进入模型训练` : `${marketLabel}暂无天气数据`, "/api/v1/weather/hourly", weather?.forecastIssueTimeAvailable ? "持续补充每日滚动预报" : "补精确forecast_issue_time，提升审计粒度"],
     ["零售合同", "待补数据", "暂无", "/api/retail/contracts", "补套餐价格、偏差规则、保底封顶和服务费"],
     ["中长期持仓", "待补数据", "暂无", "/api/medium-contract/positions", "补月度持仓、曲线分解和调仓记录"],
-    ["预测与回测", connected ? "部分接入" : "待补数据", connected ? "真实历史价格与组合负荷基线；天气已接入但尚未进入当前模型" : `${marketLabel}暂无模型输入`, "/api/forecast/run", "补天气发布时间、边界、竞价空间、新能源和生产计划"],
+    ["预测与回测", connected ? "部分接入" : "待补数据", connected ? "价格预测v1.1已使用申报前GFS天气，并与无天气基线进行逐日滚动同窗对比" : `${marketLabel}暂无模型输入`, "/api/forecast/run", "补边界、竞价空间、新能源和生产计划"],
     ["策略复盘", "待补数据", "暂无", "/api/strategy/review", "陪跑期每日记录策略建议和执行结果"],
     ["能碳资源", "待补数据", "暂无", "/api/ecosystem/resources", "二期补虚拟电厂、储能、碳资产"],
   ];
