@@ -3429,7 +3429,6 @@ th {
                   <span>分析日期</span>
                   <select id="lossDateSelect" aria-label="盈亏分析日期"></select>
                 </label>
-                <span class="pill partial" id="lossBasisPill">成本事实与风险代理</span>
                 <button class="secondary-action" id="exportLossBtn" type="button">导出盈亏分析</button>
               </div>
             </div>
@@ -6002,8 +6001,6 @@ function renderMonthlySettlementAnalysis() {
     document.querySelector("#lossMonthlyCustomerTrendTable").innerHTML = '<tr><td colspan="7">暂无客户趋势数据。</td></tr>';
     if (state.activeLossTab === "monthly") {
       document.querySelector("#lossSubtitle").textContent = "月度零售结算毛利待接入";
-      document.querySelector("#lossBasisPill").textContent = "待补数据";
-      document.querySelector("#lossBasisPill").className = "pill wait";
       document.querySelector("#lossKpis").innerHTML = "";
       document.querySelector("#lossBoundaryNote").textContent = "当前选择没有月度结算数据，平台不会复用其他省份或其他交易主体的数据。";
     }
@@ -6104,9 +6101,6 @@ function renderMonthlySettlementAnalysis() {
 
   if (state.activeLossTab === "monthly") {
     document.querySelector("#lossSubtitle").textContent = `${state.lossMonth} · 月度零售结算毛利`;
-    const basisPill = document.querySelector("#lossBasisPill");
-    basisPill.textContent = "原表结算口径 · 非公司净利润";
-    basisPill.className = "pill partial";
     document.querySelector("#lossKpis").innerHTML = [
       ["半年结算电量", `${fmt(summary.totals.settledEnergyMwh)} MWh`, `${summary.quality.customerMonthRecordCount}条客户月记录`],
       ["半年表内总成本", `${fmt(summary.totals.totalCostYuan)} 元`, `仅含原表已计成本；均价${fmt(summary.totals.averageUnitCostYuanMwh)}元/MWh`],
@@ -6273,9 +6267,6 @@ function renderLossAnalysis() {
     ? `${signed(analysis.grossMarginYuan)} 元`
     : "待补零售收入";
   document.querySelector("#lossSubtitle").textContent = `${analysis.date} · ${analysis.basis}`;
-  const basisPill = document.querySelector("#lossBasisPill");
-  basisPill.textContent = analysis.exactSettlement ? "结算事实 + 市场基准" : "组合成本代理";
-  basisPill.className = `pill ${analysis.exactSettlement ? "partial" : "wait"}`;
   document.querySelector("#lossKpis").innerHTML = [
     [costLabel, `${fmt(analysis.actualCostYuan)} 元`, `${fmt(analysis.totalEnergyMwh)} MWh`],
     ["平均成本", `${fmt(analysis.actualUnitCostYuanMwh)} 元/MWh`, analysis.exactSettlement ? "结算单实绩" : "实时价代理"],
