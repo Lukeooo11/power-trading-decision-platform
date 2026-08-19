@@ -2932,7 +2932,13 @@ th {
                   <h3>网架拓扑与阻塞诊断</h3>
                   <p>关联网架结构、节点价格、线路约束和异常价差</p>
                 </div>
-                <span class="pill wait">接口预留</span>
+                <div class="inline-actions">
+                  <label class="field compact-field">
+                    <span>分析日期</span>
+                    <select id="gridDateSelect" aria-label="拓扑阻塞分析日期"></select>
+                  </label>
+                  <span class="pill wait">接口预留</span>
+                </div>
               </div>
               <div class="form-grid bottom-gap">
                 <label class="upload-card compact-upload">
@@ -3413,12 +3419,16 @@ th {
 
         <section class="view" id="lossView">
           <section class="panel">
-            <div class="panel-head">
-              <div>
-                <h3>盈亏分析</h3>
-                <p id="lossSubtitle">组合成本、客户贡献与收入情景</p>
-              </div>
+              <div class="panel-head">
+                <div>
+                  <h3>盈亏分析</h3>
+                  <p id="lossSubtitle">组合成本、客户贡献与收入情景</p>
+                </div>
               <div class="inline-actions">
+                <label class="field compact-field">
+                  <span>分析日期</span>
+                  <select id="lossDateSelect" aria-label="盈亏分析日期"></select>
+                </label>
                 <span class="pill partial" id="lossBasisPill">成本事实与风险代理</span>
                 <button class="secondary-action" id="exportLossBtn" type="button">导出盈亏分析</button>
               </div>
@@ -4471,6 +4481,12 @@ function bindEvents() {
   document.querySelector("#exportPolicyBtn").addEventListener("click", exportPolicyAnalysis);
   document.querySelector("#runGridBtn").addEventListener("click", runResourceDiagnosis);
   document.querySelector("#exportGridBtn").addEventListener("click", exportResourceDiagnosis);
+  document.querySelector("#gridDateSelect").addEventListener("change", (event) => {
+    selectAnalysisDate(event.target.value, { rerunMedium: false });
+  });
+  document.querySelector("#lossDateSelect").addEventListener("change", (event) => {
+    selectAnalysisDate(event.target.value, { rerunMedium: false });
+  });
   document.querySelector("#runLossBtn").addEventListener("click", () => {
     readLossScenarioInputs();
     renderLossAnalysis();
@@ -4586,6 +4602,11 @@ function selectAnalysisDate(date, { rerunMedium = true } = {}) {
   els.dateSelect.value = date;
   const reportDateSelect = document.querySelector("#reportDateSelect");
   if (reportDateSelect) reportDateSelect.value = date;
+  const gridDateSelect = document.querySelector("#gridDateSelect");
+  if (gridDateSelect) gridDateSelect.value = date;
+  const lossDateSelect = document.querySelector("#lossDateSelect");
+  if (lossDateSelect) lossDateSelect.value = date;
+  syncLossMonthToAnalysisDate();
   if (rerunMedium) {
     syncMediumToAnalysisDate();
     runMediumOptimization({ silent: true });
@@ -4656,6 +4677,13 @@ function hydrateDates() {
     reportDateSelect.value = state.selectedDate;
     reportDateSelect.disabled = !state.dates.length;
   }
+  ["#gridDateSelect", "#lossDateSelect"].forEach((selector) => {
+    const select = document.querySelector(selector);
+    if (!select) return;
+    select.innerHTML = dateOptions;
+    select.value = state.selectedDate;
+    select.disabled = !state.dates.length;
+  });
 }
 
 function hydrateForecastDates() {
@@ -4784,7 +4812,12 @@ function hydrateWeatherControls(preferredDate = state.selectedDate) {
 function hydrateLossControls() {
   const marketData = selectedMarketData();
   const months = [...new Set((marketData.settlementSummaryMonthly?.monthly || []).map((row) => row.settlementMonth).filter(Boolean))].sort();
-  state.lossMonth = months.includes(state.lossMonth) ? state.lossMonth : months.at(-1) || "";
+  const analysisMonth = state.selectedDate.slice(0, 7);
+  state.lossMonth = months.includes(analysisMonth)
+    ? analysisMonth
+    : months.includes(state.lossMonth)
+      ? state.lossMonth
+      : months.at(-1) || "";
   const monthSelect = document.querySelector("#lossMonthSelect");
   monthSelect.innerHTML = months.map((month) => `<option value="${month}">${month}</option>`).join("");
   monthSelect.value = state.lossMonth;
@@ -4797,6 +4830,15 @@ function hydrateLossControls() {
   const customerSelect = document.querySelector("#lossMonthlyCustomerSelect");
   customerSelect.innerHTML = aliases.map((alias) => `<option value="${escapeHtml(alias)}">${escapeHtml(alias)}</option>`).join("");
   customerSelect.value = state.lossMonthlyCustomerAlias;
+}
+
+function syncLossMonthToAnalysisDate() {
+  const monthly = selectedMarketData().settlementSummaryMonthly?.monthly || [];
+  const months = new Set(monthly.map((row) => row.settlementMonth).filter(Boolean));
+  const analysisMonth = state.selectedDate.slice(0, 7);
+  if (months.has(analysisMonth)) state.lossMonth = analysisMonth;
+  const monthSelect = document.querySelector("#lossMonthSelect");
+  if (monthSelect) monthSelect.value = state.lossMonth;
 }
 
 function hydrateOrganizationControls() {
@@ -6213,6 +6255,11 @@ function renderCustomerContributionDetail(contribution) {
 }
 
 function renderLossAnalysis() {
+  const lossDateSelect = document.querySelector("#lossDateSelect");
+  if (lossDateSelect) {
+    lossDateSelect.value = state.selectedDate;
+    lossDateSelect.disabled = !state.dates.length;
+  }
   const analysis = buildLossAnalysis();
   state.lossAnalysis = analysis;
   const customerContribution = buildCustomerContributionAnalysis(analysis);
@@ -6972,9 +7019,17 @@ function renderPolicySamples() {
 }
 
 function renderGridSamples() {
+  const gridDateSelect = document.querySelector("#gridDateSelect");
+  if (gridDateSelect) {
+    gridDateSelect.value = state.selectedDate;
+    gridDateSelect.disabled = !state.dates.length;
+  }
+  const dateLabel = state.selectedDate || "当前日期";
+  setText("#gridDayNode", `${dateLabel}市场边界`);
+  setText("#gridRealtimeNode", `${dateLabel}出清价格`);
   document.querySelector("#gridSampleList").innerHTML = [
-    sampleItem({ title: "网架拓扑", body: "待补节点、线路、断面限额、潮流和节点价格数据。" }),
-    sampleItem({ title: "阻塞解释", body: "把异常价差与线路约束、机组检修和市场边界联系起来。" }),
+    sampleItem({ title: `${dateLabel}网架拓扑`, body: "待补节点、线路、断面限额、潮流和节点价格数据。" }),
+    sampleItem({ title: "阻塞解释", body: `按${dateLabel}的价格和运行约束分析异常价差；接入拓扑、潮流和节点价格后生成诊断结果。` }),
   ].join("");
 }
 
@@ -7202,7 +7257,7 @@ function runPolicyAnalysis() {
 }
 
 function runResourceDiagnosis() {
-  showToast("拓扑阻塞诊断已刷新，等待真实拓扑和潮流数据。");
+  showToast(`${state.selectedDate || "当前日期"}拓扑阻塞诊断已刷新，等待真实拓扑和潮流数据。`);
   renderGridSamples();
 }
 
