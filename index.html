@@ -7510,7 +7510,7 @@ function renderCharts() {
   drawLineChart(chartEls.settlementMonthly, [
     { name: "表内结算毛利", color: "#c95341", values: monthlySettlement.map((row) => (row.settlementMarginYuan ?? row.grossProfitYuan ?? 0) / 1000) },
     { name: "清分扣减", color: "#0e6f78", values: monthlySettlement.map((row) => (row.clearingDeductionsYuan ?? ((row.grossProfitYuan || 0) - (row.pureProfitYuan || 0))) / 1000) },
-  ]);
+  ], monthlySettlement.map((row) => `${row.settlementMonth.slice(5)}月`));
   if (state.activeLossTab === "detail") {
     const contribution = state.lossCustomerAnalysis?.date === state.selectedDate
       ? state.lossCustomerAnalysis
@@ -7718,7 +7718,7 @@ function drawForecastComparisonChart(canvas) {
   drawLineChart(canvas, lines);
 }
 
-function drawLineChart(canvas, lines) {
+function drawLineChart(canvas, lines, xAxisLabels = null) {
   if (!canvas) return;
   const ctx = setupCanvas(canvas);
   const width = canvas.__chartWidth;
@@ -7753,7 +7753,7 @@ function drawLineChart(canvas, lines) {
     ctx.stroke();
   });
   drawLegend(ctx, lines, pad.left, legendY, width - pad.left - pad.right);
-  drawXAxis(ctx, width, height, pad);
+  drawXAxis(ctx, width, height, pad, xAxisLabels);
 }
 
 function drawForecastChart(canvas, rows) {
@@ -8142,12 +8142,12 @@ function drawGrid(ctx, width, height, pad, min, max, scaleY) {
   }
 }
 
-function drawXAxis(ctx, width, height, pad) {
+function drawXAxis(ctx, width, height, pad, customLabels = null) {
   ctx.fillStyle = "#64706c";
   ctx.font = "12px Microsoft YaHei, sans-serif";
-  const labels = ["00:00", "06:00", "12:00", "18:00", "24:00"];
+  const labels = customLabels?.length ? customLabels : ["00:00", "06:00", "12:00", "18:00", "24:00"];
   labels.forEach((label, index) => {
-    const x = pad.left + (index / 4) * (width - pad.left - pad.right);
+    const x = pad.left + (index / Math.max(1, labels.length - 1)) * (width - pad.left - pad.right);
     ctx.textAlign = index === 0 ? "left" : index === labels.length - 1 ? "right" : "center";
     ctx.fillText(label, x, height - 12);
   });
