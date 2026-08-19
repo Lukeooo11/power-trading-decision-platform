@@ -5500,7 +5500,7 @@ function renderWeatherAnalysis() {
     return;
   }
   status.className = "pill partial";
-  status.textContent = `${asset.quality.acceptedRowCount}点 · 已进入v1.2模型`;
+  status.textContent = `${asset.quality.acceptedRowCount}点 · 已进入主模型`;
   const temperatures = rows.map((row) => row.temperature2mC);
   const wind10m = rows.map((row) => row.windSpeed10mMs);
   const wind100m = rows.map((row) => row.windSpeed100mMs);
@@ -7905,7 +7905,7 @@ function buildInventoryRows() {
     ["电源出力与供需代理", supplyVersion ? "部分接入" : "待补数据", supplyVersion ? `Q1实际/Q2预测已分口径接入，版本${supplyVersion}；模型仅使用Q2的D-1/D-7滞后` : `${marketLabel}暂无电源出力数据`, "/api/v1/market-supply/hourly", "补目标日预测、发布时间、抽蓄/水电、市场化机组与正式竞价空间"],
     ["零售合同", "待补数据", "暂无", "/api/retail/contracts", "补套餐价格、偏差规则、保底封顶和服务费"],
     ["中长期持仓", "待补数据", "暂无", "/api/medium-contract/positions", "补月度持仓、曲线分解和调仓记录"],
-    ["预测与回测", connected ? "部分接入" : "待补数据", connected ? "价格预测v1.2已使用申报前GFS天气与Q2电源预测滞后，并进行逐日滚动同窗对比" : `${marketLabel}暂无模型输入`, "/api/forecast/run", "补目标日边界、竞价空间、新能源预测发布时间和生产计划"],
+    ["预测与回测", connected ? "部分接入" : "待补数据", connected ? "主模型v1.0.0已使用申报前天气与电源出力特征，并由实时价差子模型补充实时价格；旧模型保留为对照" : `${marketLabel}暂无模型输入`, "/api/forecast/run", "补目标日边界、竞价空间、新能源预测发布时间和生产计划"],
     ["策略复盘", "待补数据", "暂无", "/api/strategy/review", "陪跑期每日记录策略建议和执行结果"],
     ["能碳资源", "待补数据", "暂无", "/api/ecosystem/resources", "二期补虚拟电厂、储能、碳资产"],
   ];
