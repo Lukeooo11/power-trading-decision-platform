@@ -1377,6 +1377,32 @@ canvas {
   min-height: 320px;
 }
 
+.forecast-actual-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.forecast-actual-item {
+  min-width: 0;
+}
+
+.forecast-actual-item .subsection-head {
+  align-items: flex-start;
+  min-height: 44px;
+}
+
+.forecast-actual-item .subsection-head span {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.chart-frame-actual {
+  height: 280px;
+  min-height: 280px;
+}
+
 .forecast-comparison-table table {
   min-width: 940px;
 }
@@ -2426,6 +2452,10 @@ th {
     width: 100%;
   }
 
+  .forecast-actual-grid {
+    grid-template-columns: 1fr;
+  }
+
   .terminal-integration-layout,
   .report-chart-grid,
   .report-kpi-grid,
@@ -2520,6 +2550,11 @@ th {
   .chart-frame-comparison {
     height: 280px;
     min-height: 280px;
+  }
+
+  .chart-frame-actual {
+    height: 260px;
+    min-height: 260px;
   }
 
   #deskChart,
@@ -2955,44 +2990,42 @@ th {
           <section class="panel">
             <div class="panel-head">
               <div>
-                <h3>双模型对照评估</h3>
-                <p>按各模型声明的预测目标和测试窗口展示结果；同窗状态仅在数据口径一致时成立</p>
+                <h3>预测值与真实值对比</h3>
+                <p>按当前预测日期对齐24时段，分别核对日前价格、实时价格和日前减实时价差</p>
               </div>
-              <span class="pill wait" id="forecastComparisonStatus">1/2 模型已接入</span>
+              <span class="pill partial" id="forecastActualStatus">真实值待接入</span>
             </div>
-            <div class="comparison-controls">
-              <label class="upload-card compact-upload">
-                <span>导入候选模型 CSV/JSON</span>
-                <input id="forecastCandidateUpload" type="file" accept=".csv,.json" />
-              </label>
-              <label class="field compact-field">
-                <span>未覆盖电量（MWh）</span>
-                <input id="forecastExposureInput" type="number" min="0" step="0.1" placeholder="接入持仓后录入" />
-              </label>
-            </div>
-            <div class="metric-row comparison-kpis" id="forecastComparisonKpis"></div>
-            <div class="forecast-comparison-layout">
-              <div class="forecast-comparison-visual">
+            <div class="forecast-actual-grid">
+              <div class="forecast-actual-item">
                 <div class="subsection-head">
-                  <h4>真实值与模型曲线</h4>
-                  <span id="forecastComparisonSubtitle">等待同一日期的第二套模型结果</span>
+                  <h4>日前价格</h4>
+                  <span id="forecastDayAheadActualSubtitle">预测值与真实值</span>
                 </div>
-                <div class="chart-frame chart-frame-comparison">
-                  <canvas id="forecastComparisonChart" height="320" data-chart-height="320"></canvas>
+                <div class="chart-frame chart-frame-actual">
+                  <canvas id="forecastDayAheadActualChart" height="280" data-chart-height="280"></canvas>
                 </div>
               </div>
-              <div class="forecast-comparison-table">
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr><th>模型</th><th>状态</th><th>训练 / 测试窗口</th><th>样本</th><th>MAE</th><th>RMSE</th><th>相对准确度</th><th>误差金额敏感性</th></tr>
-                    </thead>
-                    <tbody id="forecastComparisonTable"></tbody>
-                  </table>
+
+              <div class="forecast-actual-item">
+                <div class="subsection-head">
+                  <h4>实时价格</h4>
+                  <span id="forecastRealTimeActualSubtitle">预测值与真实值</span>
+                </div>
+                <div class="chart-frame chart-frame-actual">
+                  <canvas id="forecastRealTimeActualChart" height="280" data-chart-height="280"></canvas>
+                </div>
+              </div>
+
+              <div class="forecast-actual-item">
+                <div class="subsection-head">
+                  <h4>日前减实时价差</h4>
+                  <span id="forecastSpreadActualSubtitle">预测值与真实值</span>
+                </div>
+                <div class="chart-frame chart-frame-actual">
+                  <canvas id="forecastSpreadActualChart" height="280" data-chart-height="280"></canvas>
                 </div>
               </div>
             </div>
-            <p class="loss-boundary-note" id="forecastImpactNote" hidden>误差金额敏感性 = MAE × 未覆盖电量，仅用于风险量级判断，不等于真实交易收益。</p>
           </section>
 
           <section class="panel">
@@ -4253,13 +4286,13 @@ const DATA_REQUIREMENTS = [
     target: "/api/forecast/features",
   },
   {
-    domain: "模型基线与同窗验收",
-    priority: "P0 模型验收",
+    domain: "预测值与实绩核对",
+    priority: "P0 结果验收",
     status: "部分接入",
-    need: "两套模型均已接入，但主模型与对照模型的训练口径和测试窗口尚未完全对齐；无天气基线、同窗改善比例和区间覆盖率需在统一窗口重跑后补齐。",
-    use: "按会议口径同图比较真实曲线与两套预测，并评估误差对交易敞口的金额敏感性。",
-    frequency: "模型版本变更或评估窗口更新时重跑。",
-    target: "/api/v1/model-comparisons",
+    need: "历史日期已接入日前价格、实时价格和价差的预测值与真实值；预测目标日需在实际价格发布后补齐实绩。",
+    use: "按同一交易日和24时段分别比较日前价格、实时价格及日前减实时价差。",
+    frequency: "实际价格发布后更新。",
+    target: "/api/v1/forecast-actual-comparisons",
   },
   {
     domain: "策略与复盘记录",
@@ -4308,7 +4341,7 @@ const INTERFACES = [
   { path: "/api/v1/model-runs/{run_id}/review", use: "策略人工审核", method: "POST", input: "SUBMIT/APPROVE/MODIFY/REJECT,reviewer,reason", output: "审核状态、版本和操作时间", status: "真实后端已接入；不自动下单" },
   { path: "/api/v1/model-runs/{run_id}/reviews", use: "策略审核历史", method: "GET", input: "run_id", output: "原建议、修改后建议、审核人和原因", status: "真实后端已接入" },
   { path: "/api/v1/model-runs/{run_id}/audit-logs", use: "运行操作审计", method: "GET", input: "run_id", output: "创建、结果、错误、审核和取消日志", status: "真实后端已接入" },
-  { path: "/api/v1/model-comparisons", use: "双模型同窗验收", method: "POST/GET", input: "market_code,model_run_ids,train_window,test_window,actual_data_version,exposure_mwh", output: "真实/预测点级曲线、MAE、RMSE、相对准确度和误差金额敏感性", status: "接口预留；待第二套模型点级结果" },
+  { path: "/api/v1/forecast-actual-comparisons", use: "预测值与实绩核对", method: "GET", input: "market_code,market_date,model_version", output: "日前价格、实时价格和价差的24点预测值与真实值", status: "历史结果已接入；预测日实绩待发布" },
   { path: "/api/trade/settlement", use: "解析客户结算单", method: "POST", input: "file,customerId,date", output: "小时结算明细、总电量、均价、金额", status: "客户案例已接入" },
   { path: "/api/trade/execution", use: "申报成交全链路", method: "GET/POST", input: "date,customerId,declared,cleared,actual", output: "偏差、执行评价、亏损归因", status: "待补数据" },
   { path: "/api/customer/load-profile", use: "组合及客户负荷曲线", method: "GET", input: "marketCode,dateRange,interval,aggregation,customerAlias", output: "组合负荷或按稳定代号查询的24点客户负荷", status: "真实数据已接入" },
@@ -4570,10 +4603,7 @@ const state = {
   forecastSource: "山东真实历史价格与组合负荷",
   forecastProvidedMetrics: null,
   forecastRunMeta: null,
-  forecastCandidateResults: [],
-  forecastCandidateMeta: null,
   secondaryPriceForecastResult: null,
-  forecastExposureMwh: null,
   backendOnline: false,
   selectedMarket: "national",
   selectedSubject: "retail",
@@ -4598,7 +4628,9 @@ const chartEls = {
   desk: document.querySelector("#deskChart"),
   spotPrice: document.querySelector("#spotPriceChart"),
   forecast: document.querySelector("#forecastChart"),
-  forecastComparison: document.querySelector("#forecastComparisonChart"),
+  forecastDayAheadActual: document.querySelector("#forecastDayAheadActualChart"),
+  forecastRealTimeActual: document.querySelector("#forecastRealTimeActualChart"),
+  forecastSpreadActual: document.querySelector("#forecastSpreadActualChart"),
   medium: document.querySelector("#mediumCurveChart"),
   loss: document.querySelector("#lossChart"),
   lossCustomer: document.querySelector("#lossCustomerChart"),
@@ -4734,12 +4766,6 @@ function bindEvents() {
     runForecastEvaluation({ silent: true });
   });
   document.querySelector("#forecastResultUpload").addEventListener("change", importForecastResults);
-  document.querySelector("#forecastCandidateUpload").addEventListener("change", importForecastCandidateResults);
-  document.querySelector("#forecastExposureInput").addEventListener("input", (event) => {
-    const value = event.target.value === "" ? null : Number(event.target.value);
-    state.forecastExposureMwh = Number.isFinite(value) && value >= 0 ? value : null;
-    renderForecastComparison();
-  });
   document.querySelector("#runMediumBtn").addEventListener("click", runMediumOptimization);
   document.querySelector("#exportMediumBtn").addEventListener("click", exportMediumResults);
   document.querySelector("#monthSelect").addEventListener("change", (event) => {
@@ -5039,8 +5065,6 @@ function integratedForecastSource(result) {
 function hydrateDefaultForecastResult() {
   state.forecastProvidedMetrics = selectedForecastBacktest();
   state.forecastRunMeta = null;
-  state.forecastCandidateResults = [];
-  state.forecastCandidateMeta = null;
   if (!hasConnectedMarketData() || !state.forecastDate) {
     state.forecastResults = [];
     return;
@@ -5067,21 +5091,6 @@ function hydrateDefaultForecastResult() {
     state.forecastSource = "山东真实历史价格与组合负荷";
   }
 
-  if (state.secondaryPriceForecastResult?.periods?.length) {
-    state.forecastCandidateResults = normalizeForecastRows(state.secondaryPriceForecastResult.periods, {
-      ...state.secondaryPriceForecastResult,
-      target: "real_time",
-    });
-    state.forecastCandidateMeta = {
-      name: state.secondaryPriceForecastResult.model?.name || "现有平台模型",
-      version: state.secondaryPriceForecastResult.model?.version || "price-forecast-v1.2.0",
-      backtest: state.secondaryPriceForecastResult.backtest || null,
-      trainingWindow: normalizeModelWindow(
-        state.secondaryPriceForecastResult.training_window || state.secondaryPriceForecastResult.train_window,
-      ),
-      source: "平台现有模型自动加载",
-    };
-  }
 }
 
 function hydrateMediumControls() {
@@ -5298,9 +5307,6 @@ function clearMarketScopedState() {
   state.forecastResults = [];
   state.forecastProvidedMetrics = null;
   state.forecastRunMeta = null;
-  state.forecastCandidateResults = [];
-  state.forecastCandidateMeta = null;
-  state.forecastExposureMwh = null;
   state.mediumResults = [];
   state.mediumMonthlyResults = [];
   state.mediumSummary = null;
@@ -6875,7 +6881,7 @@ function renderForecast() {
     document.querySelector("#forecastBacktest").innerHTML = "";
     document.querySelector("#forecastGovernance").innerHTML = "";
     document.querySelector("#forecastResultTable").innerHTML = '<tr><td colspan="8">暂无预测结果。</td></tr>';
-    renderForecastComparison();
+    renderForecastActualComparison();
     return;
   }
   const rows = state.forecastResults;
@@ -6886,7 +6892,7 @@ function renderForecast() {
     document.querySelector("#forecastBacktest").innerHTML = "";
     document.querySelector("#forecastGovernance").innerHTML = "";
     document.querySelector("#forecastResultTable").innerHTML = "";
-    renderForecastComparison();
+    renderForecastActualComparison();
     return;
   }
   const isDayAheadTarget = rows.some((row) => row.target === "day_ahead");
@@ -6973,7 +6979,7 @@ function renderForecast() {
       <td>${escapeHtml(row.drivers)}</td>
     </tr>
   `).join("");
-  renderForecastComparison();
+  renderForecastActualComparison();
 }
 
 function forecastMetrics(rows) {
@@ -7041,243 +7047,72 @@ async function importForecastResults(event) {
   }
 }
 
-async function importForecastCandidateResults(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  try {
-    const text = await file.text();
-    const payload = file.name.toLowerCase().endsWith(".json") ? JSON.parse(text) : parseCsvRecords(text);
-    const resultPayload = payload?.result || payload;
-    const sourceRows = Array.isArray(payload) ? payload : resultPayload?.periods || resultPayload?.results || resultPayload?.predictions || [];
-    const filenameDate = file.name.match(/20\d{2}-\d{2}-\d{2}/)?.[0] || null;
-    const normalized = normalizeForecastRows(sourceRows, {
-      ...resultPayload,
-      market_date: resultPayload?.market_date || resultPayload?.forecast_date || filenameDate || state.forecastDate,
-    });
-    if (!normalized.length) throw new Error("没有识别到候选模型的时点和预测价格字段");
-
-    const model = resultPayload?.model || payload?.model || {};
-    const backtest = resultPayload?.backtest || payload?.backtest || null;
-    const trainingWindow = normalizeModelWindow(
-      resultPayload?.training_window || resultPayload?.train_window || payload?.training_window || payload?.train_window,
-    );
-    state.forecastCandidateResults = normalized;
-    state.forecastCandidateMeta = {
-      name: model.name || resultPayload?.model_name || "候选模型 B",
-      version: model.version || resultPayload?.model_version || normalized[0].modelVersion || "candidate-external",
-      sourceFile: file.name,
-      backtest,
-      trainingWindow,
-      dataVersion: resultPayload?.data_snapshot?.version || resultPayload?.data_version || payload?.data_version || null,
-    };
-
-    [...new Set(normalized.map((row) => row.date).filter((date) => /^20\d{2}-\d{2}-\d{2}$/.test(date)))].forEach(ensureForecastDateOption);
-    addImportRecord("候选预测模型", file.name, "已导入", `已识别 ${normalized.length} 个预测点，等待同窗校验。`);
-    renderForecastComparison();
-    renderImportRecords();
-    const sameDateCount = forecastRowsForDate(normalized).length;
-    showToast(sameDateCount
-      ? `${file.name} 已进入双模型同窗验收。`
-      : `${file.name} 已导入，请切换到候选模型包含的预测日期。`);
-  } catch (error) {
-    addImportRecord("候选预测模型", file.name, "失败", error.message);
-    renderImportRecords();
-    showToast(`候选模型导入失败：${error.message}`);
-  }
-}
-
-function normalizeModelWindow(windowValue) {
-  if (!windowValue) return null;
-  const start = windowValue.start || windowValue.window_start || windowValue.train_start || null;
-  const end = windowValue.end || windowValue.window_end || windowValue.train_end || null;
-  return start && end ? { start, end } : null;
-}
-
 function forecastRowsForDate(rows, date = state.forecastDate) {
   return (rows || [])
     .filter((row) => row.date === date)
     .sort((left, right) => (left.pointIndex || 0) - (right.pointIndex || 0) || left.time.localeCompare(right.time));
 }
 
-function inferredTrainingWindow(testStart) {
-  if (!testStart) return null;
-  const dates = selectedMarketData().spotPrices
-    .map((row) => row.date)
-    .filter((date) => date && date < testStart)
-    .sort();
-  return dates.length ? { start: dates[0], end: dates[dates.length - 1] } : null;
-}
-
-function forecastMetricSummary(rows, providedMetrics = null, trainingWindow = null) {
-  const calculated = forecastMetrics(rows);
-  const windowStart = providedMetrics?.window_start || calculatedWindow(rows)?.start || null;
-  const windowEnd = providedMetrics?.window_end || calculatedWindow(rows)?.end || null;
-  const mae = providedMetrics?.mae_yuan_per_mwh ?? providedMetrics?.mae ?? calculated?.mae ?? null;
-  const meanAbsActual = calculated?.meanAbsActual ?? historicalMeanAbsolutePrice(windowStart, windowEnd);
-  return {
-    mae,
-    rmse: providedMetrics?.rmse_yuan_per_mwh ?? providedMetrics?.rmse ?? calculated?.rmse ?? null,
-    bias: providedMetrics?.bias_yuan_per_mwh ?? providedMetrics?.bias ?? calculated?.bias ?? null,
-    sampleCount: providedMetrics?.sample_count ?? calculated?.sampleCount ?? 0,
-    windowStart,
-    windowEnd,
-    trainingWindow: trainingWindow || null,
-    meanAbsActual,
-    relativeAccuracy: Number.isFinite(mae) && Number.isFinite(meanAbsActual) && meanAbsActual > 0
-      ? Math.max(0, 1 - mae / meanAbsActual)
-      : null,
-  };
-}
-
-function calculatedWindow(rows) {
-  const dates = rows.filter((row) => Number.isFinite(row.actualPrice) && /^20\d{2}-\d{2}-\d{2}$/.test(row.date)).map((row) => row.date).sort();
-  return dates.length ? { start: dates[0], end: dates[dates.length - 1] } : null;
-}
-
-function historicalMeanAbsolutePrice(start, end) {
-  if (!start || !end) return null;
-  const values = selectedMarketData().spotPrices
-    .filter((row) => row.date >= start && row.date <= end && Number.isFinite(row.realtimePriceYuanMwh))
-    .map((row) => Math.abs(row.realtimePriceYuanMwh));
-  return values.length ? mean(values) : null;
-}
-
-function sameModelWindow(left, right) {
-  return Boolean(left?.start && left?.end && right?.start && right?.end && left.start === right.start && left.end === right.end);
-}
-
-function modelWindowText(summary) {
-  const train = summary.trainingWindow ? `${summary.trainingWindow.start} 至 ${summary.trainingWindow.end}` : "待模型声明";
-  const test = summary.windowStart && summary.windowEnd ? `${summary.windowStart} 至 ${summary.windowEnd}` : "待真实值";
-  return `训练：${train}<br>测试：${test}`;
-}
-
-function forecastComparisonSeries() {
-  const primary = forecastRowsForDate(state.forecastResults);
-  const candidate = forecastRowsForDate(state.forecastCandidateResults);
-  const primaryByTime = new Map(primary.map((row) => [row.time, row]));
-  const candidateByTime = new Map(candidate.map((row) => [row.time, row]));
-  const primaryTarget = primary[0]?.target || "real_time";
-  const candidateTarget = candidate[0]?.target || "real_time";
-  const actualByTime = new Map(spotPriceRows(state.forecastDate).map((row) => [
-    row.time,
-    primaryTarget === "day_ahead" ? row.dayAheadPriceYuanMwh : row.realtimePriceYuanMwh,
-  ]));
-  [...primary, ...candidate].forEach((row) => {
-    if (Number.isFinite(row.actualPrice)) actualByTime.set(row.time, row.actualPrice);
+function forecastActualSeries() {
+  const forecasts = forecastRowsForDate(state.forecastResults);
+  const actuals = spotPriceRows(state.forecastDate);
+  const pointCount = Math.max(forecasts.length, actuals.length);
+  const points = Array.from({ length: pointCount }, (_, index) => {
+    const forecast = forecasts.find((row) => row.pointIndex === index + 1) || forecasts[index] || {};
+    const actual = actuals[index] || {};
+    const predictedDayAhead = Number.isFinite(forecast.predictedDayAhead) ? forecast.predictedDayAhead : forecast.dayAheadReference;
+    const predictedRealTime = Number.isFinite(forecast.predictedRealTime) ? forecast.predictedRealTime : forecast.predictedPrice;
+    const actualDayAhead = Number.isFinite(forecast.actualDayAhead) ? forecast.actualDayAhead : actual.dayAheadPriceYuanMwh;
+    const actualRealTime = Number.isFinite(forecast.actualRealTime) ? forecast.actualRealTime : actual.realtimePriceYuanMwh;
+    return {
+      label: actual.time || `${String(index + 1).padStart(2, "0")}:00`,
+      predictedDayAhead,
+      predictedRealTime,
+      predictedSpread: Number.isFinite(forecast.predictedSpread)
+        ? forecast.predictedSpread
+        : Number.isFinite(predictedDayAhead) && Number.isFinite(predictedRealTime) ? predictedDayAhead - predictedRealTime : null,
+      actualDayAhead,
+      actualRealTime,
+      actualSpread: Number.isFinite(forecast.actualSpread)
+        ? forecast.actualSpread
+        : Number.isFinite(actualDayAhead) && Number.isFinite(actualRealTime) ? actualDayAhead - actualRealTime : null,
+    };
   });
-  const times = [...new Set([...primaryByTime.keys(), ...candidateByTime.keys(), ...actualByTime.keys()])].sort();
   return {
-    primary,
-    candidate,
-    times,
-    actualValues: times.map((time) => actualByTime.get(time) ?? null),
-    primaryValues: times.map((time) => primaryByTime.get(time)?.predictedPrice ?? null),
-    candidateValues: times.map((time) => candidateByTime.get(time)?.predictedPrice ?? null),
-    primaryTarget,
-    candidateTarget,
+    labels: points.map((point) => point.label),
+    dayAhead: {
+      predicted: points.map((point) => point.predictedDayAhead),
+      actual: points.map((point) => point.actualDayAhead),
+    },
+    realTime: {
+      predicted: points.map((point) => point.predictedRealTime),
+      actual: points.map((point) => point.actualRealTime),
+    },
+    spread: {
+      predicted: points.map((point) => point.predictedSpread),
+      actual: points.map((point) => point.actualSpread),
+    },
   };
 }
 
-function renderForecastComparison() {
-  if (!hasConnectedMarketData()) {
-    const status = document.querySelector("#forecastComparisonStatus");
-    status.textContent = "数据待接入";
-    status.className = "pill wait";
-    document.querySelector("#forecastComparisonKpis").innerHTML = sampleItem({ title: "暂无模型验收数据", body: "当前省份和交易主体尚未接入预测结果。" });
-    document.querySelector("#forecastComparisonSubtitle").textContent = "不会跨省份复用山东模型结果";
-    document.querySelector("#forecastComparisonTable").innerHTML = '<tr><td colspan="8">暂无可比较模型。</td></tr>';
-    document.querySelector("#forecastImpactNote").textContent = "接入同一市场的两套模型输出、真实价格和未覆盖电量后计算。";
-    drawForecastComparisonChart(chartEls.forecastComparison);
-    return;
-  }
-  const primaryRows = forecastRowsForDate(state.forecastResults);
-  const candidateRows = forecastRowsForDate(state.forecastCandidateResults);
-  const primaryBacktest = state.forecastProvidedMetrics || primaryForecastResultForDate()?.backtest || null;
-  const primaryTestStart = primaryBacktest?.window_start || calculatedWindow(primaryRows)?.start || null;
-  const primaryTraining = inferredTrainingWindow(primaryTestStart);
-  const primary = forecastMetricSummary(primaryRows, primaryBacktest, primaryTraining);
-  const candidate = forecastMetricSummary(candidateRows, state.forecastCandidateMeta?.backtest || null, state.forecastCandidateMeta?.trainingWindow || null);
-  const series = forecastComparisonSeries();
-  const actualCount = series.actualValues.filter(Number.isFinite).length;
-  const hasCandidate = candidateRows.length > 0 || Boolean(state.forecastCandidateMeta);
-  const sameTest = Boolean(hasCandidate && primary.windowStart && primary.windowEnd
-    && primary.windowStart === candidate.windowStart && primary.windowEnd === candidate.windowEnd);
-  const sameTrain = sameModelWindow(primary.trainingWindow, candidate.trainingWindow);
-  const candidateForDate = candidateRows.length > 0;
-  const primaryTarget = primaryRows[0]?.target || "real_time";
-  const candidateTarget = candidateRows[0]?.target || "real_time";
-  const targetLabel = (target) => target === "day_ahead" ? "日前价格" : "实时价格";
+function renderForecastActualComparison() {
+  const series = forecastActualSeries();
+  const coverage = [series.dayAhead, series.realTime, series.spread]
+    .map((item) => item.actual.filter(Number.isFinite).length);
+  const complete = coverage.every((count) => count >= 24);
+  const hasActual = coverage.some((count) => count > 0);
+  const status = document.querySelector("#forecastActualStatus");
+  status.textContent = complete ? "真实值 24/24" : hasActual ? "真实值部分接入" : "真实值待接入";
+  status.className = `pill ${complete ? "ok" : "partial"}`;
 
-  const status = document.querySelector("#forecastComparisonStatus");
-  if (!hasCandidate) {
-    status.textContent = "1/2 模型已接入";
-    status.className = "pill wait";
-  } else if (!candidateForDate) {
-    status.textContent = "候选模型日期不匹配";
-    status.className = "pill wait";
-  } else if (!sameTest) {
-    status.textContent = "测试窗口不一致";
-    status.className = "pill missing";
-  } else if (!sameTrain) {
-    status.textContent = "训练窗口待对齐";
-    status.className = "pill partial";
-  } else if (!actualCount) {
-    status.textContent = "真实价格待补";
-    status.className = "pill partial";
-  } else {
-    status.textContent = "同窗可验收";
-    status.className = "pill ok";
-  }
-
-  const testWindow = primary.windowStart && primary.windowEnd ? `${primary.windowStart} 至 ${primary.windowEnd}` : "待回测结果";
-  const trainWindow = primary.trainingWindow ? `${primary.trainingWindow.start} 至 ${primary.trainingWindow.end}` : "待模型声明";
-  document.querySelector("#forecastComparisonKpis").innerHTML = [
-    ["模型接入", `${hasCandidate ? 2 : 1}/2`],
-    ["统一训练窗口", trainWindow],
-    ["统一测试窗口", testWindow],
-    ["当日真实值覆盖", `${actualCount}/${Math.max(24, series.times.length)}`],
-    ["未覆盖电量", Number.isFinite(state.forecastExposureMwh) ? `${fmt(state.forecastExposureMwh)} MWh` : "待持仓数据"],
-  ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
-
-  document.querySelector("#forecastComparisonSubtitle").textContent = `${state.forecastDate || "未选日期"} · 主模型目标：${targetLabel(primaryTarget)} · 对照模型目标：${candidateForDate ? targetLabel(candidateTarget) : "待接入"} · ${actualCount ? `真实价格 ${actualCount} 点` : "真实价格待补"}`;
-  const exposure = state.forecastExposureMwh;
-  const impactText = (summary) => Number.isFinite(summary.mae) && Number.isFinite(exposure)
-    ? `${fmt(summary.mae * exposure)} 元`
-    : "待持仓数据";
-  const modelRows = [
-    {
-      name: `主模型 · ${state.priceForecastResult?.model?.name || "天气与电源出力增强"}`,
-      version: state.forecastModelVersion,
-      stateLabel: "已接入",
-      stateClass: "ok",
-      summary: primary,
-    },
-    {
-      name: `对照模型 · ${state.forecastCandidateMeta?.name || "现有平台模型"}`,
-      version: state.forecastCandidateMeta?.version || "待加载",
-      stateLabel: !hasCandidate ? "待加载" : !candidateForDate ? "日期不匹配" : !sameTest ? "测试窗不一致" : !sameTrain ? "训练窗待声明" : "已接入",
-      stateClass: !hasCandidate || !candidateForDate ? "wait" : !sameTest ? "missing" : sameTrain ? "ok" : "partial",
-      summary: candidate,
-    },
-  ];
-  document.querySelector("#forecastComparisonTable").innerHTML = modelRows.map((item) => `
-    <tr>
-      <td><strong>${escapeHtml(item.name)}</strong><br><small>${escapeHtml(item.version)}</small></td>
-      <td><span class="tag ${item.stateClass}">${item.stateLabel}</span></td>
-      <td>${modelWindowText(item.summary)}</td>
-      <td>${item.summary.sampleCount || "--"}</td>
-      <td>${Number.isFinite(item.summary.mae) ? `${fmt(item.summary.mae)} 元/MWh` : "--"}</td>
-      <td>${Number.isFinite(item.summary.rmse) ? `${fmt(item.summary.rmse)} 元/MWh` : "--"}</td>
-      <td>${Number.isFinite(item.summary.relativeAccuracy) ? `${fmt(item.summary.relativeAccuracy * 100)}%` : "--"}</td>
-      <td>${impactText(item.summary)}</td>
-    </tr>
-  `).join("");
-  const targetNote = primaryTarget === candidateTarget
-    ? `两套模型预测目标均为${targetLabel(primaryTarget)}。`
-    : `主模型预测${targetLabel(primaryTarget)}，对照模型预测${targetLabel(candidateTarget)}，当前误差仅作参考，不能直接作为同目标优劣结论。`;
-  document.querySelector("#forecastImpactNote").textContent = `${targetNote} 相对准确度 = max(0, 1 - MAE / 平均|真实价格|)，用于尺度比较；误差金额敏感性 = MAE × 未覆盖电量，仅表示价格误差对应的敞口风险量级，不等于真实收益。${sameTest && !sameTrain ? " 当前两套模型的测试窗口一致，但对照模型尚未声明训练窗口，暂不能标记为同窗验收通过。" : ""}`;
-  drawForecastComparisonChart(chartEls.forecastComparison);
+  [
+    ["#forecastDayAheadActualSubtitle", coverage[0]],
+    ["#forecastRealTimeActualSubtitle", coverage[1]],
+    ["#forecastSpreadActualSubtitle", coverage[2]],
+  ].forEach(([selector, count]) => {
+    setText(selector, `${state.forecastDate || "未选日期"} · ${count ? `真实值 ${count}/24` : "真实值待接入"}`);
+  });
+  drawForecastActualCharts(series);
 }
 
 function normalizeForecastRows(rows, context = {}) {
@@ -7304,6 +7139,12 @@ function normalizeForecastRows(rows, context = {}) {
     const actualRaw = target === "day_ahead"
       ? row.actual_day_ahead_price_yuan_per_mwh ?? row.actualDayAheadPrice ?? row.actualPrice ?? row.actual_price ?? row.y_true ?? row.actual ?? row["实际价格"]
       : row.actualPrice ?? row.actual_price ?? row.actual_real_time_price_yuan_per_mwh ?? row.real_time_price_actual_yuan_per_mwh ?? row.y_true ?? row.actual ?? row["实际价格"];
+    const actualDayAheadRaw = row.actual_day_ahead_price_yuan_per_mwh ?? row.actualDayAheadPrice;
+    const actualRealTimeRaw = row.actual_real_time_price_yuan_per_mwh ?? row.real_time_price_actual_yuan_per_mwh ?? row.actualRealTimePrice;
+    const predictedDayAhead = Number(dayAheadQuantiles?.p50 ?? row.predicted_day_ahead_price_yuan_per_mwh ?? dayAheadReference);
+    const predictedRealTime = Number(realtimeQuantiles?.p50 ?? row.predicted_real_time_price_yuan_per_mwh ?? predictedPrice);
+    const actualDayAhead = actualDayAheadRaw !== null && actualDayAheadRaw !== undefined && actualDayAheadRaw !== "" && Number.isFinite(Number(actualDayAheadRaw)) ? Number(actualDayAheadRaw) : null;
+    const actualRealTime = actualRealTimeRaw !== null && actualRealTimeRaw !== undefined && actualRealTimeRaw !== "" && Number.isFinite(Number(actualRealTimeRaw)) ? Number(actualRealTimeRaw) : null;
     const datetimeDate = row.datetime?.slice(0, 10) || row.timestamp?.slice(0, 10) || null;
     return {
       date: row.date ?? row.forecastDate ?? row.forecast_date ?? datetimeDate ?? context.market_date ?? row["预测日期"] ?? state.forecastDate ?? "外部导入",
@@ -7312,6 +7153,9 @@ function normalizeForecastRows(rows, context = {}) {
       target,
       dayAheadReference,
       predictedPrice,
+      predictedDayAhead,
+      predictedRealTime,
+      predictedSpread: Number.isFinite(spread) ? spread : null,
       lower,
       upper,
       spread,
@@ -7320,6 +7164,9 @@ function normalizeForecastRows(rows, context = {}) {
       drivers: reasonCodes || row.drivers || row["主要驱动"] || "外部模型输出",
       modelVersion: row.modelVersion ?? row.model_version ?? context.model?.version ?? row["模型版本"] ?? "external",
       actualPrice: actualRaw !== null && actualRaw !== undefined && actualRaw !== "" && Number.isFinite(Number(actualRaw)) ? Number(actualRaw) : null,
+      actualDayAhead,
+      actualRealTime,
+      actualSpread: Number.isFinite(actualDayAhead) && Number.isFinite(actualRealTime) ? actualDayAhead - actualRealTime : null,
       negativeRisk: row.negative_price_risk || null,
       highRisk: row.high_price_risk || null,
       dataCompleteness: row.data_completeness || null,
@@ -7903,7 +7750,7 @@ function renderCharts() {
     { name: "价差", color: "#c95341", values: marketRows.map((row) => row.spreadYuanMwh) },
   ]);
   drawForecastChart(chartEls.forecast, hasConnectedMarketData() ? state.forecastResults : []);
-  drawForecastComparisonChart(chartEls.forecastComparison);
+  drawForecastActualCharts();
   const medium = hasConnectedMarketData() && state.mediumResults.length ? state.mediumResults : settlement.map((row) => ({
     baseEnergy: row.realtimeEnergyMwh || 0,
     optimizedEnergy: (row.realtimeEnergyMwh || 0) * 0.7,
@@ -8124,20 +7971,23 @@ function sampleItem(item) {
   return `<article class="sample-item"><strong>${item.title}</strong><p>${item.body}</p></article>`;
 }
 
-function drawForecastComparisonChart(canvas) {
-  if (!canvas) return;
-  const series = forecastComparisonSeries();
-  const lines = [];
-  const targetLabel = (target) => target === "day_ahead" ? "日前" : "实时";
-  if (series.actualValues.some(Number.isFinite)) lines.push({ name: `真实${targetLabel(series.primaryTarget)}价`, color: "#24312d", values: series.actualValues });
-  if (series.primaryValues.some(Number.isFinite)) lines.push({ name: `主模型预测${targetLabel(series.primaryTarget)}价`, color: "#0e6f78", values: series.primaryValues });
-  if (series.candidateValues.some(Number.isFinite)) lines.push({ name: `对照模型预测${targetLabel(series.candidateTarget)}价`, color: "#c95341", values: series.candidateValues });
-  if (!lines.length) {
-    const ctx = setupCanvas(canvas);
-    drawChartEmptyState(ctx, "等待同日模型输出", 54, 64);
-    return;
-  }
-  drawLineChart(canvas, lines);
+function drawForecastActualCharts(series = forecastActualSeries()) {
+  [
+    [chartEls.forecastDayAheadActual, series.dayAhead],
+    [chartEls.forecastRealTimeActual, series.realTime],
+    [chartEls.forecastSpreadActual, series.spread],
+  ].forEach(([canvas, values]) => {
+    if (!canvas) return;
+    const lines = [];
+    if (values.predicted.some(Number.isFinite)) lines.push({ name: "预测值", color: "#0e6f78", values: values.predicted });
+    if (values.actual.some(Number.isFinite)) lines.push({ name: "真实值", color: "#24312d", values: values.actual });
+    if (!lines.length) {
+      const ctx = setupCanvas(canvas);
+      drawChartEmptyState(ctx, "等待预测结果", 54, 64);
+      return;
+    }
+    drawLineChart(canvas, lines);
+  });
 }
 
 function drawLineChart(canvas, lines, xAxisLabels = null) {
