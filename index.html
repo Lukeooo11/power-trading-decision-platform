@@ -2063,6 +2063,186 @@ th {
   transform: translateY(0);
 }
 
+.data-notes-dialog {
+  width: min(1040px, calc(100vw - 32px));
+  max-height: min(820px, calc(100vh - 32px));
+  overflow: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 24px 80px rgba(16, 42, 35, 0.2);
+}
+
+.data-notes-dialog::backdrop {
+  background: rgba(14, 35, 30, 0.42);
+}
+
+.data-notes-dialog[open] {
+  display: grid;
+  gap: 18px;
+}
+
+.dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dialog-head h2 {
+  margin: 5px 0 0;
+  font-size: 22px;
+}
+
+.dialog-head p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dialog-close {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--surface-2);
+  color: var(--teal);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dialog-close:hover {
+  border-color: #9fbeb5;
+  background: #f1f7f4;
+}
+
+.data-notes-summary,
+.data-notes-grid,
+.data-notes-rules {
+  margin: 0 24px;
+}
+
+.data-notes-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.data-notes-summary article {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.data-notes-summary span,
+.data-note-item span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.data-notes-summary strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 17px;
+}
+
+.data-notes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  min-height: 0;
+}
+
+.data-notes-grid > section,
+.data-notes-rules {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfb;
+}
+
+.data-notes-grid .subsection-head,
+.data-notes-rules .subsection-head {
+  margin-bottom: 10px;
+}
+
+.data-notes-grid h3,
+.data-notes-rules h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.data-note-list {
+  display: grid;
+  gap: 8px;
+  max-height: 310px;
+  overflow: auto;
+}
+
+.data-note-item {
+  padding: 10px;
+  border-left: 3px solid var(--teal);
+  background: white;
+}
+
+.data-note-item.missing {
+  border-left-color: var(--amber);
+}
+
+.data-note-item strong {
+  display: block;
+  font-size: 13px;
+}
+
+.data-note-item p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.data-note-item small {
+  display: block;
+  margin-top: 6px;
+  color: var(--teal);
+  font-size: 11px;
+}
+
+.data-notes-rules {
+  margin-bottom: 24px;
+}
+
+.data-notes-rules > div:last-child {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.data-notes-rules article {
+  padding: 10px;
+  border-top: 2px solid var(--teal);
+  background: white;
+}
+
+.data-notes-rules article strong {
+  display: block;
+  font-size: 12px;
+}
+
+.data-notes-rules article p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 @media (max-width: 1180px) {
   .shell {
     grid-template-columns: 1fr;
@@ -2129,6 +2309,11 @@ th {
   .loss-kpi-grid,
   .profit-scope-grid,
   .profit-gap-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .data-notes-summary,
+  .data-notes-rules > div:last-child {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -2254,6 +2439,33 @@ th {
 
   .loss-customer-filters {
     grid-template-columns: 1fr;
+  }
+
+  .data-notes-grid,
+  .data-notes-summary,
+  .data-notes-rules > div:last-child {
+    grid-template-columns: 1fr;
+  }
+
+  .data-notes-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+
+  .dialog-head,
+  .data-notes-summary,
+  .data-notes-grid,
+  .data-notes-rules {
+    margin-left: 12px;
+    margin-right: 12px;
+  }
+
+  .dialog-head {
+    padding: 16px 0 12px;
+  }
+
+  .data-notes-rules {
+    margin-bottom: 12px;
   }
 
   .import-mode-note {
@@ -2708,7 +2920,7 @@ th {
               <span class="pill partial">天气与电源增强</span>
             </div>
             <div class="metric-row" id="forecastBacktest"></div>
-            <div class="model-governance" id="forecastGovernance"></div>
+            <div class="model-governance" id="forecastGovernance" hidden></div>
           </section>
 
           <section class="panel">
@@ -2751,7 +2963,7 @@ th {
                 </div>
               </div>
             </div>
-            <p class="loss-boundary-note" id="forecastImpactNote">误差金额敏感性 = MAE × 未覆盖电量，仅用于风险量级判断，不等于真实交易收益。</p>
+            <p class="loss-boundary-note" id="forecastImpactNote" hidden>误差金额敏感性 = MAE × 未覆盖电量，仅用于风险量级判断，不等于真实交易收益。</p>
           </section>
 
           <section class="panel">
@@ -2983,7 +3195,10 @@ th {
                 <h3>数据采集与导入管理</h3>
                 <p>统一接入交易中心 Excel、PDF、CSV、政策文件、模型输出和客户案例数据</p>
               </div>
-              <button class="secondary-action" id="exportImportBtn" type="button">导出导入记录</button>
+              <div class="inline-actions">
+                <button class="secondary-action" id="openDataNotesBtn" type="button">数据说明与缺口</button>
+                <button class="secondary-action" id="exportImportBtn" type="button">导出导入记录</button>
+              </div>
             </div>
             <div class="form-grid">
               <label class="field">
@@ -3388,7 +3603,7 @@ th {
               </div>
             </section>
 
-            <section class="panel">
+            <section class="panel" hidden>
               <div class="panel-head">
                 <div>
                   <h3>数据边界</h3>
@@ -3437,7 +3652,7 @@ th {
               <button class="loss-tab" type="button" role="tab" aria-selected="false" data-loss-tab="detail">客户详情</button>
             </div>
             <div class="loss-kpi-grid" id="lossKpis"></div>
-            <p class="loss-boundary-note" id="lossBoundaryNote"></p>
+            <p class="loss-boundary-note" id="lossBoundaryNote" hidden></p>
           </section>
 
           <div id="lossMonthlyPanel" data-loss-panel="monthly">
@@ -3453,7 +3668,7 @@ th {
                 </label>
               </div>
               <div class="loss-kpi-grid" id="lossMonthlyKpis"></div>
-              <p class="loss-boundary-note" id="lossMonthlyQualityNote"></p>
+              <p class="loss-boundary-note" id="lossMonthlyQualityNote" hidden></p>
             </section>
 
             <div class="grid two-one">
@@ -3488,7 +3703,7 @@ th {
                 <span class="pill wait" id="companyProfitStatusPill">公司净利润待核验</span>
               </div>
               <div class="profit-scope-grid" id="profitScopeLadder"></div>
-              <div class="missing-grid profit-gap-grid" id="profitDataGapList"></div>
+              <div class="missing-grid profit-gap-grid" id="profitDataGapList" hidden></div>
             </section>
 
             <section class="panel">
@@ -3629,7 +3844,7 @@ th {
                 <span class="pill wait">代理测算</span>
               </div>
               <div class="loss-kpi-grid" id="lossCustomerSummaryKpis"></div>
-              <p class="loss-boundary-note" id="lossCustomerBoundaryNote"></p>
+              <p class="loss-boundary-note" id="lossCustomerBoundaryNote" hidden></p>
             </section>
 
             <section class="panel">
@@ -3690,7 +3905,7 @@ th {
                 </label>
               </div>
               <div class="loss-kpi-grid" id="lossCustomerDetailKpis"></div>
-              <p class="loss-boundary-note" id="lossCustomerDetailBoundary"></p>
+              <p class="loss-boundary-note" id="lossCustomerDetailBoundary" hidden></p>
             </section>
 
             <div class="grid two-one">
@@ -3775,6 +3990,32 @@ th {
         </section>
       </main>
     </div>
+
+    <dialog class="data-notes-dialog" id="dataNotesDialog">
+      <div class="dialog-head">
+        <div>
+          <span class="eyebrow">DATA CENTER</span>
+          <h2>数据说明与缺口</h2>
+          <p id="dataNotesSubtitle">集中查看当前市场的数据来源、口径和待补数据。</p>
+        </div>
+        <button class="dialog-close" id="closeDataNotesBtn" type="button" aria-label="关闭数据说明">关闭</button>
+      </div>
+      <div class="data-notes-summary" id="dataNotesSummary"></div>
+      <div class="data-notes-grid">
+        <section>
+          <div class="subsection-head"><h3>当前已接入</h3><span class="tag ok">可使用</span></div>
+          <div class="data-note-list" id="dataNotesAvailable"></div>
+        </section>
+        <section>
+          <div class="subsection-head"><h3>待补数据</h3><span class="tag wait">后续接入</span></div>
+          <div class="data-note-list" id="dataNotesMissing"></div>
+        </section>
+      </div>
+      <section class="data-notes-rules">
+        <div class="subsection-head"><h3>统一使用规则</h3></div>
+        <div id="dataNotesRules"></div>
+      </section>
+    </dialog>
 
     <div class="toast" id="toast"></div>
     <script src="./vendor/xlsx.full.min.js"></script>
@@ -4385,6 +4626,7 @@ async function init() {
     hydrateWeatherControls();
     hydrateLossControls();
     hydrateDefaultForecastResult();
+    renderDataNotes();
     renderStaticScaffold();
     renderAll();
     checkBackend();
@@ -4574,6 +4816,14 @@ function bindEvents() {
     updateImportMappingView();
   });
   document.querySelector("#exportImportBtn").addEventListener("click", exportImportRecords);
+  document.querySelector("#openDataNotesBtn").addEventListener("click", () => {
+    renderDataNotes();
+    const dialog = document.querySelector("#dataNotesDialog");
+    if (dialog?.showModal) dialog.showModal();
+  });
+  document.querySelector("#closeDataNotesBtn").addEventListener("click", () => {
+    document.querySelector("#dataNotesDialog")?.close();
+  });
   document.querySelector("#exportReportBtn").addEventListener("click", exportReportMarkdown);
   document.querySelector("#spotTabs").addEventListener("click", (event) => {
     const button = event.target.closest("[data-spot-tab]");
@@ -4901,6 +5151,7 @@ function selectMarket(code) {
   hydrateCustomerControls();
   hydrateWeatherControls();
   hydrateLossControls();
+  renderDataNotes();
   if (code === "national") {
     switchView("company");
   } else if (code === "SD") {
@@ -4923,6 +5174,7 @@ function selectSubject(subject) {
   hydrateCustomerControls();
   hydrateWeatherControls();
   hydrateLossControls();
+  renderDataNotes();
   if (state.selectedMarket === "national") switchView("company");
   else switchView("desk");
   renderAll();
@@ -7248,6 +7500,53 @@ function runPolicyAnalysis() {
 function runResourceDiagnosis() {
   showToast(`${state.selectedDate || "当前日期"}拓扑阻塞诊断已刷新，等待真实拓扑和潮流数据。`);
   renderGridSamples();
+}
+
+function renderDataNotes() {
+  const market = selectedMarketProfile();
+  const marketData = selectedMarketData();
+  const hasPrices = marketData.spotPrices.length > 0;
+  const hasLoad = marketData.loadHourly.length > 0;
+  const hasWeather = Boolean(marketData.weatherAsset?.rows?.length);
+  const hasSettlement = Boolean(marketData.settlementSummaryMonthly?.monthly?.length);
+  const hasSupply = Boolean(marketData.marketSupply?.rows?.length || state.priceForecastResult?.backtest?.supply_data_version);
+  const availableCount = [hasPrices, hasLoad, hasWeather, hasSupply, hasSettlement].filter(Boolean).length;
+  const missingRequirements = DATA_REQUIREMENTS.filter((item) => item.status !== "已接入");
+  const label = market?.name || "全国公司视图";
+
+  setText("#dataNotesSubtitle", `${label} · 集中查看当前数据资产、计算口径和后续接入事项。`);
+  document.querySelector("#dataNotesSummary").innerHTML = [
+    ["当前市场", label],
+    ["已接入数据域", `${availableCount} 项`],
+    ["待补数据项", `${missingRequirements.length} 项`],
+  ].map(([title, value]) => `<article><span>${title}</span><strong>${value}</strong></article>`).join("");
+
+  const available = [
+    ["现货价格", hasPrices ? `${marketData.spotPrices.length} 个小时点` : "尚未接入", "/api/spot/prices"],
+    ["客户负荷", hasLoad ? `${marketData.customerProfiles.length} 家脱敏客户、${marketData.loadHourly.length} 个小时点` : "尚未接入", "/api/customer/load-profile"],
+    ["天气预报", hasWeather ? `${marketData.weatherAsset.rows.length} 个小时点` : "尚未接入", "/api/v1/weather/hourly"],
+    ["电源出力与供需代理", hasSupply ? "Q1实际 / Q2预测已接入" : "尚未接入", "/api/v1/market-supply/hourly"],
+    ["月度结算", hasSettlement ? `${marketData.settlementSummaryMonthly.monthly.length} 个月、${marketData.customerSettlementMonthly.length} 条记录` : "尚未接入", "/api/finance/settlement"],
+  ];
+  document.querySelector("#dataNotesAvailable").innerHTML = available.map(([title, body, target]) => `
+    <article class="data-note-item ${body === "尚未接入" ? "missing" : ""}">
+      <strong>${escapeHtml(title)}</strong><p>${escapeHtml(body)}</p><small>${escapeHtml(target)}</small>
+    </article>
+  `).join("");
+
+  document.querySelector("#dataNotesMissing").innerHTML = missingRequirements.map((item) => `
+    <article class="data-note-item missing">
+      <strong>${escapeHtml(item.domain)} · ${escapeHtml(item.priority)}</strong>
+      <p>${escapeHtml(item.need)}</p>
+      <small>${escapeHtml(item.target)} · ${escapeHtml(item.frequency)}</small>
+    </article>
+  `).join("");
+
+  document.querySelector("#dataNotesRules").innerHTML = [
+    ["客户标识", "前端、导出和模型输入只使用稳定脱敏客户代号。"],
+    ["预测与策略", "预测结果用于辅助决策，策略建议必须经过人工复核。"],
+    ["盈亏口径", "表内结算毛利只代表原表收支差额，不直接等于公司净利润。"],
+  ].map(([title, body]) => `<article><strong>${title}</strong><p>${body}</p></article>`).join("");
 }
 
 function renderDataQuality() {
