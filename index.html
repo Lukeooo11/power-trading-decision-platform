@@ -2916,9 +2916,9 @@ th {
             <div class="panel-head">
               <div>
                 <h3>历史回测与模型治理</h3>
-                <p>回测结果以模型输出窗口和真实样本为准；其余评估口径集中在数据说明与缺口</p>
+                <p>模型级指标随版本和验收窗口更新，不随当前查看的预测日期重复计算</p>
               </div>
-              <span class="pill partial">天气与电源增强</span>
+              <span class="pill partial">模型级回测</span>
             </div>
             <div class="metric-row" id="forecastBacktest"></div>
             <div class="model-governance" id="forecastGovernance" hidden></div>
@@ -4959,8 +4959,20 @@ function hydrateForecastDates() {
   select.value = state.forecastDate;
 }
 
+function selectedForecastBacktest() {
+  const primaryVersion = state.priceForecastResult?.model?.version;
+  if (primaryVersion && state.forecastModelVersion === primaryVersion) {
+    return state.priceForecastResult.backtest || null;
+  }
+  const secondaryVersion = state.secondaryPriceForecastResult?.model?.version;
+  if (secondaryVersion && state.forecastModelVersion === secondaryVersion) {
+    return state.secondaryPriceForecastResult.backtest || null;
+  }
+  return null;
+}
+
 function hydrateDefaultForecastResult() {
-  state.forecastProvidedMetrics = null;
+  state.forecastProvidedMetrics = selectedForecastBacktest();
   state.forecastRunMeta = null;
   state.forecastCandidateResults = [];
   state.forecastCandidateMeta = null;
@@ -6679,7 +6691,7 @@ function buildForecastResults(date) {
       direction,
       confidence,
       drivers: drivers.join("、"),
-      modelVersion: state.forecastModelVersion,
+      modelVersion: "lag-baseline-v0.3",
       actualPrice,
       actualSpread: Number.isFinite(actualPrice) ? dayAheadReference - actualPrice : null,
       sourceFile: "spot_prices_2026h1.json + portfolio_load_hourly_2026h1.json",
@@ -6695,7 +6707,7 @@ async function runForecastEvaluation(options = {}) {
     return;
   }
   state.forecastModelVersion = document.querySelector("#forecastModelSelect").value;
-  state.forecastProvidedMetrics = null;
+  state.forecastProvidedMetrics = selectedForecastBacktest();
   state.forecastRunMeta = null;
   const isIntegratedPriceForecast = ["price-forecast-v1.2.0", "weather-power-price-optimized-v1.0.0"].includes(state.forecastModelVersion);
   const staticResult = state.priceForecastResult?.market_date === state.forecastDate ? state.priceForecastResult : null;
@@ -6818,16 +6830,17 @@ function renderForecast() {
   const upCount = rows.filter((row) => row.direction === "实时高于日前").length;
   const downCount = rows.filter((row) => row.direction === "实时低于日前").length;
   const peakPoint = maxBy(rows, (row) => row.predictedPrice);
+  const resultModelVersion = rows[0]?.modelVersion || state.forecastModelVersion;
   const negativeRiskCount = rows.filter((row) => ["MEDIUM", "HIGH"].includes(row.negativeRisk?.level)).length;
   const highRiskCount = rows.filter((row) => ["MEDIUM", "HIGH"].includes(row.highRisk?.level)).length;
   document.querySelector("#forecastKpis").innerHTML = [
     ["预测点数", `${rows.length} 点`],
-    [`主模型预测${targetLabel}`, `${fmt(avgPrice)} 元/MWh`],
+    [`平均预测${targetLabel}`, `${fmt(avgPrice)} 元/MWh`],
     ["最大绝对价差", Number.isFinite(peakSpread.spread) ? `${fmt(Math.abs(peakSpread.spread))} 元/MWh` : "未建模"],
     ["高置信点覆盖", `${fmt((confidentPoints / rows.length) * 100)}%`],
-    ["模型版本", state.forecastModelVersion],
+    ["结果模型版本", resultModelVersion],
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
-  document.querySelector("#forecastChartSubtitle").textContent = `${state.forecastDate} · ${state.forecastSource} · ${state.forecastModelVersion}`;
+  document.querySelector("#forecastChartSubtitle").textContent = `${state.forecastDate} · ${state.forecastSource} · ${resultModelVersion}`;
   document.querySelector("#forecastPointStatus").textContent = `${rows.length} 点`;
   document.querySelector("#forecastModeStatus").textContent = state.forecastSource.includes("外部导入")
     ? "外部文件结果"
