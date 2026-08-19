@@ -2916,7 +2916,7 @@ th {
             <div class="panel-head">
               <div>
                 <h3>历史回测与模型治理</h3>
-                <p>回测窗口随预测日期动态取前30天；正式上线仍需目标日竞价空间、边界、新能源与规则数据</p>
+                <p>回测结果以模型输出窗口和真实样本为准；其余评估口径集中在数据说明与缺口</p>
               </div>
               <span class="pill partial">天气与电源增强</span>
             </div>
@@ -4224,12 +4224,12 @@ const DATA_REQUIREMENTS = [
     target: "/api/forecast/features",
   },
   {
-    domain: "双模型同窗验收输出",
+    domain: "模型基线与同窗验收",
     priority: "P0 模型验收",
     status: "部分接入",
-    need: "两套模型使用相同训练截止日和测试窗口，逐时输出真实值、预测值、模型版本、数据版本、MAE、RMSE和误差方向。",
+    need: "两套模型均已接入，但主模型与对照模型的训练口径和测试窗口尚未完全对齐；无天气基线、同窗改善比例和区间覆盖率需在统一窗口重跑后补齐。",
     use: "按会议口径同图比较真实曲线与两套预测，并评估误差对交易敞口的金额敏感性。",
-    frequency: "模型版本变更时重跑；当前待补第二套模型点级结果。",
+    frequency: "模型版本变更或评估窗口更新时重跑。",
     target: "/api/v1/model-comparisons",
   },
   {
@@ -6849,37 +6849,22 @@ function renderForecast() {
   const mae = provided?.mae_yuan_per_mwh ?? metrics?.mae;
   const rmse = provided?.rmse_yuan_per_mwh ?? metrics?.rmse;
   const bias = provided?.bias_yuan_per_mwh ?? metrics?.bias;
-  const negativeAccuracy = provided?.negative_price_direction_accuracy ?? metrics?.negativeAccuracy;
+  const negativeRecall = provided?.negative_price_recall ?? provided?.negative_price_direction_accuracy ?? metrics?.negativeAccuracy;
   const extremeRecall = provided?.extreme_high_price_recall ?? metrics?.extremeHighRecall;
-  const baselineMae = provided?.baseline_mae_yuan_per_mwh;
-  const weatherImprovementPct = provided?.weather_mae_improvement_pct;
-  const realtimeMae = provided?.real_time_mae_yuan_per_mwh;
-  const realtimeBaselineMae = provided?.real_time_baseline_mae_yuan_per_mwh;
-  const realtimeWeatherImprovementPct = provided?.real_time_weather_mae_improvement_pct;
-  const supplyImprovementPct = provided?.day_ahead_final_improvement_vs_weather_pct;
-  const spreadDirectionAccuracy = provided?.spread_direction_accuracy;
-  const spreadMae = provided?.spread_mae_yuan_per_mwh;
-  const dayAheadCoverage = provided?.day_ahead_interval_coverage;
-  const realtimeCoverage = provided?.real_time_interval_coverage;
-  const backtestWindow = provided?.window_start && provided?.window_end ? `${provided.window_start} 至 ${provided.window_end}` : "当前选择日回测";
-  document.querySelector("#forecastBacktest").innerHTML = [
-    ["日前MAE", Number.isFinite(mae) ? `${fmt(mae)} 元/MWh` : "待真实值"],
-    ["日前RMSE", Number.isFinite(rmse) ? `${fmt(rmse)} 元/MWh` : "待真实值"],
-    ["日前Bias", Number.isFinite(bias) ? `${signed(bias)} 元/MWh` : "待真实值"],
-    ["日前负价方向准确率", Number.isFinite(negativeAccuracy) ? `${fmt(negativeAccuracy * 100)}%` : "待样本"],
-    ["日前极端高价召回率", Number.isFinite(extremeRecall) ? `${fmt(extremeRecall * 100)}%` : "待极端样本"],
-    ["日前无天气基线MAE", Number.isFinite(baselineMae) ? `${fmt(baselineMae)} 元/MWh` : "待同窗基线"],
-    ["日前天气MAE改善", Number.isFinite(weatherImprovementPct) ? `${signed(weatherImprovementPct)}%` : "待同窗对比"],
-    ["实时MAE", Number.isFinite(realtimeMae) ? `${fmt(realtimeMae)} 元/MWh` : "待真实值"],
-    ["实时无天气基线MAE", Number.isFinite(realtimeBaselineMae) ? `${fmt(realtimeBaselineMae)} 元/MWh` : "待同窗基线"],
-    ["实时天气MAE改善", Number.isFinite(realtimeWeatherImprovementPct) ? `${signed(realtimeWeatherImprovementPct)}%` : "待同窗对比"],
-    ["日前较天气模型改善", Number.isFinite(supplyImprovementPct) ? `${signed(supplyImprovementPct)}%` : "待同窗对比"],
-    ["价差方向准确率", Number.isFinite(spreadDirectionAccuracy) ? `${fmt(spreadDirectionAccuracy * 100)}%` : "待样本"],
-    ["价差MAE", Number.isFinite(spreadMae) ? `${fmt(spreadMae)} 元/MWh` : "待样本"],
-    ["日前区间覆盖率", Number.isFinite(dayAheadCoverage) ? `${fmt(dayAheadCoverage * 100)}%` : "待样本"],
-    ["实时区间覆盖率", Number.isFinite(realtimeCoverage) ? `${fmt(realtimeCoverage * 100)}%` : "待样本"],
-    ["回测窗口", backtestWindow],
-  ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
+  const spreadMae = provided?.real_time_spread?.mae_yuan_per_mwh ?? provided?.spread_mae_yuan_per_mwh;
+  const backtestMetrics = [
+    ["日前MAE", mae, (value) => `${fmt(value)} 元/MWh`],
+    ["日前RMSE", rmse, (value) => `${fmt(value)} 元/MWh`],
+    ["日前Bias", bias, (value) => `${signed(value)} 元/MWh`],
+    ["实时价差MAE", spreadMae, (value) => `${fmt(value)} 元/MWh`],
+    ["负价召回率", negativeRecall, (value) => `${fmt(value * 100)}%`],
+    ["极端高价召回率", extremeRecall, (value) => `${fmt(value * 100)}%`],
+  ].filter(([, value]) => Number.isFinite(value));
+  const backtestContext = provided?.window_start && provided?.window_end
+    ? [["回测窗口", `${provided.window_start} 至 ${provided.window_end}`]]
+    : [];
+  document.querySelector("#forecastBacktest").innerHTML = [...backtestMetrics.map(([label, value, format]) => [label, format(value)]), ...backtestContext]
+    .map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
   document.querySelector("#forecastGovernance").innerHTML = [
     ["数据来源", `${state.forecastSource}；价格、日历滞后、申报前GFS天气与Q2电源预测D-1/D-7滞后；逐户名称未进入模型输入`],
     ["输入批次", rows[0].importBatchId || "外部导入批次"],
