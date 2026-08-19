@@ -6852,17 +6852,26 @@ function renderForecast() {
   const negativeRecall = provided?.negative_price_recall ?? provided?.negative_price_direction_accuracy ?? metrics?.negativeAccuracy;
   const extremeRecall = provided?.extreme_high_price_recall ?? metrics?.extremeHighRecall;
   const spreadMae = provided?.real_time_spread?.mae_yuan_per_mwh ?? provided?.spread_mae_yuan_per_mwh;
+  const realtimePrice = provided?.real_time_price;
   const backtestMetrics = [
     ["日前MAE", mae, (value) => `${fmt(value)} 元/MWh`],
     ["日前RMSE", rmse, (value) => `${fmt(value)} 元/MWh`],
     ["日前Bias", bias, (value) => `${signed(value)} 元/MWh`],
+    ["实时价格相对准确度", realtimePrice?.relative_accuracy, (value) => `${fmt(value * 100)}%`],
+    ["实时价格MAE", realtimePrice?.mae_yuan_per_mwh, (value) => `${fmt(value)} 元/MWh`],
+    ["实时价格RMSE", realtimePrice?.rmse_yuan_per_mwh, (value) => `${fmt(value)} 元/MWh`],
+    ["实时价格Bias", realtimePrice?.bias_yuan_per_mwh, (value) => `${signed(value)} 元/MWh`],
     ["实时价差MAE", spreadMae, (value) => `${fmt(value)} 元/MWh`],
     ["负价召回率", negativeRecall, (value) => `${fmt(value * 100)}%`],
     ["极端高价召回率", extremeRecall, (value) => `${fmt(value * 100)}%`],
   ].filter(([, value]) => Number.isFinite(value));
-  const backtestContext = provided?.window_start && provided?.window_end
-    ? [["回测窗口", `${provided.window_start} 至 ${provided.window_end}`]]
-    : [];
+  const backtestContext = [];
+  if (provided?.window_start && provided?.window_end) {
+    backtestContext.push(["日前回测窗口", `${provided.window_start} 至 ${provided.window_end}`]);
+  }
+  if (realtimePrice?.window_start && realtimePrice?.window_end) {
+    backtestContext.push(["实时回测窗口", `${realtimePrice.window_start} 至 ${realtimePrice.window_end}`]);
+  }
   document.querySelector("#forecastBacktest").innerHTML = [...backtestMetrics.map(([label, value, format]) => [label, format(value)]), ...backtestContext]
     .map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
   document.querySelector("#forecastGovernance").innerHTML = [
@@ -7592,6 +7601,7 @@ function renderDataNotes() {
   document.querySelector("#dataNotesRules").innerHTML = [
     ["客户标识", "前端、导出和模型输入只使用稳定脱敏客户代号。"],
     ["预测与策略", "预测结果用于辅助决策，策略建议必须经过人工复核。"],
+    ["预测准确度", "相对准确度 = max(0, 1 - MAE / 平均|真实价格|)；实时价格指标由日前预测与实时价差预测在同一留出窗口组合后计算。"],
     ["盈亏口径", "表内结算毛利只代表原表收支差额，不直接等于公司净利润。"],
   ].map(([title, body]) => `<article><strong>${title}</strong><p>${body}</p></article>`).join("");
 }
