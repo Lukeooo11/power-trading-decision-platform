@@ -2978,10 +2978,10 @@ th {
           <section class="panel">
             <div class="panel-head">
               <div>
-                <h3>历史回测与模型治理</h3>
-                <p>模型级指标随版本和验收窗口更新，不随当前查看的预测日期重复计算</p>
+                <h3>当日预测准确度</h3>
+                <p>仅使用当前预测日期的24点预测值与真实值计算，切换日期后同步更新</p>
               </div>
-              <span class="pill partial">模型级回测</span>
+              <span class="pill partial" id="forecastAccuracyStatus">真实值待接入</span>
             </div>
             <div class="metric-row" id="forecastBacktest"></div>
             <div class="model-governance" id="forecastGovernance" hidden></div>
@@ -6878,7 +6878,7 @@ function renderForecast() {
     document.querySelector("#forecastPointStatus").textContent = "0 点";
     document.querySelector("#forecastModeStatus").textContent = "数据待接入";
     document.querySelector("#forecastInsights").innerHTML = "";
-    document.querySelector("#forecastBacktest").innerHTML = "";
+    renderDailyForecastAccuracy();
     document.querySelector("#forecastGovernance").innerHTML = "";
     document.querySelector("#forecastResultTable").innerHTML = '<tr><td colspan="8">暂无预测结果。</td></tr>';
     renderForecastActualComparison();
@@ -6889,7 +6889,7 @@ function renderForecast() {
     document.querySelector("#forecastKpis").innerHTML = sampleItem({ title: "暂无预测结果", body: "请选择有特征数据的日期，或导入模型输出 CSV/JSON。" });
     document.querySelector("#forecastPointStatus").textContent = "0 点";
     document.querySelector("#forecastInsights").innerHTML = "";
-    document.querySelector("#forecastBacktest").innerHTML = "";
+    renderDailyForecastAccuracy();
     document.querySelector("#forecastGovernance").innerHTML = "";
     document.querySelector("#forecastResultTable").innerHTML = "";
     renderForecastActualComparison();
@@ -6931,36 +6931,7 @@ function renderForecast() {
   if (Number.isFinite(peakSpread.spread)) insightItems.push({ title: "最大偏离", body: `${peakSpread.time} 相对日前参考价差 ${signed(peakSpread.spread)} 元/MWh，建议作为申报复核点。` });
   document.querySelector("#forecastInsights").innerHTML = insightItems.map((item) => `<article class="signal-item"><strong>${item.title}</strong><p>${item.body}</p></article>`).join("");
 
-  const metrics = forecastMetrics(rows);
-  const provided = state.forecastProvidedMetrics;
-  const mae = provided?.mae_yuan_per_mwh ?? metrics?.mae;
-  const rmse = provided?.rmse_yuan_per_mwh ?? metrics?.rmse;
-  const bias = provided?.bias_yuan_per_mwh ?? metrics?.bias;
-  const negativeRecall = provided?.negative_price_recall ?? provided?.negative_price_direction_accuracy ?? metrics?.negativeAccuracy;
-  const extremeRecall = provided?.extreme_high_price_recall ?? metrics?.extremeHighRecall;
-  const spreadMae = provided?.real_time_spread?.mae_yuan_per_mwh ?? provided?.spread_mae_yuan_per_mwh;
-  const realtimePrice = provided?.real_time_price;
-  const backtestMetrics = [
-    ["日前MAE", mae, (value) => `${fmt(value)} 元/MWh`],
-    ["日前RMSE", rmse, (value) => `${fmt(value)} 元/MWh`],
-    ["日前Bias", bias, (value) => `${signed(value)} 元/MWh`],
-    ["实时价格相对准确度", realtimePrice?.relative_accuracy, (value) => `${fmt(value * 100)}%`],
-    ["实时价格MAE", realtimePrice?.mae_yuan_per_mwh, (value) => `${fmt(value)} 元/MWh`],
-    ["实时价格RMSE", realtimePrice?.rmse_yuan_per_mwh, (value) => `${fmt(value)} 元/MWh`],
-    ["实时价格Bias", realtimePrice?.bias_yuan_per_mwh, (value) => `${signed(value)} 元/MWh`],
-    ["实时价差MAE", spreadMae, (value) => `${fmt(value)} 元/MWh`],
-    ["负价召回率", negativeRecall, (value) => `${fmt(value * 100)}%`],
-    ["极端高价召回率", extremeRecall, (value) => `${fmt(value * 100)}%`],
-  ].filter(([, value]) => Number.isFinite(value));
-  const backtestContext = [];
-  if (provided?.window_start && provided?.window_end) {
-    backtestContext.push(["日前回测窗口", `${provided.window_start} 至 ${provided.window_end}`]);
-  }
-  if (realtimePrice?.window_start && realtimePrice?.window_end) {
-    backtestContext.push(["实时回测窗口", `${realtimePrice.window_start} 至 ${realtimePrice.window_end}`]);
-  }
-  document.querySelector("#forecastBacktest").innerHTML = [...backtestMetrics.map(([label, value, format]) => [label, format(value)]), ...backtestContext]
-    .map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
+  renderDailyForecastAccuracy();
   document.querySelector("#forecastGovernance").innerHTML = [
     ["数据来源", `${state.forecastSource}；价格、日历滞后、申报前GFS天气与Q2电源预测D-1/D-7滞后；逐户名称未进入模型输入`],
     ["输入批次", rows[0].importBatchId || "外部导入批次"],
@@ -7005,6 +6976,58 @@ function forecastMetrics(rows) {
     meanAbsActual: mean(evaluated.map((row) => Math.abs(row.actualPrice))),
     sampleCount: evaluated.length,
   };
+}
+
+function dailyPairMetrics(predictedValues, actualValues) {
+  const pairs = predictedValues.map((predicted, index) => ({ predicted, actual: actualValues[index] }))
+    .filter((item) => Number.isFinite(item.predicted) && Number.isFinite(item.actual));
+  if (!pairs.length) return null;
+  const errors = pairs.map((item) => item.predicted - item.actual);
+  const mae = mean(errors.map(Math.abs));
+  const meanAbsActual = mean(pairs.map((item) => Math.abs(item.actual)));
+  return {
+    sampleCount: pairs.length,
+    mae,
+    rmse: Math.sqrt(mean(errors.map((value) => value ** 2))),
+    bias: mean(errors),
+    relativeAccuracy: meanAbsActual > 0 ? Math.max(0, 1 - mae / meanAbsActual) : null,
+    directionAccuracy: pairs.filter((item) => Math.sign(item.predicted) === Math.sign(item.actual)).length / pairs.length,
+  };
+}
+
+function renderDailyForecastAccuracy() {
+  const series = forecastActualSeries();
+  const dayAhead = dailyPairMetrics(series.dayAhead.predicted, series.dayAhead.actual);
+  const realTime = dailyPairMetrics(series.realTime.predicted, series.realTime.actual);
+  const spread = dailyPairMetrics(series.spread.predicted, series.spread.actual);
+  const coverage = Math.min(dayAhead?.sampleCount || 0, realTime?.sampleCount || 0, spread?.sampleCount || 0);
+  const status = document.querySelector("#forecastAccuracyStatus");
+  if (!coverage) {
+    status.textContent = "真实值待接入";
+    status.className = "pill partial";
+    document.querySelector("#forecastBacktest").innerHTML = sampleItem({
+      title: `${state.forecastDate || "当前日期"} 暂不能评估`,
+      body: "当日真实日前价格和实时价格尚未接入，当前只展示预测结果，不计算准确度和误差。",
+    });
+    return;
+  }
+
+  status.textContent = `${state.forecastDate} · ${coverage}/24`;
+  status.className = `pill ${coverage >= 24 ? "ok" : "partial"}`;
+  document.querySelector("#forecastBacktest").innerHTML = [
+    ["日前相对准确度", `${fmt(dayAhead.relativeAccuracy * 100)}%`],
+    ["日前MAE", `${fmt(dayAhead.mae)} 元/MWh`],
+    ["日前RMSE", `${fmt(dayAhead.rmse)} 元/MWh`],
+    ["日前Bias", `${signed(dayAhead.bias)} 元/MWh`],
+    ["实时相对准确度", `${fmt(realTime.relativeAccuracy * 100)}%`],
+    ["实时MAE", `${fmt(realTime.mae)} 元/MWh`],
+    ["实时RMSE", `${fmt(realTime.rmse)} 元/MWh`],
+    ["实时Bias", `${signed(realTime.bias)} 元/MWh`],
+    ["价差方向准确率", `${fmt(spread.directionAccuracy * 100)}%`],
+    ["价差MAE", `${fmt(spread.mae)} 元/MWh`],
+    ["价差RMSE", `${fmt(spread.rmse)} 元/MWh`],
+    ["价差Bias", `${signed(spread.bias)} 元/MWh`],
+  ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
 }
 
 function directionClass(direction) {
@@ -7147,7 +7170,7 @@ function normalizeForecastRows(rows, context = {}) {
     const actualRealTime = actualRealTimeRaw !== null && actualRealTimeRaw !== undefined && actualRealTimeRaw !== "" && Number.isFinite(Number(actualRealTimeRaw)) ? Number(actualRealTimeRaw) : null;
     const datetimeDate = row.datetime?.slice(0, 10) || row.timestamp?.slice(0, 10) || null;
     return {
-      date: row.date ?? row.forecastDate ?? row.forecast_date ?? datetimeDate ?? context.market_date ?? row["预测日期"] ?? state.forecastDate ?? "外部导入",
+      date: row.date ?? row.forecastDate ?? row.forecast_date ?? context.market_date ?? datetimeDate ?? row["预测日期"] ?? state.forecastDate ?? "外部导入",
       time: String(time),
       pointIndex: period,
       target,
