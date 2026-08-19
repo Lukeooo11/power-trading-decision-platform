@@ -2937,7 +2937,6 @@ th {
                     <span>分析日期</span>
                     <select id="gridDateSelect" aria-label="拓扑阻塞分析日期"></select>
                   </label>
-                  <span class="pill wait">接口预留</span>
                 </div>
               </div>
               <div class="form-grid bottom-gap">
@@ -3304,7 +3303,6 @@ th {
                   <span>复盘日期</span>
                   <select id="reportDateSelect" aria-label="复盘日期"></select>
                 </label>
-                <span class="pill partial" id="reportDataStatus">真实数据（已脱敏）</span>
                 <button class="secondary-action" id="copyReportBtn" type="button">复制文字底稿</button>
                 <button class="primary-action" id="exportReportBtn" type="button">导出 Markdown</button>
               </div>
@@ -7306,8 +7304,6 @@ function renderReport() {
   if (!hasConnectedMarketData()) {
     const marketLabel = market?.name || "当前省级市场";
     setText("#reportSubtitle", `${marketLabel} · ${subject.name} · 数据接入后生成图表复盘`);
-    document.querySelector("#reportDataStatus").className = "pill wait";
-    setText("#reportDataStatus", "数据待接入");
     document.querySelector("#reportKpis").innerHTML = ["平均绝对价差", "最大价差", "回测 MAE", "真实收益", "仿真收益"]
       .map((label) => `<article class="report-kpi"><span>${label}</span><strong>--</strong><small>待本市场数据</small></article>`).join("");
     setText("#reportSpreadSubtitle", `${marketLabel}暂无24点价格数据`);
@@ -7352,8 +7348,6 @@ function renderReport() {
     .slice(0, 8);
 
   setText("#reportSubtitle", `${market?.name || "当前市场"} · ${subject.name} · ${state.selectedDate}复盘`);
-  document.querySelector("#reportDataStatus").className = "pill partial";
-  setText("#reportDataStatus", "价格事实 · 结算为表内口径 · 策略待接入");
   document.querySelector("#reportProfitStatus").className = "pill wait";
   setText("#reportProfitStatus", "公司净利润待补");
   setText("#reportSpreadSubtitle", `${state.selectedDate} · 日前减实时 · ${rows.length}个小时点`);
