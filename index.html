@@ -2872,6 +2872,7 @@ th {
               <label class="field">
                 <span>模型版本</span>
                 <select id="forecastModelSelect">
+                  <option value="weather-power-price-optimized-v1.0.0">主模型 · 天气与电源出力增强 v1.0.0</option>
                   <option value="price-forecast-v1.2.0">价格预测模型 v1.2.0 · 天气与电源增强</option>
                   <option value="lag-baseline-v0.3">时序基线 v0.3</option>
                 </select>
@@ -2926,8 +2927,8 @@ th {
           <section class="panel">
             <div class="panel-head">
               <div>
-                <h3>双模型同窗验收</h3>
-                <p>按同一训练集、测试集和真实价格比较两套算法，并将价格误差换算为交易敞口敏感性</p>
+                <h3>双模型对照评估</h3>
+                <p>按各模型声明的预测目标和测试窗口展示结果；同窗状态仅在数据口径一致时成立</p>
               </div>
               <span class="pill wait" id="forecastComparisonStatus">1/2 模型已接入</span>
             </div>
@@ -2979,7 +2980,7 @@ th {
                   <tr>
                     <th>时点</th>
                     <th>日前参考</th>
-                    <th>预测实时价</th>
+                    <th>主模型预测价</th>
                     <th>置信区间</th>
                     <th>预测价差（日前-实时）</th>
                     <th>方向</th>
@@ -4106,7 +4107,8 @@ const DATA_SOURCES = {
   spotPrices: "./data/spot-prices.json",
   portfolioLoadDaily: "./data/portfolio-load-daily.json",
   portfolioLoadHourly: "./data/portfolio-load-hourly.json",
-  priceForecastResult: "./data/price-forecast-result.json?v=price-forecast-v1.2.0-supply-ensemble",
+  priceForecastResult: "./data/price-forecast-result.json?v=weather-power-price-optimized-v1.0.0-realtime",
+  secondaryPriceForecastResult: "./data/price-forecast-result-secondary.json?v=price-forecast-v1.2.0-supply-ensemble",
   dataQuality: "./data/data-quality.json",
   marketFeatures: "./data/market-features.json",
   customerProfiles: "./data/customer-profiles.json",
@@ -4533,13 +4535,14 @@ const state = {
   customerAliasMap: {},
   uploads: {},
   forecastDate: "",
-  forecastModelVersion: "price-forecast-v1.2.0",
+  forecastModelVersion: "weather-power-price-optimized-v1.0.0",
   forecastResults: [],
   forecastSource: "山东真实历史价格与组合负荷",
   forecastProvidedMetrics: null,
   forecastRunMeta: null,
   forecastCandidateResults: [],
   forecastCandidateMeta: null,
+  secondaryPriceForecastResult: null,
   forecastExposureMwh: null,
   backendOnline: false,
   selectedMarket: "national",
@@ -4582,7 +4585,7 @@ init();
 async function init() {
   bindEvents();
   try {
-    const [settlement, loadDaily, loadHourly, forecast96, metadata, spotPrices, portfolioLoadDaily, portfolioLoadHourly, priceForecastResult, dataQuality, marketFeatures, customerProfiles, customerLoadDaily, customerLoadHourly, customerSettlementMonthly, settlementSummaryMonthly, weatherAsset] = await Promise.all([
+    const [settlement, loadDaily, loadHourly, forecast96, metadata, spotPrices, portfolioLoadDaily, portfolioLoadHourly, priceForecastResult, secondaryPriceForecastResult, dataQuality, marketFeatures, customerProfiles, customerLoadDaily, customerLoadHourly, customerSettlementMonthly, settlementSummaryMonthly, weatherAsset] = await Promise.all([
       fetchJson(DATA_SOURCES.settlement),
       fetchJson(DATA_SOURCES.loadDaily),
       fetchJson(DATA_SOURCES.loadHourly),
@@ -4592,6 +4595,7 @@ async function init() {
       fetchJsonOptional(DATA_SOURCES.portfolioLoadDaily, []),
       fetchJsonOptional(DATA_SOURCES.portfolioLoadHourly, []),
       fetchJsonOptional(DATA_SOURCES.priceForecastResult, null),
+      fetchJsonOptional(DATA_SOURCES.secondaryPriceForecastResult, null),
       fetchJsonOptional(DATA_SOURCES.dataQuality, null),
       fetchJsonOptional(DATA_SOURCES.marketFeatures, null),
       fetchJsonOptional(DATA_SOURCES.customerProfiles, []),
@@ -4616,6 +4620,7 @@ async function init() {
     state.marketDataMode = dataQuality?.isSynthetic ? "synthetic" : spotPrices.length ? "real" : "fallback";
     state.forecast96 = forecast96;
     state.priceForecastResult = priceForecastResult;
+    state.secondaryPriceForecastResult = secondaryPriceForecastResult;
     state.metadata = metadata;
     hydrateOrganizationControls();
     hydrateImportMarkets();
@@ -4957,12 +4962,17 @@ function hydrateForecastDates() {
 function hydrateDefaultForecastResult() {
   state.forecastProvidedMetrics = null;
   state.forecastRunMeta = null;
+  state.forecastCandidateResults = [];
+  state.forecastCandidateMeta = null;
   if (!hasConnectedMarketData() || !state.forecastDate) {
     state.forecastResults = [];
     return;
   }
   if (state.priceForecastResult?.market_date === state.forecastDate) {
-    state.forecastResults = normalizeForecastRows(state.priceForecastResult.periods || [], state.priceForecastResult);
+    state.forecastResults = normalizeForecastRows(state.priceForecastResult.periods || [], {
+      ...state.priceForecastResult,
+      target: "real_time",
+    });
     state.forecastProvidedMetrics = state.priceForecastResult.backtest || null;
     state.forecastRunMeta = {
       request_id: state.priceForecastResult.request_id || null,
@@ -4972,10 +4982,26 @@ function hydrateDefaultForecastResult() {
     };
     state.forecastModelVersion = state.priceForecastResult.model?.version || state.forecastModelVersion;
     state.forecastSource = "本地价格预测模型预计算结果";
-    return;
+  } else {
+    state.forecastResults = buildForecastResults(state.forecastDate);
+    state.forecastSource = "山东真实历史价格与组合负荷";
   }
-  state.forecastResults = buildForecastResults(state.forecastDate);
-  state.forecastSource = "山东真实历史价格与组合负荷";
+
+  if (state.secondaryPriceForecastResult?.periods?.length) {
+    state.forecastCandidateResults = normalizeForecastRows(state.secondaryPriceForecastResult.periods, {
+      ...state.secondaryPriceForecastResult,
+      target: "real_time",
+    });
+    state.forecastCandidateMeta = {
+      name: state.secondaryPriceForecastResult.model?.name || "现有平台模型",
+      version: state.secondaryPriceForecastResult.model?.version || "price-forecast-v1.2.0",
+      backtest: state.secondaryPriceForecastResult.backtest || null,
+      trainingWindow: normalizeModelWindow(
+        state.secondaryPriceForecastResult.training_window || state.secondaryPriceForecastResult.train_window,
+      ),
+      source: "平台现有模型自动加载",
+    };
+  }
 }
 
 function hydrateMediumControls() {
@@ -6671,11 +6697,22 @@ async function runForecastEvaluation(options = {}) {
   state.forecastModelVersion = document.querySelector("#forecastModelSelect").value;
   state.forecastProvidedMetrics = null;
   state.forecastRunMeta = null;
-  const isPriceForecast = state.forecastModelVersion.startsWith("price-forecast");
+  const isIntegratedPriceForecast = ["price-forecast-v1.2.0", "weather-power-price-optimized-v1.0.0"].includes(state.forecastModelVersion);
+  const staticResult = state.priceForecastResult?.market_date === state.forecastDate ? state.priceForecastResult : null;
+  if (state.forecastModelVersion === "weather-power-price-optimized-v1.0.0" && staticResult) {
+    state.forecastResults = normalizeForecastRows(staticResult.periods || [], { ...staticResult, target: "real_time" });
+    state.forecastProvidedMetrics = staticResult.backtest || null;
+    state.forecastRunMeta = { run_id: staticResult.run_id || null, data_version: staticResult.data_snapshot?.version || null, review_status: "DRAFT" };
+    state.forecastSource = "同事模型：天气与电源出力增强";
+    renderForecast();
+    drawForecastChart(chartEls.forecast, state.forecastResults);
+    if (!options.silent) showToast(`已生成 ${state.forecastResults.length} 点主模型预测结果。`);
+    return;
+  }
   const apiBase = "http://127.0.0.1:8002";
   if (state.backendOnline) {
     try {
-      if (isPriceForecast) {
+      if (isIntegratedPriceForecast) {
         const requestId = `ui-${state.selectedMarket}-${state.forecastDate}-${Date.now()}`;
         const response = await fetch(`${apiBase}/api/v1/models/price-forecast/runs`, {
           method: "POST",
@@ -6715,24 +6752,24 @@ async function runForecastEvaluation(options = {}) {
       }
     } catch (error) {
       console.warn("Backend forecast failed; using the available local result.", error);
-      const staticResult = state.priceForecastResult?.market_date === state.forecastDate ? state.priceForecastResult : null;
-      if (isPriceForecast && staticResult) {
-        state.forecastResults = normalizeForecastRows(staticResult.periods || [], staticResult);
-        state.forecastProvidedMetrics = staticResult.backtest || null;
-        state.forecastRunMeta = { run_id: staticResult.run_id || null, data_version: staticResult.data_snapshot?.version || null, review_status: "DRAFT" };
-        state.forecastSource = "本地价格预测模型预计算结果";
+      const fallbackStaticResult = state.priceForecastResult?.market_date === state.forecastDate ? state.priceForecastResult : null;
+      if (isIntegratedPriceForecast && fallbackStaticResult) {
+        state.forecastResults = normalizeForecastRows(fallbackStaticResult.periods || [], { ...fallbackStaticResult, target: "real_time" });
+        state.forecastProvidedMetrics = fallbackStaticResult.backtest || null;
+        state.forecastRunMeta = { run_id: fallbackStaticResult.run_id || null, data_version: fallbackStaticResult.data_snapshot?.version || null, review_status: "DRAFT" };
+        state.forecastSource = fallbackStaticResult.model?.version === "weather-power-price-optimized-v1.0.0" ? "同事模型：天气与电源出力增强" : "本地价格预测模型预计算结果";
       } else {
         state.forecastResults = buildForecastResults(state.forecastDate);
         state.forecastSource = "山东真实历史数据（浏览器回退基线）";
       }
     }
   } else {
-    const staticResult = isPriceForecast && state.priceForecastResult?.market_date === state.forecastDate ? state.priceForecastResult : null;
+    const staticResult = isIntegratedPriceForecast && state.priceForecastResult?.market_date === state.forecastDate ? state.priceForecastResult : null;
     if (staticResult) {
-      state.forecastResults = normalizeForecastRows(staticResult.periods || [], staticResult);
+      state.forecastResults = normalizeForecastRows(staticResult.periods || [], { ...staticResult, target: "real_time" });
       state.forecastProvidedMetrics = staticResult.backtest || null;
       state.forecastRunMeta = { run_id: staticResult.run_id || null, data_version: staticResult.data_snapshot?.version || null, review_status: "DRAFT" };
-      state.forecastSource = "本地价格预测模型预计算结果";
+      state.forecastSource = staticResult.model?.version === "weather-power-price-optimized-v1.0.0" ? "同事模型：天气与电源出力增强（含实时价差）" : "本地价格预测模型预计算结果";
     } else {
       state.forecastResults = buildForecastResults(state.forecastDate);
       state.forecastSource = "山东真实历史价格与组合负荷";
@@ -6772,8 +6809,11 @@ function renderForecast() {
     renderForecastComparison();
     return;
   }
+  const isDayAheadTarget = rows.some((row) => row.target === "day_ahead");
+  const targetLabel = isDayAheadTarget ? "日前价格" : "实时价格";
+  const spreadRows = rows.filter((row) => Number.isFinite(row.spread));
   const avgPrice = mean(rows.map((row) => row.predictedPrice));
-  const peakSpread = maxBy(rows, (row) => Math.abs(row.spread));
+  const peakSpread = maxBy(spreadRows, (row) => Math.abs(row.spread)) || { time: "--", spread: null };
   const confidentPoints = rows.filter((row) => row.confidence >= 0.72).length;
   const upCount = rows.filter((row) => row.direction === "实时高于日前").length;
   const downCount = rows.filter((row) => row.direction === "实时低于日前").length;
@@ -6782,8 +6822,8 @@ function renderForecast() {
   const highRiskCount = rows.filter((row) => ["MEDIUM", "HIGH"].includes(row.highRisk?.level)).length;
   document.querySelector("#forecastKpis").innerHTML = [
     ["预测点数", `${rows.length} 点`],
-    ["预测均价", `${fmt(avgPrice)} 元/MWh`],
-    ["最大绝对价差", `${fmt(Math.abs(peakSpread.spread))} 元/MWh`],
+    [`主模型预测${targetLabel}`, `${fmt(avgPrice)} 元/MWh`],
+    ["最大绝对价差", Number.isFinite(peakSpread.spread) ? `${fmt(Math.abs(peakSpread.spread))} 元/MWh` : "未建模"],
     ["高置信点覆盖", `${fmt((confidentPoints / rows.length) * 100)}%`],
     ["模型版本", state.forecastModelVersion],
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
@@ -6796,13 +6836,13 @@ function renderForecast() {
     : state.forecastSource.includes("本地 FastAPI")
       ? "本地后端基线"
       : "浏览器回退基线";
-  document.querySelector("#forecastInsights").innerHTML = [
-    { title: "价差方向", body: `实时高于日前 ${upCount} 点，实时低于日前 ${downCount} 点，其余为收敛区间。` },
+  const insightItems = [
+    { title: "预测目标", body: `当前主模型输出${targetLabel}P10/P50/P90。${isDayAheadTarget ? "实时价格和日前-实时价差由后续实时模型补充。" : "可用于日前申报前的实时价差判断。"}` },
     { title: "风险时段", body: `负价中高风险 ${negativeRiskCount} 点，高价中高风险 ${highRiskCount} 点；风险原因码保留在小时结果中供人工复核。` },
     { title: "峰值时段", body: `${peakPoint.time} 预测价格最高，为 ${fmt(peakPoint.predictedPrice)} 元/MWh；驱动因素：${peakPoint.drivers}。` },
-    { title: "最大偏离", body: `${peakSpread.time} 相对日前参考价差 ${signed(peakSpread.spread)} 元/MWh，建议作为申报复核点。` },
-    { title: "使用边界", body: "模型已使用申报前GFS天气和Q2电源预测的D-1/D-7滞后特征；目标日竞价空间、边界、新能源预测发布时间和规则仍待接入，不能作为自动交易指令。" },
-  ].map((item) => `<article class="signal-item"><strong>${item.title}</strong><p>${item.body}</p></article>`).join("");
+  ];
+  if (Number.isFinite(peakSpread.spread)) insightItems.push({ title: "最大偏离", body: `${peakSpread.time} 相对日前参考价差 ${signed(peakSpread.spread)} 元/MWh，建议作为申报复核点。` });
+  document.querySelector("#forecastInsights").innerHTML = insightItems.map((item) => `<article class="signal-item"><strong>${item.title}</strong><p>${item.body}</p></article>`).join("");
 
   const metrics = forecastMetrics(rows);
   const provided = state.forecastProvidedMetrics;
@@ -6852,7 +6892,7 @@ function renderForecast() {
       <td>${fmt(row.dayAheadReference)}</td>
       <td>${fmt(row.predictedPrice)}</td>
       <td>${fmt(row.lower)} ~ ${fmt(row.upper)}</td>
-      <td>${signed(row.spread)}</td>
+      <td>${Number.isFinite(row.spread) ? signed(row.spread) : "未建模"}</td>
       <td><span class="tag ${directionClass(row.direction)}">${escapeHtml(row.direction)}</span></td>
       <td>${fmt(row.confidence * 100)}%</td>
       <td>${escapeHtml(row.drivers)}</td>
@@ -7042,7 +7082,12 @@ function forecastComparisonSeries() {
   const candidate = forecastRowsForDate(state.forecastCandidateResults);
   const primaryByTime = new Map(primary.map((row) => [row.time, row]));
   const candidateByTime = new Map(candidate.map((row) => [row.time, row]));
-  const actualByTime = new Map(spotPriceRows(state.forecastDate).map((row) => [row.time, row.realtimePriceYuanMwh]));
+  const primaryTarget = primary[0]?.target || "real_time";
+  const candidateTarget = candidate[0]?.target || "real_time";
+  const actualByTime = new Map(spotPriceRows(state.forecastDate).map((row) => [
+    row.time,
+    primaryTarget === "day_ahead" ? row.dayAheadPriceYuanMwh : row.realtimePriceYuanMwh,
+  ]));
   [...primary, ...candidate].forEach((row) => {
     if (Number.isFinite(row.actualPrice)) actualByTime.set(row.time, row.actualPrice);
   });
@@ -7054,6 +7099,8 @@ function forecastComparisonSeries() {
     actualValues: times.map((time) => actualByTime.get(time) ?? null),
     primaryValues: times.map((time) => primaryByTime.get(time)?.predictedPrice ?? null),
     candidateValues: times.map((time) => candidateByTime.get(time)?.predictedPrice ?? null),
+    primaryTarget,
+    candidateTarget,
   };
 }
 
@@ -7084,6 +7131,9 @@ function renderForecastComparison() {
     && primary.windowStart === candidate.windowStart && primary.windowEnd === candidate.windowEnd);
   const sameTrain = sameModelWindow(primary.trainingWindow, candidate.trainingWindow);
   const candidateForDate = candidateRows.length > 0;
+  const primaryTarget = primaryRows[0]?.target || "real_time";
+  const candidateTarget = candidateRows[0]?.target || "real_time";
+  const targetLabel = (target) => target === "day_ahead" ? "日前价格" : "实时价格";
 
   const status = document.querySelector("#forecastComparisonStatus");
   if (!hasCandidate) {
@@ -7116,23 +7166,23 @@ function renderForecastComparison() {
     ["未覆盖电量", Number.isFinite(state.forecastExposureMwh) ? `${fmt(state.forecastExposureMwh)} MWh` : "待持仓数据"],
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
 
-  document.querySelector("#forecastComparisonSubtitle").textContent = `${state.forecastDate || "未选日期"} · ${actualCount ? `真实价格 ${actualCount} 点` : "真实价格待补"} · 候选模型${candidateForDate ? `${candidateRows.length} 点` : "待同日结果"}`;
+  document.querySelector("#forecastComparisonSubtitle").textContent = `${state.forecastDate || "未选日期"} · 主模型目标：${targetLabel(primaryTarget)} · 对照模型目标：${candidateForDate ? targetLabel(candidateTarget) : "待接入"} · ${actualCount ? `真实价格 ${actualCount} 点` : "真实价格待补"}`;
   const exposure = state.forecastExposureMwh;
   const impactText = (summary) => Number.isFinite(summary.mae) && Number.isFinite(exposure)
     ? `${fmt(summary.mae * exposure)} 元`
     : "待持仓数据";
   const modelRows = [
     {
-      name: state.priceForecastResult?.model?.name || "模型 A：当前线上模型",
+      name: `主模型 · ${state.priceForecastResult?.model?.name || "天气与电源出力增强"}`,
       version: state.forecastModelVersion,
       stateLabel: "已接入",
       stateClass: "ok",
       summary: primary,
     },
     {
-      name: state.forecastCandidateMeta?.name || "模型 B：候选模型",
-      version: state.forecastCandidateMeta?.version || "待导入",
-      stateLabel: !hasCandidate ? "待导入" : !candidateForDate ? "日期不匹配" : !sameTest ? "测试窗不一致" : !sameTrain ? "训练窗待声明" : "已接入",
+      name: `对照模型 · ${state.forecastCandidateMeta?.name || "现有平台模型"}`,
+      version: state.forecastCandidateMeta?.version || "待加载",
+      stateLabel: !hasCandidate ? "待加载" : !candidateForDate ? "日期不匹配" : !sameTest ? "测试窗不一致" : !sameTrain ? "训练窗待声明" : "已接入",
       stateClass: !hasCandidate || !candidateForDate ? "wait" : !sameTest ? "missing" : sameTrain ? "ok" : "partial",
       summary: candidate,
     },
@@ -7149,7 +7199,10 @@ function renderForecastComparison() {
       <td>${impactText(item.summary)}</td>
     </tr>
   `).join("");
-  document.querySelector("#forecastImpactNote").textContent = `相对准确度 = max(0, 1 - MAE / 平均|真实价格|)，用于统一尺度比较；误差金额敏感性 = MAE × 未覆盖电量，仅表示价格误差对应的敞口风险量级，不等于真实收益。${sameTest && !sameTrain ? " 当前两套模型的测试窗口一致，但候选模型尚未声明训练窗口，暂不能标记为同窗验收通过。" : ""}`;
+  const targetNote = primaryTarget === candidateTarget
+    ? `两套模型预测目标均为${targetLabel(primaryTarget)}。`
+    : `主模型预测${targetLabel(primaryTarget)}，对照模型预测${targetLabel(candidateTarget)}，当前误差仅作参考，不能直接作为同目标优劣结论。`;
+  document.querySelector("#forecastImpactNote").textContent = `${targetNote} 相对准确度 = max(0, 1 - MAE / 平均|真实价格|)，用于尺度比较；误差金额敏感性 = MAE × 未覆盖电量，仅表示价格误差对应的敞口风险量级，不等于真实收益。${sameTest && !sameTrain ? " 当前两套模型的测试窗口一致，但对照模型尚未声明训练窗口，暂不能标记为同窗验收通过。" : ""}`;
   drawForecastComparisonChart(chartEls.forecastComparison);
 }
 
@@ -7157,23 +7210,32 @@ function normalizeForecastRows(rows, context = {}) {
   return rows.map((row, index) => {
     const realtimeQuantiles = row.real_time_price_yuan_per_mwh;
     const dayAheadQuantiles = row.day_ahead_price_yuan_per_mwh;
-    const predictedPrice = Number(realtimeQuantiles?.p50 ?? row.predictedPrice ?? row.prediction ?? row.predicted_price ?? row.prediction_yuan_per_mwh ?? row.predicted_real_time_price_yuan_per_mwh ?? row.y_pred ?? row.forecast ?? row["预测价格"]);
+    const target = context.target || row.target || context.prediction_target || "real_time";
+    const targetQuantiles = target === "day_ahead" ? dayAheadQuantiles : realtimeQuantiles;
+    const fallbackQuantiles = targetQuantiles || realtimeQuantiles || dayAheadQuantiles;
+    const predictedPrice = Number(fallbackQuantiles?.p50 ?? row.predictedPrice ?? row.prediction ?? row.predicted_price ?? row.prediction_yuan_per_mwh ?? row.predicted_real_time_price_yuan_per_mwh ?? row.predicted_day_ahead_price_yuan_per_mwh ?? row.y_pred ?? row.forecast ?? row["预测价格"]);
     const period = Number(row.period ?? index + 1);
     const periodTime = Number.isFinite(period) ? `${String(Math.max(0, period - 1)).padStart(2, "0")}:00` : null;
     const time = row.time ?? row.pointTime ?? row.point_time ?? row.datetime?.slice(11, 16) ?? row.timestamp?.slice(11, 16) ?? periodTime ?? row["时点"];
     if (!time || !Number.isFinite(predictedPrice)) return null;
     const dayAheadReference = Number(dayAheadQuantiles?.p50 ?? row.dayAheadReference ?? row.day_ahead_reference ?? row.dayAheadPrice ?? row["日前参考"] ?? predictedPrice);
-    const lower = Number(realtimeQuantiles?.p10 ?? row.lower ?? row.lowerBound ?? row.lower_bound ?? row["置信区间下限"] ?? predictedPrice - 40);
-    const upper = Number(realtimeQuantiles?.p90 ?? row.upper ?? row.upperBound ?? row.upper_bound ?? row["置信区间上限"] ?? predictedPrice + 40);
-    const spread = Number(row.spread_day_ahead_minus_real_time_yuan_per_mwh ?? row.spread ?? dayAheadReference - predictedPrice);
+    const lower = Number(fallbackQuantiles?.p10 ?? row.lower ?? row.lowerBound ?? row.lower_bound ?? row["置信区间下限"] ?? predictedPrice - 40);
+    const upper = Number(fallbackQuantiles?.p90 ?? row.upper ?? row.upperBound ?? row.upper_bound ?? row["置信区间上限"] ?? predictedPrice + 40);
+    const explicitSpread = row.spread_day_ahead_minus_real_time_yuan_per_mwh ?? row.spread;
+    const spread = explicitSpread === null || explicitSpread === undefined || explicitSpread === ""
+      ? target === "day_ahead" ? null : dayAheadReference - predictedPrice
+      : Number(explicitSpread);
     const direction = row.direction ?? row["方向"] ?? (spread < -10 ? "实时高于日前" : spread > 10 ? "实时低于日前" : "价差收敛");
     const reasonCodes = Array.isArray(row.risk_reason_codes) ? row.risk_reason_codes.join("、") : null;
-    const actualRaw = row.actualPrice ?? row.actual_price ?? row.actual_real_time_price_yuan_per_mwh ?? row.real_time_price_actual_yuan_per_mwh ?? row.y_true ?? row.actual ?? row["实际价格"];
+    const actualRaw = target === "day_ahead"
+      ? row.actual_day_ahead_price_yuan_per_mwh ?? row.actualDayAheadPrice ?? row.actualPrice ?? row.actual_price ?? row.y_true ?? row.actual ?? row["实际价格"]
+      : row.actualPrice ?? row.actual_price ?? row.actual_real_time_price_yuan_per_mwh ?? row.real_time_price_actual_yuan_per_mwh ?? row.y_true ?? row.actual ?? row["实际价格"];
     const datetimeDate = row.datetime?.slice(0, 10) || row.timestamp?.slice(0, 10) || null;
     return {
       date: row.date ?? row.forecastDate ?? row.forecast_date ?? datetimeDate ?? context.market_date ?? row["预测日期"] ?? state.forecastDate ?? "外部导入",
       time: String(time),
       pointIndex: period,
+      target,
       dayAheadReference,
       predictedPrice,
       lower,
@@ -7991,9 +8053,10 @@ function drawForecastComparisonChart(canvas) {
   if (!canvas) return;
   const series = forecastComparisonSeries();
   const lines = [];
-  if (series.actualValues.some(Number.isFinite)) lines.push({ name: "真实实时价", color: "#24312d", values: series.actualValues });
-  if (series.primaryValues.some(Number.isFinite)) lines.push({ name: "模型 A", color: "#0e6f78", values: series.primaryValues });
-  if (series.candidateValues.some(Number.isFinite)) lines.push({ name: "模型 B", color: "#c95341", values: series.candidateValues });
+  const targetLabel = (target) => target === "day_ahead" ? "日前" : "实时";
+  if (series.actualValues.some(Number.isFinite)) lines.push({ name: `真实${targetLabel(series.primaryTarget)}价`, color: "#24312d", values: series.actualValues });
+  if (series.primaryValues.some(Number.isFinite)) lines.push({ name: `主模型预测${targetLabel(series.primaryTarget)}价`, color: "#0e6f78", values: series.primaryValues });
+  if (series.candidateValues.some(Number.isFinite)) lines.push({ name: `对照模型预测${targetLabel(series.candidateTarget)}价`, color: "#c95341", values: series.candidateValues });
   if (!lines.length) {
     const ctx = setupCanvas(canvas);
     drawChartEmptyState(ctx, "等待同日模型输出", 54, 64);
