@@ -2122,6 +2122,7 @@ th {
 
 .data-notes-summary,
 .data-notes-grid,
+.data-notes-interfaces,
 .data-notes-rules {
   margin: 0 24px;
 }
@@ -2160,6 +2161,7 @@ th {
 }
 
 .data-notes-grid > section,
+.data-notes-interfaces,
 .data-notes-rules {
   min-width: 0;
   padding: 14px;
@@ -2169,14 +2171,35 @@ th {
 }
 
 .data-notes-grid .subsection-head,
+.data-notes-interfaces .subsection-head,
 .data-notes-rules .subsection-head {
   margin-bottom: 10px;
 }
 
 .data-notes-grid h3,
+.data-notes-interfaces h3,
 .data-notes-rules h3 {
   margin: 0;
   font-size: 15px;
+}
+
+.data-notes-interfaces .subsection-head p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.data-notes-interfaces .api-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.data-notes-interfaces .api-card {
+  min-width: 0;
+}
+
+.data-notes-interfaces .api-card strong,
+.data-notes-interfaces .api-card p {
+  overflow-wrap: anywhere;
 }
 
 .data-note-list {
@@ -2455,6 +2478,7 @@ th {
   .dialog-head,
   .data-notes-summary,
   .data-notes-grid,
+  .data-notes-interfaces,
   .data-notes-rules {
     margin-left: 12px;
     margin-right: 12px;
@@ -2466,6 +2490,10 @@ th {
 
   .data-notes-rules {
     margin-bottom: 12px;
+  }
+
+  .data-notes-interfaces .api-card-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .import-mode-note {
@@ -3105,7 +3133,7 @@ th {
         </section>
 
         <section class="view" id="policyView">
-          <div class="grid two-one">
+          <div class="grid">
             <section class="panel">
               <div class="panel-head">
                 <div>
@@ -3123,16 +3151,6 @@ th {
                 <button class="secondary-action" id="exportPolicyBtn" type="button">导出解读 JSON</button>
               </div>
               <div id="policySample"></div>
-            </section>
-
-            <section class="panel">
-              <div class="panel-head">
-                <div>
-                  <h3>政策解读接口</h3>
-                  <p>为交易策略提供可追溯的规则边界</p>
-                </div>
-              </div>
-              <div class="api-card-grid" id="policyInterfaces"></div>
             </section>
           </div>
         </section>
@@ -3588,7 +3606,7 @@ th {
             </section>
           </div>
 
-          <div class="grid two-one">
+          <div class="grid">
             <section class="panel">
               <div class="panel-head">
                 <div>
@@ -4012,6 +4030,16 @@ th {
           <div class="data-note-list" id="dataNotesMissing"></div>
         </section>
       </div>
+      <section class="data-notes-interfaces">
+        <div class="subsection-head">
+          <div>
+            <h3>政策解读接口</h3>
+            <p>为交易策略提供可追溯的规则边界</p>
+          </div>
+          <span class="tag wait">接口预留</span>
+        </div>
+        <div class="api-card-grid" id="policyInterfaces"></div>
+      </section>
       <section class="data-notes-rules">
         <div class="subsection-head"><h3>统一使用规则</h3></div>
         <div id="dataNotesRules"></div>
