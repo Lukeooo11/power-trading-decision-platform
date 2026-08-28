@@ -5898,33 +5898,13 @@ function integratedForecastSource(result) {
 }
 
 function hydrateDefaultForecastResult() {
-  state.forecastProvidedMetrics = selectedForecastBacktest();
-  state.forecastRunMeta = null;
-  if (!hasConnectedMarketData() || !state.forecastDate) {
-    state.forecastResults = [];
-    return;
-  }
-  const primaryResult = primaryForecastResultForDate();
-  if (primaryResult) {
-    state.forecastResults = normalizeForecastRows(primaryResult.periods || [], {
-      ...primaryResult,
-      target: "real_time",
-    });
-    state.forecastProvidedMetrics = primaryResult.backtest || null;
-    state.forecastRunMeta = {
-      request_id: primaryResult.request_id || null,
-      run_id: primaryResult.run_id || null,
-      data_version: primaryResult.data_snapshot?.version || null,
-      review_status: "DRAFT",
-    };
-    state.forecastModelVersion = primaryResult.model?.version || state.forecastModelVersion;
-    state.forecastSource = primaryResult.market_date === state.priceForecastResult?.market_date
-      ? "本地价格预测模型预计算结果"
-      : "主模型历史滚动预测";
-  } else {
-    state.forecastResults = buildForecastResults(state.forecastDate);
-    state.forecastSource = "山东真实历史价格与组合负荷";
-  }
+  // Local prediction assets and browser fallback baselines are disabled.
+  // Results can only appear after an external provider callback or file import.
+  state.forecastResults = [];
+  state.forecastProvidedMetrics = null;
+  state.forecastRunMeta = { status: "PENDING_PROVIDER" };
+  state.forecastSource = "预测模型接口待接入";
+  state.forecastModelVersion = "external";
 
 }
 
@@ -7745,6 +7725,9 @@ function renderForecast() {
     renderDailyForecastAccuracy();
     document.querySelector("#forecastGovernance").innerHTML = "";
     document.querySelector("#forecastResultTable").innerHTML = "";
+    for (const canvas of [chartEls.forecast, chartEls.forecastDayAheadActual, chartEls.forecastRealTimeActual, chartEls.forecastSpreadActual]) {
+      if (canvas) canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    }
     renderForecastActualComparison();
     return;
   }
