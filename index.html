@@ -24,6 +24,440 @@
   font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
 }
 
+/* Trading Agent workspace */
+.sidebar {
+  overflow-y: auto;
+}
+
+.agent-two-column {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.agent-national-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding: 11px 12px;
+  border-left: 3px solid var(--amber);
+  background: #fff9eb;
+}
+
+.agent-national-notice p,
+.agent-inline-note,
+.agent-run-meta,
+.agent-empty,
+.agent-step p,
+.agent-gate-item p,
+.agent-evidence-meta,
+.agent-review-history p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.agent-national-notice strong {
+  white-space: nowrap;
+}
+
+.agent-readiness-table {
+  min-width: 1040px;
+}
+
+.agent-context-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 14px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.agent-context-row > div {
+  min-width: 0;
+  padding: 12px 14px;
+  border-right: 1px solid var(--line);
+}
+
+.agent-context-row > div:last-child {
+  border-right: 0;
+}
+
+.agent-context-row span,
+.agent-context-row strong {
+  display: block;
+}
+
+.agent-context-row span {
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.agent-context-row strong {
+  overflow-wrap: anywhere;
+}
+
+.agent-context-row input {
+  width: 100%;
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--ink);
+  padding: 0 8px;
+}
+
+.agent-context-row input:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: var(--focus);
+}
+
+.agent-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+}
+
+.agent-action-row .agent-inline-note {
+  align-self: center;
+  margin-left: auto;
+}
+
+.agent-run-meta {
+  min-height: 20px;
+  margin-top: 12px;
+}
+
+.agent-step-list,
+.agent-gate-list,
+.agent-evidence-list,
+.agent-message-list,
+.agent-review-history,
+.policy-document-list,
+.policy-citation-list {
+  display: grid;
+  gap: 9px;
+}
+
+.agent-step,
+.agent-gate-item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf2ef;
+}
+
+.agent-step:last-child,
+.agent-gate-item:last-child {
+  border-bottom: 0;
+}
+
+.agent-step-index {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.agent-step strong,
+.agent-gate-item strong,
+.agent-evidence-item strong,
+.policy-document-item strong,
+.policy-citation-item strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.agent-step[data-status="COMPLETED"] .agent-step-index,
+.agent-step[data-status="SUCCEEDED"] .agent-step-index,
+.agent-step[data-status="DONE"] .agent-step-index {
+  background: #e2f4ed;
+  color: var(--green);
+}
+
+.agent-step[data-status="RUNNING"] .agent-step-index {
+  background: #e4eff4;
+  color: var(--teal);
+}
+
+.agent-step[data-status="FAILED"] .agent-step-index {
+  background: #fae8e4;
+  color: var(--red);
+}
+
+.agent-signal-table {
+  min-width: 1100px;
+}
+
+.agent-signal-table td,
+.agent-signal-table th {
+  white-space: nowrap;
+}
+
+.agent-evidence-item,
+.policy-document-item,
+.policy-citation-item {
+  padding: 11px 12px;
+  border-left: 3px solid #9fbeb5;
+  background: #f8fbf9;
+}
+
+.agent-evidence-item summary {
+  cursor: pointer;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.agent-evidence-excerpt,
+.policy-citation-excerpt {
+  margin: 9px 0 0;
+  padding: 9px 10px;
+  border-left: 2px solid var(--amber);
+  background: white;
+  color: #394440;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.agent-message-list {
+  min-height: 160px;
+  max-height: 360px;
+  overflow: auto;
+  margin-bottom: 12px;
+  padding-right: 3px;
+}
+
+.agent-message {
+  padding: 9px 11px;
+  border-left: 3px solid var(--line);
+  background: #f8faf9;
+}
+
+.agent-message.agent-assistant {
+  border-left-color: var(--teal);
+  background: #eef6f5;
+}
+
+.agent-message span,
+.agent-message time {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.agent-message p {
+  margin: 6px 0 0;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.agent-message-form,
+.agent-review-form {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.35fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.agent-message-content {
+  min-width: 0;
+}
+
+.field textarea {
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 9px 12px;
+  font: inherit;
+  line-height: 1.5;
+}
+
+.field textarea:focus {
+  outline: none;
+  border-color: var(--teal);
+  box-shadow: var(--focus);
+}
+
+.agent-review-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.agent-review-reason {
+  grid-column: 1 / -1;
+}
+
+.agent-review-form button {
+  justify-self: start;
+}
+
+.agent-review-history {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.agent-review-entry {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agent-report-preview {
+  min-height: 88px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed #b7c7c1;
+  color: var(--muted);
+  text-align: center;
+}
+
+.agent-report-frame {
+  width: 100%;
+  min-height: 640px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+}
+
+.policy-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 10px;
+}
+
+.policy-source-field,
+.policy-file-field,
+.policy-authorization-field {
+  grid-column: span 2;
+}
+
+.policy-upload-actions {
+  justify-content: flex-start;
+}
+
+.policy-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.policy-results-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+}
+
+.policy-results-layout h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.policy-document-meta,
+.policy-citation-meta {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.agent-error-text {
+  color: var(--red);
+}
+
+.agent-readiness-table-wrap,
+.agent-signal-table-wrap {
+  max-height: 520px;
+}
+
+@media (max-width: 1180px) {
+  .policy-upload-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .agent-two-column,
+  .agent-context-row,
+  .agent-message-form,
+  .agent-review-form,
+  .policy-upload-grid,
+  .policy-results-layout,
+  .policy-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-context-row > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .agent-context-row > div:last-child {
+    border-bottom: 0;
+  }
+
+  .agent-action-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .agent-action-row .field,
+  .agent-action-row input,
+  .agent-action-row button,
+  .agent-message-form button,
+  .agent-review-form button,
+  .policy-search-row button {
+    width: 100%;
+  }
+
+  .agent-action-row .agent-inline-note {
+    margin-left: 0;
+  }
+
+  .agent-step,
+  .agent-gate-item {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .agent-step > .tag,
+  .agent-gate-item > .tag {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .agent-review-reason,
+  .policy-source-field,
+  .policy-file-field,
+  .policy-authorization-field {
+    grid-column: 1;
+  }
+
+  .agent-national-notice,
+  .agent-review-entry {
+    display: grid;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -2567,6 +3001,220 @@ th {
   }
 }
 
+/* Trading Agent first-use guidance */
+body.agent-view-active #marketContextBanner {
+  display: none;
+}
+
+.agent-workspace-brief {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(460px, 0.9fr);
+  align-items: center;
+  gap: 24px;
+  padding: 2px 2px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.agent-workspace-copy {
+  min-width: 0;
+}
+
+.agent-kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.agent-workspace-brief h3 {
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.agent-workspace-copy p,
+.agent-quick-steps p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.agent-workspace-copy p {
+  max-width: 720px;
+}
+
+.agent-quick-steps {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-quick-steps li {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  padding: 2px 14px;
+  border-left: 1px solid var(--line);
+}
+
+.agent-quick-steps li:first-child {
+  border-left: 0;
+}
+
+.agent-quick-steps li > span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.agent-quick-steps strong {
+  display: block;
+  line-height: 1.4;
+}
+
+.agent-run-panel {
+  border-left: 4px solid var(--teal);
+}
+
+.agent-run-panel .panel-head {
+  align-items: center;
+}
+
+.agent-run-panel .agent-context-row {
+  background: #fbfcfb;
+}
+
+.agent-run-panel .primary-action {
+  min-width: 136px;
+}
+
+.agent-inline-note,
+.agent-run-meta {
+  overflow-wrap: anywhere;
+}
+
+.agent-readiness-details summary {
+  padding: 10px 0;
+  color: var(--teal);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.agent-readiness-details summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.agent-readiness-details[open] summary {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #edf2ef;
+}
+
+@media (max-width: 1320px) {
+  .agent-workspace-brief {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 720px) {
+  body.agent-view-active .sidebar {
+    gap: 14px;
+    padding-bottom: 14px;
+  }
+
+  body.agent-view-active .nav {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  body.agent-view-active .nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.agent-view-active .nav-item {
+    flex: 0 0 auto;
+    min-width: 126px;
+  }
+
+  body.agent-view-active .topbar {
+    grid-template-columns: minmax(0, 1fr) minmax(142px, 0.75fr);
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+
+  body.agent-view-active .topbar .eyebrow {
+    display: none;
+  }
+
+  body.agent-view-active .topbar-actions {
+    display: block;
+  }
+
+  body.agent-view-active .context-controls {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  body.agent-view-active .context-controls .field {
+    gap: 4px;
+  }
+
+  body.agent-view-active .context-controls .field select {
+    min-width: 0;
+  }
+
+  .agent-workspace-brief {
+    padding-bottom: 14px;
+  }
+
+  .agent-workspace-brief h3 {
+    font-size: 19px;
+  }
+
+  .agent-quick-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-quick-steps li {
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .agent-quick-steps li:first-child {
+    border-top: 0;
+  }
+
+  .agent-run-panel .panel-head .inline-actions {
+    justify-content: flex-start;
+  }
+
+  .agent-run-panel .primary-action {
+    min-width: 0;
+  }
+}
+
 
     </style>
   </head>
@@ -2591,16 +3239,17 @@ th {
 
         <nav class="nav" aria-label="交易辅助平台模块">
           <button class="nav-item active" data-view="company"><span>01</span>公司运营</button>
-          <button class="nav-item" data-view="desk"><span>02</span>盘前工作台</button>
-          <button class="nav-item" data-view="forecast"><span>03</span>预测评估</button>
-          <button class="nav-item" data-view="spot"><span>04</span>现货市场</button>
-          <button class="nav-item" data-view="medium"><span>05</span>中长期</button>
-          <button class="nav-item" data-view="policy"><span>06</span>政策 AI</button>
-          <button class="nav-item" data-view="grid"><span>07</span>拓扑阻塞</button>
-          <button class="nav-item" data-view="report"><span>08</span>报告复盘</button>
-          <button class="nav-item" data-view="loss"><span>09</span>盈亏分析</button>
-          <button class="nav-item" data-view="data"><span>10</span>数据导入</button>
-          <button class="nav-item" data-view="interfaces"><span>11</span>接口清单</button>
+          <button class="nav-item" data-view="agent"><span>02</span>交易 Agent</button>
+          <button class="nav-item" data-view="desk"><span>03</span>盘前工作台</button>
+          <button class="nav-item" data-view="forecast"><span>04</span>预测评估</button>
+          <button class="nav-item" data-view="spot"><span>05</span>现货市场</button>
+          <button class="nav-item" data-view="medium"><span>06</span>中长期</button>
+          <button class="nav-item" data-view="policy"><span>07</span>政策 AI</button>
+          <button class="nav-item" data-view="grid"><span>08</span>拓扑阻塞</button>
+          <button class="nav-item" data-view="report"><span>09</span>报告复盘</button>
+          <button class="nav-item" data-view="loss"><span>10</span>盈亏分析</button>
+          <button class="nav-item" data-view="data"><span>11</span>数据导入</button>
+          <button class="nav-item" data-view="interfaces"><span>12</span>接口清单</button>
         </nav>
 
         <div class="side-status">
@@ -2689,6 +3338,161 @@ th {
               </div>
             </div>
             <div class="company-foundation" id="companyFoundation"></div>
+          </section>
+        </section>
+
+        <section class="view" id="agentView">
+          <section class="agent-workspace-brief" aria-labelledby="agentWorkspaceTitle">
+            <div class="agent-workspace-copy">
+              <span class="agent-kicker">历史陪跑 · 人工审核</span>
+              <h3 id="agentWorkspaceTitle">看风险、查依据、送审核，不下单</h3>
+              <p>面向内部交易员和分析员：使用已接入的历史数据检查 24 点风险、数据和政策依据，只生成供人工判断的陪跑材料。</p>
+            </div>
+            <ol class="agent-quick-steps" aria-label="交易 Agent 使用步骤">
+              <li><span>1</span><div><strong>设定范围</strong><p>左侧选省份，填写日期和发起人</p></div></li>
+              <li><span>2</span><div><strong>启动陪跑</strong><p>检查数据、规则与 24 点风险</p></div></li>
+              <li><span>3</span><div><strong>查看并送审</strong><p>核对依据后由不同人员复核</p></div></li>
+            </ol>
+          </section>
+
+          <section class="panel agent-run-panel">
+            <div class="panel-head">
+              <div>
+                <h3>第 1-2 步：设定范围并启动陪跑</h3>
+                <p>运行范围继承左侧省份和交易主体；只处理历史数据，不连接交易终端。</p>
+              </div>
+              <div class="inline-actions">
+                <span class="pill wait" id="agentHealthStatus">服务检查中</span>
+                <span class="pill wait" id="agentRunStatus">尚未开始</span>
+              </div>
+            </div>
+            <div class="agent-context-row" aria-label="当前 Agent 上下文">
+              <div><span>省份（左侧选择）</span><strong id="agentContextMarket">全国</strong></div>
+              <div><span>交易主体（左侧选择）</span><strong id="agentContextSubject">售电侧</strong></div>
+              <div><span>业务日期</span><input id="agentBusinessDate" type="date" aria-label="Agent 业务日期" /></div>
+              <div><span>运行方式</span><strong>历史陪跑 · 不下单</strong></div>
+            </div>
+            <div class="agent-national-notice" id="agentNationalNotice">
+              <strong>先选择具体省份</strong>
+              <p>全国视图仅查看接入情况。未接入市场只显示缺口，不会读取或复用山东数据。</p>
+            </div>
+            <div class="agent-action-row">
+              <label class="field">
+                <span>发起人（必填）</span>
+                <input id="agentInitiatorInput" type="text" maxlength="128" autocomplete="name" placeholder="请输入姓名" />
+              </label>
+              <button class="primary-action" id="agentStartRunBtn" type="button" aria-describedby="agentRunHint">启动历史陪跑</button>
+              <button class="secondary-action" id="agentCancelRunBtn" type="button" disabled>取消本次运行</button>
+              <button class="secondary-action" id="agentRerunBtn" type="button" disabled>按原条件重跑</button>
+              <span class="agent-inline-note" id="agentRunHint" aria-live="polite">第 1 步：请选择具体省份后运行</span>
+            </div>
+            <div class="agent-run-meta" id="agentRunMeta" aria-live="polite"></div>
+          </section>
+
+          <section class="panel agent-readiness-panel">
+            <div class="panel-head">
+              <div>
+                <h3>接入检查</h3>
+                <p id="agentReadinessSubtitle">确认当前市场的数据、模型与政策是否齐全；全国视图可查看 31 个市场的接入覆盖。</p>
+              </div>
+              <div class="inline-actions">
+                <button class="secondary-action" id="agentRefreshReadinessBtn" type="button">刷新检查</button>
+              </div>
+            </div>
+            <details class="agent-readiness-details">
+              <summary id="agentReadinessSummary">查看当前市场接入矩阵</summary>
+              <div class="table-wrap agent-readiness-table-wrap">
+                <table class="agent-readiness-table">
+                  <thead>
+                    <tr><th>市场</th><th>交易主体</th><th>数据</th><th>模型</th><th>政策</th><th>可运行</th><th>缺口</th></tr>
+                  </thead>
+                  <tbody id="agentReadinessTable"></tbody>
+                </table>
+              </div>
+            </details>
+          </section>
+
+          <div class="grid agent-two-column">
+            <section class="panel">
+              <div class="panel-head">
+                <div><h3>运行进度</h3><p>完成后依次查看门禁、24 点风险与证据，再送审。</p></div>
+              </div>
+              <div class="agent-step-list" id="agentStepList"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div><h3>正式建议门禁</h3><p>任一项未通过，24 点全部保持 HOLD、0 MWh；不会下单。</p></div>
+              </div>
+              <div class="agent-gate-list" id="agentGateList"></div>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>第 3 步：查看 24 点风险</h3>
+                <p>用于人工复核高价、负价与价差信号；不产生可执行买卖量价。</p>
+              </div>
+              <span class="pill partial">关注阈值 45 元/MWh</span>
+            </div>
+            <div class="table-wrap agent-signal-table-wrap">
+              <table class="agent-signal-table">
+                <thead>
+                  <tr><th>时段</th><th>日前预测</th><th>实时预测</th><th>预测价差</th><th>风险等级</th><th>研究信号</th><th>正式建议</th><th>电量</th></tr>
+                </thead>
+                <tbody id="agentSignalTable"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div><h3>风险依据</h3><p>核对数据版本、模型版本和政策原文引用。</p></div>
+              <span class="pill wait" id="agentEvidenceCount">0 条证据</span>
+            </div>
+            <div class="agent-evidence-list" id="agentEvidenceList"></div>
+          </section>
+
+          <div class="grid agent-two-column">
+            <section class="panel">
+              <div class="panel-head">
+                <div><h3>结果问答</h3><p>询问本次风险、门禁或依据；只解释结果，不改变结论。</p></div>
+              </div>
+              <div class="agent-message-list" id="agentMessageList" aria-live="polite"></div>
+              <div class="agent-message-form">
+                <label class="field"><span>提问人</span><input id="agentMessageAuthor" type="text" maxlength="128" placeholder="请输入姓名" /></label>
+                <label class="field agent-message-content"><span>问题</span><textarea id="agentMessageInput" maxlength="8000" rows="3" placeholder="询问本次运行的门禁、风险或证据"></textarea></label>
+                <button class="primary-action" id="agentSendMessageBtn" type="button" disabled>发送</button>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div><h3>送审与复核</h3><p>先送审，再由不同人员复核；姓名录入暂不等同于正式认证。</p></div>
+              </div>
+              <div class="agent-review-form">
+                <label class="field"><span>提交人</span><input id="agentSubmitterInput" type="text" maxlength="128" placeholder="送审人姓名" /></label>
+                <button class="secondary-action" id="agentSubmitReviewBtn" type="button" disabled>提交复核</button>
+                <label class="field"><span>审批人</span><input id="agentReviewerInput" type="text" maxlength="128" placeholder="须与提交人不同" /></label>
+                <label class="field"><span>审核结论</span><select id="agentReviewDecision"><option value="APPROVED">批准</option><option value="MODIFIED">修改</option><option value="REJECTED">拒绝</option></select></label>
+                <label class="field agent-review-reason"><span>审核原因</span><textarea id="agentReviewReason" maxlength="1000" rows="3" placeholder="修改或拒绝时必填"></textarea></label>
+                <button class="primary-action" id="agentReviewBtn" type="button" disabled>提交审核结论</button>
+              </div>
+              <div class="agent-review-history" id="agentReviewHistory"></div>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div><h3>陪跑报告</h3><p>运行后生成草稿，审核后更新定稿；不含交易指令。</p></div>
+              <div class="inline-actions">
+                <button class="secondary-action" id="agentViewReportBtn" type="button" disabled>查看网页报告</button>
+                <button class="secondary-action" id="agentDownloadMarkdownBtn" type="button" disabled>下载 Markdown</button>
+                <button class="secondary-action" id="agentDownloadJsonBtn" type="button" disabled>下载 JSON</button>
+              </div>
+            </div>
+            <div class="agent-report-preview" id="agentReportPreview">完成一次历史陪跑后，可在这里查看或下载报告。</div>
+            <iframe class="agent-report-frame" id="agentReportFrame" title="Agent 陪跑报告" sandbox hidden></iframe>
           </section>
         </section>
 
@@ -2936,6 +3740,7 @@ th {
                 <span>模型版本</span>
                 <select id="forecastModelSelect">
                   <option value="weather-power-price-optimized-v1.0.0">主模型 · 天气与电源出力增强 v1.0.0</option>
+                  <option value="price-forecast-v1.3.0">主模型 · 自适应集成 v1.3.0（GRU/TCN challenger）</option>
                   <option value="price-forecast-v1.2.0">价格预测模型 v1.2.0 · 天气与电源增强</option>
                   <option value="lag-baseline-v0.3">时序基线 v0.3</option>
                 </select>
@@ -3170,18 +3975,48 @@ th {
             <section class="panel">
               <div class="panel-head">
                 <div>
-                  <h3>政策文件与 AI 解读</h3>
-                  <p>上传政策文件，生成核心要点、影响对象、交易条款、风险提示和版本差异</p>
+                  <h3>政策文件与引用检索</h3>
+                  <p>只接收已获授权的规则文件，保留版本、生效日期、摘要哈希和原文定位</p>
                 </div>
-                <span class="pill wait">AI 解读</span>
+                <span class="pill wait" id="policyServiceStatus">服务检查中</span>
               </div>
-              <div class="form-grid bottom-gap">
-                <label class="upload-card compact-upload">
-                  <span>上传政策文件</span>
-                  <input id="policyUpload" type="file" accept=".txt,.md,.json,.pdf,.doc,.docx" />
+              <div class="policy-upload-grid bottom-gap">
+                <label class="field">
+                  <span>文件标题（可选）</span>
+                  <input id="policyTitleInput" type="text" maxlength="255" placeholder="规则或政策名称" />
                 </label>
-                <button class="primary-action" id="runPolicyBtn" type="button">生成 AI 解读</button>
-                <button class="secondary-action" id="exportPolicyBtn" type="button">导出解读 JSON</button>
+                <label class="field">
+                  <span>版本</span>
+                  <input id="policyVersionInput" type="text" maxlength="128" placeholder="例如 2026.1" />
+                </label>
+                <label class="field">
+                  <span>生效日期</span>
+                  <input id="policyEffectiveDateInput" type="date" />
+                </label>
+                <label class="field policy-source-field">
+                  <span>授权来源说明</span>
+                  <input id="policySourceInput" type="text" maxlength="255" placeholder="内部授权渠道或公开来源" />
+                </label>
+                <label class="upload-card compact-upload policy-file-field">
+                  <span>政策文件（最大 20 MiB）</span>
+                  <input id="policyUpload" type="file" accept=".txt,.md,.markdown,.json,.pdf,.docx" />
+                </label>
+                <label class="checkbox-field policy-authorization-field">
+                  <input id="policyAuthorizedCheck" type="checkbox" />
+                  <span>确认已获得该文件的处理与存储授权</span>
+                </label>
+              </div>
+              <div class="inline-actions policy-upload-actions bottom-gap">
+                <button class="primary-action" id="runPolicyBtn" type="button">上传并解析</button>
+                <button class="secondary-action" id="policyRefreshBtn" type="button">刷新文档</button>
+                <button class="secondary-action" id="exportPolicyBtn" type="button">导出文档清单</button>
+              </div>
+              <div class="policy-search-row bottom-gap">
+                <label class="field">
+                  <span>检索政策引用</span>
+                  <input id="policySearchInput" type="search" maxlength="2000" placeholder="输入规则、申报、结算或偏差等关键词" />
+                </label>
+                <button class="secondary-action" id="policySearchBtn" type="button">检索引用</button>
               </div>
               <div id="policySample"></div>
             </section>
@@ -4069,7 +4904,7 @@ th {
             <h3>政策解读接口</h3>
             <p>为交易策略提供可追溯的规则边界</p>
           </div>
-          <span class="tag wait">接口预留</span>
+          <span class="tag partial">Agent 已接入</span>
         </div>
         <div class="api-card-grid" id="policyInterfaces"></div>
       </section>
@@ -4182,11 +5017,12 @@ const DATA_SOURCES = {
 };
 
 const MODULES = [
+  { name: "交易 Agent", status: "partial", text: "按市场、主体和交易日运行可审计陪跑流程，输出门禁、研究信号、证据和人工审核记录。" },
   { name: "盘前工作台", status: "ok", text: "集中展示关键指标、风险提示、执行窗口和市场状态。" },
   { name: "预测评估", status: "partial", text: "接入价格预测模型，展示24点P10/P50/P90、价差风险、回测指标和人工复核边界。" },
   { name: "现货市场", status: "partial", text: "读取预测结果并结合山东小时日前/实时价格，形成出清分析、复盘和价差判断。" },
   { name: "中长期", status: "partial", text: "承接合约曲线优化、长周期电价预测和曲线价值测算。" },
-  { name: "政策 AI", status: "wait", text: "预留政策文件上传、结构化解读、风险提示和版本差异接口。" },
+  { name: "政策 AI", status: "partial", text: "已接入授权文档上传、版本登记、解析状态与带页码或章节的原文引用检索。" },
   { name: "拓扑阻塞", status: "wait", text: "预留网架拓扑、节点价格、线路约束和阻塞诊断接口。" },
   { name: "数据导入", status: "partial", text: "管理 Excel、PDF、CSV、模型结果和客户案例数据的导入版本。" },
   { name: "报告复盘", status: "partial", text: "当前生成浏览器报告草稿；真实运行、审核、成交和结算记录接入后再落库复盘。" },
@@ -4324,6 +5160,11 @@ const DATA_REQUIREMENTS = [
 ];
 
 const INTERFACES = [
+  { path: "http://127.0.0.1:8010/api/v1/health", use: "交易 Agent 健康检查", method: "GET", input: "无", output: "Agent、平台、模型与降级状态", status: "Agent 服务" },
+  { path: "http://127.0.0.1:8010/api/v1/readiness", use: "全国市场接入矩阵", method: "GET", input: "market_code,trading_subject（可选）", output: "31个市场数据、模型、政策门禁与缺口", status: "Agent 服务" },
+  { path: "http://127.0.0.1:8010/api/v1/agent-runs", use: "启动交易日陪跑", method: "POST", input: "request_id,market_code,trading_subject,business_date,initiated_by", output: "运行状态、步骤、门禁、证据、研究信号与正式HOLD建议", status: "Agent 服务" },
+  { path: "http://127.0.0.1:8010/api/v1/agent-runs/{run_id}/review", use: "双人送审与审核", method: "POST", input: "decision,reviewed_by,reason,modified_suggestions", output: "审核状态、最终报告版本；execution_allowed=false", status: "Agent 服务" },
+  { path: "http://127.0.0.1:8010/api/v1/policies", use: "授权政策上传与引用检索", method: "GET/POST", input: "file或q、market_code、版本元数据", output: "解析状态、SHA-256、页码/章节引用", status: "Agent 服务" },
   { path: "/api/v1/health", use: "算法测试环境健康检查", method: "GET", input: "无", output: "API版本、环境、鉴权、上传/超时/留存限制", status: "真实后端已接入" },
   { path: "/api/v1/models", use: "模型注册与接入状态", method: "GET", input: "无", output: "模型ID、版本、运行方式、结果契约", status: "真实后端已接入" },
   { path: "/api/v1/data-assets", use: "真实与缺失数据资产清单", method: "GET", input: "market_code", output: "数据状态、版本、范围和缺口", status: "真实后端已接入" },
@@ -4598,7 +5439,7 @@ const state = {
   customerAliasMap: {},
   uploads: {},
   forecastDate: "",
-  forecastModelVersion: "weather-power-price-optimized-v1.0.0",
+  forecastModelVersion: "price-forecast-v1.3.0",
   forecastResults: [],
   forecastSource: "山东真实历史价格与组合负荷",
   forecastProvidedMetrics: null,
@@ -4779,8 +5620,6 @@ function bindEvents() {
   });
   document.querySelector("#penaltyInput").addEventListener("change", () => runMediumOptimization({ silent: true }));
   document.querySelector("#targetHoursInput").addEventListener("change", () => runMediumOptimization({ silent: true }));
-  document.querySelector("#runPolicyBtn").addEventListener("click", runPolicyAnalysis);
-  document.querySelector("#exportPolicyBtn").addEventListener("click", exportPolicyAnalysis);
   document.querySelector("#runGridBtn").addEventListener("click", runResourceDiagnosis);
   document.querySelector("#exportGridBtn").addEventListener("click", exportResourceDiagnosis);
   document.querySelector("#gridDateSelect").addEventListener("change", (event) => {
@@ -4897,7 +5736,6 @@ function bindEvents() {
   bindUpload("#energyUpload", "retailContract", "零售合同");
   bindUpload("#priceUpload", "mediumPosition", "中长期持仓");
   bindUpload("#curveUpload", "customerLoad", "客户负荷曲线");
-  bindUpload("#policyUpload", "policy", "规则文件");
   bindUpload("#gridUpload", "resource", "能碳资源");
   window.addEventListener("resize", debounce(renderCharts, 150));
   if ("ResizeObserver" in window) {
@@ -5229,6 +6067,7 @@ function hydrateImportMarkets() {
 function switchView(view) {
   const titles = {
     company: "公司运营",
+    agent: "交易 Agent",
     desk: "盘前工作台",
     spot: "现货市场",
     forecast: "预测评估",
@@ -5250,6 +6089,7 @@ function switchView(view) {
   els.viewTitle.textContent = pending ? `${market ? market.name : "全国"} · ${titles[view]}` : titles[view];
   document.querySelector("#globalControls").hidden = !DAILY_STRATEGY_CONTROL_VIEWS.has(view) || pending;
   updateMarketContext();
+  window.TradingAgent?.activate(view);
   renderCharts();
 }
 
@@ -5267,7 +6107,9 @@ function selectMarket(code) {
   hydrateWeatherControls();
   hydrateLossControls();
   renderDataNotes();
-  if (code === "national") {
+  if (["agent", "policy"].includes(state.activeView)) {
+    switchView(state.activeView);
+  } else if (code === "national") {
     switchView("company");
   } else if (code === "SD") {
     switchView("desk");
@@ -5290,7 +6132,8 @@ function selectSubject(subject) {
   hydrateWeatherControls();
   hydrateLossControls();
   renderDataNotes();
-  if (state.selectedMarket === "national") switchView("company");
+  if (["agent", "policy"].includes(state.activeView)) switchView(state.activeView);
+  else if (state.selectedMarket === "national") switchView("company");
   else switchView("desk");
   renderAll();
 }
@@ -5421,7 +6264,10 @@ function renderStaticScaffold() {
     </article>
   `).join("");
   document.querySelector("#mediumInterfaces").innerHTML = apiCards(["/api/retail/contracts", "/api/medium-contract/positions", "/api/strategy/review"]);
-  document.querySelector("#policyInterfaces").innerHTML = apiCards(["/api/policy/documents", "/api/strategy/review"]);
+  document.querySelector("#policyInterfaces").innerHTML = apiCards([
+    "http://127.0.0.1:8010/api/v1/policies",
+    "http://127.0.0.1:8010/api/v1/agent-runs/{run_id}/review",
+  ]);
   document.querySelector("#interfaceTable").innerHTML = INTERFACES.map((item) => `
     <tr>
       <td>${item.path}</td>
@@ -5566,6 +6412,7 @@ function renderAll() {
   renderSamples();
   renderImportRecords();
   updateMarketContext();
+  window.TradingAgent?.syncContext();
   renderCharts();
 }
 
@@ -6783,7 +7630,7 @@ async function runForecastEvaluation(options = {}) {
   state.forecastModelVersion = document.querySelector("#forecastModelSelect").value;
   state.forecastProvidedMetrics = selectedForecastBacktest();
   state.forecastRunMeta = null;
-  const isIntegratedPriceForecast = ["price-forecast-v1.2.0", "weather-power-price-optimized-v1.0.0"].includes(state.forecastModelVersion);
+  const isIntegratedPriceForecast = ["price-forecast-v1.3.0", "price-forecast-v1.2.0", "weather-power-price-optimized-v1.0.0"].includes(state.forecastModelVersion);
   const staticResult = selectedIntegratedForecastResultForDate();
   if (state.forecastModelVersion === "weather-power-price-optimized-v1.0.0" && staticResult) {
     state.forecastResults = normalizeForecastRows(staticResult.periods || [], { ...staticResult, target: "real_time" });
@@ -7251,6 +8098,10 @@ function renderMediumSamples() {
 }
 
 function renderPolicySamples() {
+  if (window.TradingAgent?.renderPolicies) {
+    window.TradingAgent.renderPolicies();
+    return;
+  }
   document.querySelector("#policySample").innerHTML = `
     <div class="placeholder-block">
       <strong>政策文件与 AI 解读接口</strong>
@@ -9292,5 +10143,6 @@ function debounce(fn, wait) {
 }
 
     </script>
+    <script src="./agent.js?v=20260827a"></script>
   </body>
 </html>
