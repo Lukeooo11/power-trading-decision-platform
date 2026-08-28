@@ -7623,6 +7623,14 @@ function buildForecastResults(date) {
 }
 
 async function runForecastEvaluation(options = {}) {
+  state.forecastResults = [];
+  state.forecastProvidedMetrics = null;
+  state.forecastRunMeta = { status: "PENDING_PROVIDER", message: "本地预测模型已移除，等待外部算法服务通过接口回传结果。" };
+  state.forecastSource = "预测模型接口待接入";
+  renderForecast();
+  if (!options.silent) showToast("本地预测模型已移除，请通过模型接口提交外部结果。");
+  return;
+  /*
   if (!hasConnectedMarketData()) {
     if (!options.silent) showToast("当前省份和交易主体尚未接入预测数据，平台不会复用其他数据。");
     return;
@@ -7711,6 +7719,7 @@ async function runForecastEvaluation(options = {}) {
   renderForecast();
   drawForecastChart(chartEls.forecast, state.forecastResults);
   if (!options.silent) showToast(`已生成 ${state.forecastResults.length} 点预测评估结果。`);
+  */
 }
 
 async function checkBackend() {
