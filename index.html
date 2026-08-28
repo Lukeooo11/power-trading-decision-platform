@@ -10149,6 +10149,33 @@ function debounce(fn, wait) {
 }
 
     </script>
-    <script src="./agent.js?v=20260827a"></script>
+    <script>
+      (() => {
+        const setText = (id, value) => {
+          const element = document.getElementById(id);
+          if (element) element.textContent = value;
+        };
+        const disableOnlineOnlyControls = () => {
+          document.querySelectorAll("#agentView button, #agentView input, #agentView select, #agentView textarea, #policyView button, #policyView input, #policyView select, #policyView textarea").forEach((element) => {
+            element.disabled = true;
+          });
+          ["agentHealthStatus", "policyServiceStatus"].forEach((id) => {
+            const element = document.getElementById(id);
+            if (element) {
+              element.className = "pill wait";
+              element.textContent = "后端待部署";
+            }
+          });
+          setText("agentReadinessSubtitle", "公开前端已上线；运行、审核、政策上传将在 Agent 后端上线后开放。");
+          setText("agentRunHint", "线上演示暂不连接交易或审核服务；不会下单。");
+          setText("agentReportPreview", "公开演示不含 Agent 运行记录。后端上线后可在这里查看报告。");
+        };
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", disableOnlineOnlyControls, { once: true });
+        } else {
+          disableOnlineOnlyControls();
+        }
+      })();
+    </script>
   </body>
 </html>
