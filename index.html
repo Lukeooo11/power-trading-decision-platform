@@ -3737,12 +3737,9 @@ body.agent-view-active #marketContextBanner {
                 <select id="forecastDateSelect"></select>
               </label>
               <label class="field">
-                <span>模型版本</span>
+                <span>模型版本（外部服务提供）</span>
                 <select id="forecastModelSelect">
-                  <option value="weather-power-price-optimized-v1.0.0">主模型 · 天气与电源出力增强 v1.0.0</option>
-                  <option value="price-forecast-v1.3.0">主模型 · 自适应集成 v1.3.0（GRU/TCN challenger）</option>
-                  <option value="price-forecast-v1.2.0">价格预测模型 v1.2.0 · 天气与电源增强</option>
-                  <option value="lag-baseline-v0.3">时序基线 v0.3</option>
+                  <option value="external">外部模型接口（版本由算法服务提交）</option>
                 </select>
               </label>
               <label class="upload-card compact-upload">
@@ -5439,7 +5436,7 @@ const state = {
   customerAliasMap: {},
   uploads: {},
   forecastDate: "",
-  forecastModelVersion: "price-forecast-v1.3.0",
+  forecastModelVersion: "external",
   forecastResults: [],
   forecastSource: "山东真实历史价格与组合负荷",
   forecastProvidedMetrics: null,
@@ -7638,9 +7635,9 @@ async function runForecastEvaluation(options = {}) {
   state.forecastModelVersion = document.querySelector("#forecastModelSelect").value;
   state.forecastProvidedMetrics = selectedForecastBacktest();
   state.forecastRunMeta = null;
-  const isIntegratedPriceForecast = ["price-forecast-v1.3.0", "price-forecast-v1.2.0", "weather-power-price-optimized-v1.0.0"].includes(state.forecastModelVersion);
+  const isIntegratedPriceForecast = false;
   const staticResult = selectedIntegratedForecastResultForDate();
-  if (state.forecastModelVersion === "weather-power-price-optimized-v1.0.0" && staticResult) {
+  if (false && state.forecastModelVersion === "weather-power-price-optimized-v1.0.0" && staticResult) {
     state.forecastResults = normalizeForecastRows(staticResult.periods || [], { ...staticResult, target: "real_time" });
     state.forecastProvidedMetrics = staticResult.backtest || null;
     state.forecastRunMeta = { run_id: staticResult.run_id || null, data_version: staticResult.data_snapshot?.version || null, review_status: "DRAFT" };
