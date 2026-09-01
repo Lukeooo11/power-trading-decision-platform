@@ -24,6 +24,125 @@
   font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
 }
 
+/* Restore the original content theme; the navigation rail below is the only
+   area intentionally given a stronger visual treatment. */
+:root {
+  --bg: #f4f6f2;
+  --surface: #ffffff;
+  --surface-2: #eef3ef;
+  --ink: #18221f;
+  --muted: #64706c;
+  --line: #d8e2dc;
+  --green: #16805f;
+  --teal: #0e6f78;
+  --red: #c95341;
+  --amber: #b57b1b;
+  --nav: #10231f;
+  --shadow: 0 14px 32px rgba(24, 34, 31, 0.08);
+  --shadow-soft: 0 5px 16px rgba(24, 34, 31, 0.06);
+  --focus: 0 0 0 3px rgba(14, 111, 120, 0.16);
+  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+}
+
+body {
+  background: #eef3f0;
+  color: var(--ink);
+  font-variant-numeric: normal;
+}
+
+.panel,
+.kpi-card,
+.work-item {
+  border: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  border-radius: 8px !important;
+  box-shadow: var(--shadow);
+}
+
+.panel-head,
+.table-wrap,
+.agent-context-row,
+.agent-action-row,
+.agent-review-form {
+  border-color: var(--line);
+}
+
+button,
+input,
+select,
+textarea {
+  border-radius: 8px !important;
+  font-family: inherit;
+}
+
+.primary-action,
+.secondary-action,
+.nav-item {
+  border: 0;
+}
+
+/* Left navigation: compact status rail with clearer grouping and focus. */
+.sidebar {
+  background: linear-gradient(180deg, #10231f 0%, #15352d 100%);
+  border-right-color: rgba(255, 255, 255, 0.14);
+}
+
+.sidebar .brand h1 {
+  letter-spacing: 0.02em;
+}
+
+.sidebar-context {
+  margin-top: 18px;
+  padding: 14px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.sidebar-field select {
+  background: #1d4037;
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.nav {
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.nav-item {
+  position: relative;
+  min-height: 40px;
+  border: 1px solid transparent;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.nav-item span {
+  border-radius: 5px;
+  color: #b9d5cb;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.nav-item:hover {
+  border-color: rgba(140, 217, 193, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(2px);
+}
+
+.nav-item.active {
+  background: #245045;
+  box-shadow: inset 3px 0 0 #75d1b8, 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.nav-item.active span {
+  color: #eafff7;
+  background: rgba(117, 209, 184, 0.2);
+}
+
+.side-status {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.17);
+}
+
 /* Trading Agent workspace */
 .sidebar {
   overflow-y: auto;
@@ -538,6 +657,115 @@
   }
 }
 
+/* Industrial trading terminal direction: flat surfaces, tabular numerics,
+   and a visible status rail for audit-heavy work. */
+:root {
+  --bg: #0b0c0a;
+  --surface: #11130f;
+  --surface-2: #181b16;
+  --ink: #f2f5ef;
+  --muted: #9aa49a;
+  --line: #2b332b;
+  --green: #00e676;
+  --teal: #00e676;
+  --red: #ff3b30;
+  --amber: #ffb800;
+  --nav: #080908;
+  --shadow: none;
+  --shadow-soft: none;
+  --focus: 0 0 0 2px rgba(0, 230, 118, 0.3);
+  font-family: "IBM Plex Mono", "Noto Sans Mono", monospace;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel,
+.kpi-card,
+.work-item,
+.empty-state,
+.agent-step,
+.agent-gate-item,
+.policy-document-item,
+.policy-citation-item {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.panel,
+.kpi-card,
+.work-item {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+}
+
+.panel:focus-within,
+.kpi-card:focus-within {
+  border-left-color: var(--green);
+}
+
+.panel-head,
+.table-wrap,
+.agent-context-row,
+.agent-action-row,
+.agent-review-form {
+  border-color: var(--line);
+}
+
+table th {
+  background: var(--surface-2);
+  color: var(--green);
+  letter-spacing: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  border-radius: 0 !important;
+  font-family: inherit;
+}
+
+button {
+  box-shadow: none !important;
+}
+
+.primary-action,
+.secondary-action,
+.nav-item {
+  border: 1px solid var(--line);
+}
+
+.primary-action:hover:not(:disabled),
+.secondary-action:hover:not(:disabled),
+.nav-item:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.tag.ok,
+.pill.ok {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.tag.partial,
+.pill.partial {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+.tag.missing,
+.pill.missing {
+  color: var(--red);
+  border-color: var(--red);
+}
+
+.agent-step[data-status="RUNNING"],
+.agent-gate-item[data-status="RUNNING"],
 * {
   box-sizing: border-box;
 }
@@ -760,6 +988,15 @@ h3 {
   color: var(--ink);
   padding: 0 12px;
   transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+/* Keep Agent form fields interactive even when the adjacent action is gated. */
+#agentInitiatorInput,
+#draftInitiator {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  user-select: text;
 }
 
 .field select:focus,
@@ -3456,6 +3693,54 @@ body.agent-view-active #marketContextBanner {
   }
 }
 
+/* Final theme reset keeps the content area in its original visual language. */
+:root {
+  --bg: #f4f6f2;
+  --surface: #ffffff;
+  --surface-2: #eef3ef;
+  --ink: #18221f;
+  --muted: #64706c;
+  --line: #d8e2dc;
+  --green: #16805f;
+  --teal: #0e6f78;
+  --red: #c95341;
+  --amber: #b57b1b;
+  --nav: #10231f;
+  --shadow: 0 14px 32px rgba(24, 34, 31, 0.08);
+  --shadow-soft: 0 5px 16px rgba(24, 34, 31, 0.06);
+  --focus: 0 0 0 3px rgba(14, 111, 120, 0.16);
+  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+}
+
+body { background: #eef3f0; color: var(--ink); font-variant-numeric: normal; }
+.panel, .kpi-card, .work-item { border: 1px solid var(--line); border-left: 1px solid var(--line); border-radius: 8px !important; box-shadow: var(--shadow); }
+button, input, select, textarea { border-radius: 8px !important; font-family: inherit; }
+.primary-action, .secondary-action, .nav-item { border: 0; }
+
+/* Only the left rail receives the refreshed visual treatment. */
+.sidebar { background: linear-gradient(180deg, #10231f 0%, #15352d 100%); border-right-color: rgba(255,255,255,.14); }
+.sidebar-context { margin-top: 18px; padding: 14px 12px; border: 1px solid rgba(255,255,255,.14); border-radius: 8px; background: rgba(255,255,255,.045); }
+.sidebar-field select { background: #1d4037; border-color: rgba(255,255,255,.24); }
+.nav { gap: 5px; margin-top: 4px; }
+.nav-item { position: relative; min-height: 40px; border: 1px solid transparent; transition: background 160ms ease, border-color 160ms ease, transform 160ms ease; }
+.nav-item span { border-radius: 5px; color: #b9d5cb; background: rgba(255,255,255,.09); }
+.nav-item:hover { border-color: rgba(140,217,193,.35); background: rgba(255,255,255,.08); transform: translateX(2px); }
+.nav-item.active { background: #245045; box-shadow: inset 3px 0 0 #75d1b8, 0 4px 12px rgba(0,0,0,.12); }
+.nav-item.active span { color: #eafff7; background: rgba(117,209,184,.2); }
+.side-status { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.17); }
+
+/* Online baseline for the navigation rail. */
+.sidebar { background: var(--nav); border-right-color: rgba(255,255,255,.08); }
+.sidebar-context { margin-top: 16px; padding: 14px 0 0; border: 0; border-top: 1px solid rgba(255,255,255,.13); border-radius: 0; background: transparent; }
+.sidebar-field select { background: #19332d; border-color: rgba(255,255,255,.18); }
+.nav { gap: 7px; margin-top: 0; }
+.nav-item { min-height: 42px; border: 0; transition: none; }
+.nav-item span { border-radius: 6px; color: inherit; background: rgba(255,255,255,.08); }
+.nav-item:hover { border-color: transparent; background: #1d3a34; transform: none; }
+.nav-item.active { background: #1d3a34; box-shadow: inset 3px 0 0 #63c0ae; }
+.nav-item.active span { color: inherit; background: rgba(255,255,255,.08); }
+.side-status { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.13); }
+.side-status { display: none !important; }
 
     </style>
   </head>
@@ -3492,9 +3777,6 @@ body.agent-view-active #marketContextBanner {
           <button class="nav-item" data-view="data"><span>11</span>数据导入</button>
           <button class="nav-item" data-view="interfaces"><span>12</span>接口清单</button>
         </nav>
-        <div class="side-status" hidden>
-          <span class="muted">系统状态</span><strong id="platformReadiness"></strong><p id="platformCoverage"></p>
-        </div>
 
       </aside>
 
@@ -3626,6 +3908,19 @@ body.agent-view-active #marketContextBanner {
               <span class="agent-inline-note" id="agentRunHint" aria-live="polite">第 1 步：请选择具体省份后运行</span>
             </div>
             <div class="agent-run-meta" id="agentRunMeta" aria-live="polite"></div>
+          </section>
+
+          <section class="panel agent-draft-panel">
+            <div class="panel-head"><div><h3>日前报价报量草稿</h3><p>山东售电侧 · 24点小时粒度 · 仅供人工复核，不可自动提交</p></div><span class="pill wait" id="draftStatus">尚未创建</span></div>
+            <div class="agent-action-row">
+              <label class="field"><span>草稿发起人</span><input id="draftInitiator" placeholder="请输入姓名" /></label>
+              <button class="secondary-action" id="createDraftBtn" type="button">创建日前草稿</button>
+              <label class="field"><span>导入 CSV/JSON</span><input id="draftFile" type="file" accept=".csv,.json" /></label>
+              <button class="primary-action" id="uploadDraftBtn" type="button" disabled>生成草稿</button>
+              <button class="secondary-action" id="exportDraftBtn" type="button" disabled>导出人工复核草稿</button>
+            </div>
+            <div class="agent-run-meta" id="draftMeta">请先创建任务，再导入包含24个时段的模板。</div>
+            <div class="table-wrap agent-signal-table-wrap"><table class="agent-signal-table"><thead><tr><th>时段</th><th>负荷</th><th>中长期</th><th>已成交</th><th>剩余敞口</th><th>预测P10/P50/P90</th><th>建议量</th><th>报价区间</th><th>门禁</th><th>风险/依据</th></tr></thead><tbody id="draftTable"></tbody></table></div>
           </section>
 
           <section class="panel agent-readiness-panel">
@@ -3978,7 +4273,7 @@ body.agent-view-active #marketContextBanner {
               <label class="field">
                 <span>模型版本（外部服务提供）</span>
                 <select id="forecastModelSelect">
-                  <option value="external">外部模型接口（版本由算法服务提交）</option>
+                  <option value="integrated-price-forecast-v2.0.0">山东一体化价格预测（DA/RT/价差）</option>
                 </select>
               </label>
               <label class="upload-card compact-upload">
@@ -6400,14 +6695,14 @@ function updateMarketContext() {
       : "全国视图只展示公司级运营汇总。请选择具体省份和交易主体进入业务工作台。";
   }
   if (!market) {
-    els.platformReadiness.textContent = "全国多市场 · 公司级框架";
-    els.platformCoverage.textContent = `已配置 ${MARKET_PROFILES.length} 个省级市场模板，山东为当前首个真实数据（已脱敏）接入市场。`;
+    setText("#platformReadiness", "全国多市场 · 公司级框架");
+    setText("#platformCoverage", `已配置 ${MARKET_PROFILES.length} 个省级市场模板，山东为当前首个真实数据（已脱敏）接入市场。`);
   } else if (hasConnectedMarketData()) {
-    els.platformReadiness.textContent = `${subject.name} · 真实数据（已脱敏）`;
-    els.platformCoverage.textContent = `价格、127家客户脱敏负荷、62天GFS天气和6个月经营结算已接入；${CUSTOMER.company} 单日结算保留为附加案例。`;
+    setText("#platformReadiness", `${subject.name} · 真实数据（已脱敏）`);
+    setText("#platformCoverage", `价格、127家客户脱敏负荷、62天GFS天气和6个月经营结算已接入；${CUSTOMER.company} 单日结算保留为附加案例。`);
   } else {
-    els.platformReadiness.textContent = `${subject.name} · 模板就绪`;
-    els.platformCoverage.textContent = "该省份与交易主体的数据隔离空间和接口已预留，当前未载入其他业务数据。";
+    setText("#platformReadiness", `${subject.name} · 模板就绪`);
+    setText("#platformCoverage", "该省份与交易主体的数据隔离空间和接口已预留，当前未载入其他业务数据。");
   }
 }
 
@@ -6754,8 +7049,8 @@ function renderDesk() {
     setText("#deskMarketSubtitle", `${market?.name || "当前省级市场"} · 数据待接入`);
     document.querySelector("#deskMarketStatus").textContent = "数据待接入";
     document.querySelector("#deskWorklist").innerHTML = `<article class="work-item"><strong>${market?.name || "当前省级市场"}模板已就绪</strong><p>当前省份和交易主体没有已接入的真实价格、负荷或结算数据，平台不会复用山东数据。</p></article>`;
-    els.platformReadiness.textContent = `${TRADING_SUBJECTS[state.selectedSubject].name} · 模板就绪`;
-    els.platformCoverage.textContent = "该省份与交易主体没有载入其他市场数据。";
+    setText("#platformReadiness", `${TRADING_SUBJECTS[state.selectedSubject].name} · 模板就绪`);
+    setText("#platformCoverage", "该省份与交易主体没有载入其他市场数据。");
     renderDeskReview();
     return;
   }
@@ -6768,8 +7063,8 @@ function renderDesk() {
   setText("#deskSpreadAvg", fmt(summary.averageSpread));
   setText("#deskRiskCount", highRisk.length);
   setText("#readyCount", marketData.spotPrices.length ? "4" : "0");
-  els.platformReadiness.textContent = `${TRADING_SUBJECTS[state.selectedSubject].name}工作台 · 真实数据（已脱敏）`;
-  els.platformCoverage.textContent = "已接入小时现货价格、脱敏组合负荷和月度经营结算；策略仍需人工复核。";
+  setText("#platformReadiness", `${TRADING_SUBJECTS[state.selectedSubject].name}工作台 · 真实数据（已脱敏）`);
+  setText("#platformCoverage", "已接入小时现货价格、脱敏组合负荷和月度经营结算；策略仍需人工复核。");
   setText("#deskMarketSubtitle", `${market?.name || "当前省级市场"} ${state.selectedDate} · 日前/实时价格与组合负荷`);
   document.querySelector("#deskMarketStatus").textContent = marketDataModeLabel();
   const largestSpread = maxBy(rows.filter((row) => Number.isFinite(row.spreadYuanMwh)), (row) => Math.abs(row.spreadYuanMwh));
@@ -7796,10 +8091,61 @@ function buildForecastResults(date) {
 async function runForecastEvaluation(options = {}) {
   state.forecastResults = [];
   state.forecastProvidedMetrics = null;
-  state.forecastRunMeta = { status: "PENDING_PROVIDER", message: "本地预测模型已移除，等待外部算法服务通过接口回传结果。" };
-  state.forecastSource = "预测模型接口待接入";
+  state.forecastRunMeta = { status: "RUNNING", message: "正在调用山东一体化价格预测模型。" };
+  state.forecastSource = "山东一体化价格预测模型";
   renderForecast();
-  if (!options.silent) showToast("本地预测模型已移除，请通过模型接口提交外部结果。");
+  if (!hasConnectedMarketData()) {
+    state.forecastRunMeta = { status: "BLOCKED", message: "当前市场没有可用的山东真实数据。" };
+    renderForecast();
+    if (!options.silent) showToast("当前市场没有可用的山东真实数据。");
+    return;
+  }
+  state.forecastModelVersion = document.querySelector("#forecastModelSelect")?.value || "integrated-price-forecast-v2.0.0";
+  const apiBase = "http://127.0.0.1:8002";
+  try {
+    const response = await fetch(`${apiBase}/api/v1/models/price-forecast/runs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        request_id: `ui-${state.selectedMarket}-${state.forecastDate}-${Date.now()}`,
+        market_code: state.selectedMarket,
+        market_date: state.forecastDate,
+        model_id: "price-forecast",
+        model_version: state.forecastModelVersion,
+        data_version: "sd-hourly-weather-supply-snapshot-2026h1-v3",
+        parameters: { quantiles: [0.1, 0.5, 0.9] },
+        input_summary: { available_domains: ["prices", "load_actual", "weather", "market_supply_history"], hourly_point_count: 24, customer_scope: "portfolio" },
+        timeout_seconds: 120,
+      }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    let run = await response.json();
+    // The model endpoint is asynchronous. Keep the UI in RUNNING state until
+    // the provider finishes instead of treating PENDING_PROVIDER as an error.
+    for (let attempt = 0; attempt < 180 && !["SUCCEEDED", "FAILED", "CANCELLED", "TIMED_OUT"].includes(run.status); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const statusResponse = await fetch(`${apiBase}/api/v1/model-runs/${run.run_id}`);
+      if (!statusResponse.ok) throw new Error(`状态 HTTP ${statusResponse.status}`);
+      run = await statusResponse.json();
+      state.forecastRunMeta = { ...run, message: `模型计算中（已等待 ${attempt + 1} 秒）` };
+      if (attempt % 3 === 0) renderForecast();
+    }
+    if (run.status !== "SUCCEEDED") throw new Error(run.error?.message || `模型运行状态：${run.status}`);
+    const resultResponse = await fetch(`${apiBase}${run.result_url}`);
+    if (!resultResponse.ok) throw new Error(`结果 HTTP ${resultResponse.status}`);
+    const payload = await resultResponse.json();
+    state.forecastResults = normalizeForecastRows(payload.result?.periods || [], payload.result || {});
+    state.forecastProvidedMetrics = payload.result?.backtest || null;
+    state.forecastRunMeta = { ...run, review_status: payload.review?.status || run.review_status };
+    state.forecastSource = "wangyifan-111/- 一体化价格预测模型（平台适配）";
+    renderForecast();
+    drawForecastChart(chartEls.forecast, state.forecastResults);
+    if (!options.silent) showToast(`已生成 ${state.forecastResults.length} 点 DA/RT/价差预测。`);
+  } catch (error) {
+    state.forecastRunMeta = { status: "FAILED", message: error.message || String(error) };
+    renderForecast();
+    if (!options.silent) showToast(`模型运行失败：${state.forecastRunMeta.message}`);
+  }
   return;
   /*
   if (!hasConnectedMarketData()) {
@@ -8044,6 +8390,12 @@ function renderDailyForecastAccuracy() {
 
   status.textContent = `${state.forecastDate} · ${coverage}/24`;
   status.className = `pill ${coverage >= 24 ? "ok" : "partial"}`;
+  const postDa = state.forecastProvidedMetrics?.post_day_ahead_realtime;
+  const postDaItems = postDa ? [
+    ["日前出清后实时MAE", `${fmt(postDa.mae_yuan_per_mwh)} 元/MWh`],
+    ["日前出清后实时RMSE", `${fmt(postDa.rmse_yuan_per_mwh)} 元/MWh`],
+    ["日前出清后实时Bias", `${signed(postDa.bias_yuan_per_mwh)} 元/MWh`],
+  ] : [];
   document.querySelector("#forecastBacktest").innerHTML = [
     ["日前相对准确度", `${fmt(dayAhead.relativeAccuracy * 100)}%`],
     ["日前MAE", `${fmt(dayAhead.mae)} 元/MWh`],
@@ -8057,6 +8409,7 @@ function renderDailyForecastAccuracy() {
     ["价差MAE", `${fmt(spread.mae)} 元/MWh`],
     ["价差RMSE", `${fmt(spread.rmse)} 元/MWh`],
     ["价差Bias", `${signed(spread.bias)} 元/MWh`],
+    ...postDaItems,
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
 }
 
