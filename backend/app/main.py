@@ -22,7 +22,10 @@ from .policy_agent_client import PolicyAgentClient, PolicyAgentError
 from .price_forecast_model import run_price_forecast
 
 
-ROOT = Path(__file__).resolve().parents[2]
+# Local runs place this file under ``<repo>/backend/app`` while the Docker
+# image copies the package to ``/app/app``. Resolve the data root for both.
+_FILE_ROOT = Path(__file__).resolve()
+ROOT = _FILE_ROOT.parents[1] if (_FILE_ROOT.parents[1] / "private-data").exists() else _FILE_ROOT.parents[2]
 CUSTOMER_DATA = ROOT / "customer-data" / "weifang-caixin"
 PRIVATE_DATA = ROOT / "private-data" / "shandong-2026h1"
 DB_PATH = ROOT / "backend" / "data" / "platform.db"
