@@ -8103,6 +8103,18 @@ async function runForecastEvaluation(options = {}) {
   state.forecastModelVersion = document.querySelector("#forecastModelSelect")?.value || "integrated-price-forecast-v2.0.0";
   const apiBase = "http://127.0.0.1:8002";
   try {
+    if (window.location.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(window.location.hostname)) {
+      const staticResult = selectedIntegratedForecastResultForDate();
+      if (!staticResult) throw new Error("公开版暂无该日期的预计算结果，请选择已发布日期。");
+      state.forecastResults = normalizeForecastRows(staticResult.periods || [], staticResult);
+      state.forecastProvidedMetrics = staticResult.backtest || null;
+      state.forecastRunMeta = { status: "SUCCEEDED", review_status: "DRAFT", message: "公开版使用已发布的脱敏预计算结果。" };
+      state.forecastSource = "公开版脱敏预计算结果";
+      renderForecast();
+      drawForecastChart(chartEls.forecast, state.forecastResults);
+      if (!options.silent) showToast(`已加载 ${state.forecastResults.length} 点公开预测结果。`);
+      return;
+    }
     const response = await fetch(`${apiBase}/api/v1/models/price-forecast/runs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
