@@ -8104,7 +8104,7 @@ async function runForecastEvaluation(options = {}) {
   state.forecastModelVersion = document.querySelector("#forecastModelSelect")?.value || "integrated-price-forecast-v2.0.0";
   const apiBase = PLATFORM_API_BASE;
   try {
-    if (window.location.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(window.location.hostname)) {
+    if (!window.__PLATFORM_API_BASE__ && (window.location.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(window.location.hostname))) {
       const staticResult = selectedIntegratedForecastResultForDate();
       if (!staticResult) throw new Error("公开版暂无该日期的预计算结果，请选择已发布日期。");
       state.forecastResults = normalizeForecastRows(staticResult.periods || [], staticResult);
