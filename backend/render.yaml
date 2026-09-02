@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: power-trading-api
+    runtime: docker
+    rootDir: .
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: POWER_TRADING_ENV
+        value: production
+      - key: POWER_TRADING_CORS_ORIGINS
+        value: https://lukeooo11.github.io
