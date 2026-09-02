@@ -10669,7 +10669,8 @@ function statusText(status) {
 }
 
 function setText(selector, value) {
-  document.querySelector(selector).textContent = value;
+  const element = document.querySelector(selector);
+  if (element) element.textContent = value;
 }
 
 function csvEscape(value) {
