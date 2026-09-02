@@ -8128,7 +8128,7 @@ async function runForecastEvaluation(options = {}) {
         data_version: "sd-hourly-weather-supply-snapshot-2026h1-v3",
         parameters: { quantiles: [0.1, 0.5, 0.9] },
         input_summary: { available_domains: ["prices", "load_actual", "weather", "market_supply_history"], hourly_point_count: 24, customer_scope: "portfolio" },
-        timeout_seconds: 120,
+        timeout_seconds: 600,
       }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
