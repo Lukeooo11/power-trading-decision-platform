@@ -20,6 +20,9 @@ from pydantic import BaseModel, Field
 
 from .policy_agent_client import PolicyAgentClient, PolicyAgentError
 from .price_forecast_model import run_price_forecast
+from .bidding_strategy import build_historical_price_scenarios, generate_strategy
+from .strategy_backtest import run_strategy_backtest
+from .strategy_comparison import compare_strategy_versions
 
 
 # Local runs place this file under ``<repo>/backend/app`` while the Docker
@@ -28,6 +31,7 @@ _FILE_ROOT = Path(__file__).resolve()
 ROOT = _FILE_ROOT.parents[1] if (_FILE_ROOT.parents[1] / "private-data").exists() else _FILE_ROOT.parents[2]
 CUSTOMER_DATA = ROOT / "customer-data" / "weifang-caixin"
 PRIVATE_DATA = ROOT / "private-data" / "shandong-2026h1"
+PUBLIC_DATA = ROOT / "data"
 DB_PATH = ROOT / "backend" / "data" / "platform.db"
 SHANGHAI_TZ = timezone(timedelta(hours=8), name="Asia/Shanghai")
 API_VERSION = "1.0.0"
@@ -437,6 +441,44 @@ def load_private_json(name: str) -> Any:
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"Private data product not found: {name}. Run scripts/process-shandong-data.cjs first.")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+_PUBLIC_STRATEGY_ASSETS = {
+    "price_forecast_history_colleague_2026h1.json": "price-forecast-history.json",
+    "spot_prices_2026h1.json": "spot-prices.json",
+    "portfolio_load_hourly_2026h1.json": "portfolio-load-hourly.json",
+    "medium_long_term_positions_2026h1.json": "medium-positions.json",
+    "market_supply_hourly_2026h1.json": "market-supply-hourly.json",
+}
+
+
+def load_strategy_json(name: str) -> Any:
+    """Load the public, anonymized strategy assets used by online research APIs."""
+    public_name = _PUBLIC_STRATEGY_ASSETS.get(name, name)
+    public_path = PUBLIC_DATA / public_name
+    if public_path.exists():
+        return json.loads(public_path.read_text(encoding="utf-8"))
+    return load_private_json(name)
+
+
+def strategy_position_document() -> dict[str, Any]:
+    """Normalize the public position response to the strategy module contract."""
+    source = load_strategy_json("medium_long_term_positions_2026h1.json")
+    if isinstance(source, dict) and isinstance(source.get("daily"), list):
+        return source
+    rows = list((source or {}).get("rows", []) if isinstance(source, dict) else [])
+    daily: dict[str, float] = {}
+    for row in rows:
+        date = str(row.get("date", ""))
+        value = row.get("positionMwh")
+        if date and isinstance(value, (int, float)) and not isinstance(value, bool):
+            daily[date] = daily.get(date, 0.0) + float(value)
+    return {
+        "schemaVersion": "medium-long-term-position-v1",
+        "dataVersion": (source or {}).get("dataVersion") if isinstance(source, dict) else None,
+        "daily": [{"date": date, "netPositionMwh": value} for date, value in sorted(daily.items())],
+        "records": rows,
+    }
 
 
 def contract_position_assets() -> tuple[dict[str, Any], dict[str, Any]]:
@@ -2226,6 +2268,176 @@ def forecast_results(date: str, model_version: str = "lag-baseline-v0.3", market
     }
 
 
+def _strategy_assets() -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
+    return (
+        load_strategy_json("price_forecast_history_colleague_2026h1.json"),
+        load_strategy_json("portfolio_load_hourly_2026h1.json"),
+        strategy_position_document(),
+        load_strategy_json("spot_prices_2026h1.json"),
+        load_strategy_json("market_supply_hourly_2026h1.json"),
+    )
+
+
+@app.get("/api/strategy/research")
+def research_bidding_strategy(
+    date: str = Query(...),
+    market_code: str = "SD",
+    risk_aversion: float = Query(default=0.3, ge=0.0, le=1.0),
+    strategy_version: Literal["historical_cvar_v02", "regime_cvar_v03"] = "historical_cvar_v02",
+) -> dict[str, Any]:
+    """Return the latest deterministic DA/RT split strategy for one historical day."""
+    normalized_market = market_code.upper()
+    require_sample_market(normalized_market)
+    forecast_doc, load_rows, position_doc, price_rows, supply_doc = _strategy_assets()
+    day = next((item for item in forecast_doc.get("results", []) if item.get("market_date") == date), None)
+    if not day:
+        raise api_error(404, "FORECAST_DATE_NOT_FOUND", f"No historical forecast for {date}")
+    forecast_by = {int(item["period"]): item for item in day.get("periods", [])}
+    loads = {
+        int(str(item.get("time", "0"))[:2]): item
+        for item in load_rows
+        if item.get("date") == date
+    }
+    position_row = next((item for item in position_doc.get("daily", []) if item.get("date") == date), None)
+    net_position = position_row.get("netPositionMwh") if position_row else None
+    prices = {
+        int(str(item.get("time", "0"))[:2]): item
+        for item in price_rows
+        if item.get("date") == date
+    }
+    supply_by = {
+        int(item.get("period", 0)): item
+        for item in supply_doc.get("rows", [])
+        if item.get("marketDate") == date
+    }
+    total_load = sum(float(item.get("totalMwh", 0)) for item in loads.values())
+    records: list[dict[str, Any]] = []
+    for period in range(1, 25):
+        load = loads.get(period, {}).get("totalMwh")
+        allocated = (
+            float(net_position) * float(load) / total_load
+            if isinstance(net_position, (int, float)) and load is not None and total_load > 0
+            else None
+        )
+        forecast = forecast_by.get(period, {})
+        strategy = generate_strategy(
+            load_mwh=float(load) if load is not None else None,
+            medium_position_mwh=allocated,
+            cleared_energy_mwh=0.0,
+            forecast=forecast,
+            actual=prices.get(period),
+            risk_aversion=risk_aversion,
+            period=period if strategy_version == "regime_cvar_v03" else None,
+            supply_context=supply_by.get(period) if strategy_version == "regime_cvar_v03" else None,
+            historical_scenarios=build_historical_price_scenarios(
+                forecast_doc=forecast_doc,
+                target_date=date,
+                period=period,
+                target_da=forecast.get("day_ahead_price_yuan_per_mwh") or {},
+                target_rt=forecast.get("real_time_price_yuan_per_mwh") or {},
+            ),
+            position_quality_flags=["DAILY_POSITION_ALLOCATION_RESEARCH_ASSUMPTION"],
+        )
+        records.append({
+            "period": period,
+            "load_mwh": load,
+            "medium_position_allocated_mwh": allocated,
+            "forecast": forecast,
+            "strategy": strategy,
+        })
+    actionable = [item["strategy"] for item in records if item["strategy"].get("action") == "BUY_SPLIT"]
+    actual_advantage = sum(
+        float(item["strategy"].get("actual_cost_advantage_yuan"))
+        for item in records
+        if item["strategy"].get("actual_cost_advantage_yuan") is not None
+    )
+    version_label = (
+        "da-rt-split-regime-cvar-v0.3"
+        if strategy_version == "regime_cvar_v03"
+        else "da-rt-split-historical-cvar-v0.2"
+    )
+    return {
+        "market_code": normalized_market,
+        "business_date": date,
+        "mode": "historical_research",
+        "strategy_version": version_label,
+        "risk_aversion": risk_aversion,
+        "forecast_version": day.get("data_version"),
+        "position_data_version": position_doc.get("dataVersion"),
+        "assumptions": [
+            "cleared_energy_mwh=0，仅用于研究回测",
+            "日级净持仓按组合分时负荷比例分摊",
+            "不构成正式申报文件",
+        ],
+        "records": records,
+        "summary": {
+            "period_count": len(records),
+            "actionable_periods": len(actionable),
+            "day_ahead_quantity_mwh": round(
+                sum(float(item["day_ahead_quantity_mwh"] or 0) for item in actionable), 6
+            ),
+            "reserved_realtime_mwh": round(
+                sum(float(item["real_time_reserved_mwh"] or 0) for item in actionable), 6
+            ),
+            "actual_cost_advantage_yuan": round(actual_advantage, 4),
+        },
+        "execution_allowed": False,
+    }
+
+
+@app.get("/api/strategy/backtest")
+def strategy_backtest(
+    start: str | None = Query(default=None),
+    end: str | None = Query(default=None),
+    market_code: str = "SD",
+    risk_aversion: float = Query(default=0.3, ge=0.0, le=1.0),
+    strategy_version: Literal["historical_cvar_v02", "regime_cvar_v03"] = "historical_cvar_v02",
+) -> dict[str, Any]:
+    normalized_market = market_code.upper()
+    require_sample_market(normalized_market)
+    forecast_doc, load_rows, position_doc, price_rows, supply_doc = _strategy_assets()
+    result = run_strategy_backtest(
+        forecast_doc=forecast_doc,
+        load_rows=load_rows,
+        position_doc=position_doc,
+        price_rows=price_rows,
+        start=start,
+        end=end,
+        risk_aversion=risk_aversion,
+        strategy_version=strategy_version,
+        supply_rows=supply_doc.get("rows", []),
+    )
+    result["market_code"] = normalized_market
+    result["forecast_version"] = forecast_doc.get("model", {}).get("version")
+    result["execution_allowed"] = False
+    return result
+
+
+@app.get("/api/strategy/compare")
+def strategy_compare(
+    start: str | None = Query(default=None),
+    end: str | None = Query(default=None),
+    market_code: str = "SD",
+    risk_aversion: float = Query(default=0.3, ge=0.0, le=1.0),
+) -> dict[str, Any]:
+    normalized_market = market_code.upper()
+    require_sample_market(normalized_market)
+    forecast_doc, load_rows, position_doc, price_rows, supply_doc = _strategy_assets()
+    result = compare_strategy_versions(
+        forecast_doc=forecast_doc,
+        load_rows=load_rows,
+        position_doc=position_doc,
+        price_rows=price_rows,
+        supply_rows=supply_doc.get("rows", []),
+        start=start,
+        end=end,
+        risk_aversion=risk_aversion,
+    )
+    result["market_code"] = normalized_market
+    result["execution_allowed"] = False
+    return result
+
+
 @app.get("/api/data/quality")
 def data_quality() -> dict[str, Any]:
     settlement = load_json("settlement_2026-06-21.json")
@@ -3192,6 +3404,17 @@ def run_audit_logs_v1(run_id: str) -> dict[str, Any]:
 
 
 app.include_router(v1)
+
+# The public Render service also exposes the auditable trading Agent under a
+# namespaced path. This keeps the Pages frontend and the Agent workflow on one
+# deployment while preserving the platform API routes above.
+try:
+    from agent_app.main import app as trading_agent_app
+
+    app.mount("/agent", trading_agent_app)
+except Exception as error:  # pragma: no cover - deployment diagnostics only
+    trading_agent_app = None
+    print(f"Trading Agent mount unavailable: {error}")
 
 
 

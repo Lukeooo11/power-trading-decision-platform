@@ -10,3 +10,9 @@ services:
         value: production
       - key: POWER_TRADING_CORS_ORIGINS
         value: https://lukeooo11.github.io
+      - key: AGENT_ENV
+        value: production
+      - key: AGENT_PLATFORM_BASE_URL
+        value: https://power-trading-api-0902.onrender.com
+      - key: AGENT_CORS_ORIGINS
+        value: https://lukeooo11.github.io

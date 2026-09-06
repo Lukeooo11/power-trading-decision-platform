@@ -4,6 +4,8 @@ WORKDIR /app
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
+COPY backend/agent_app ./agent_app
+COPY data ./data
 COPY private-data ./private-data
 
 ENV POWER_TRADING_ENV=production

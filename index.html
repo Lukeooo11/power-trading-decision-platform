@@ -3742,6 +3742,133 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
 .side-status { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.13); }
 .side-status { display: none !important; }
 
+/* Research strategy snapshot: a compact Swiss data band inside the existing draft panel. */
+.agent-draft-panel .draft-strategy-band {
+  display: grid;
+  grid-template-columns: minmax(230px, 1.05fr) minmax(150px, 0.48fr) minmax(190px, 0.72fr) minmax(260px, 1.15fr);
+  margin: 0 0 14px;
+  border: 1px solid #d5d9d7;
+  border-radius: 0 !important;
+  background: #ffffff;
+  color: #202523;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.agent-draft-panel .draft-strategy-control,
+.agent-draft-panel .draft-strategy-snapshot {
+  min-width: 0;
+  min-height: 82px;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  padding: 12px 14px;
+  border-right: 1px solid #d5d9d7;
+  text-align: left;
+}
+
+.agent-draft-panel .draft-strategy-band > :last-child {
+  border-right: 0;
+}
+
+.agent-draft-panel .draft-strategy-control > span,
+.agent-draft-panel .draft-strategy-snapshot > span {
+  color: #68706d;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.agent-draft-panel .draft-strategy-control select,
+.agent-draft-panel .draft-strategy-control input {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid #c9cecb;
+  border-radius: 0 !important;
+  background: #f7f7f8;
+  color: #202523;
+  box-shadow: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.agent-draft-panel .draft-strategy-control select:disabled,
+.agent-draft-panel .draft-strategy-control input:disabled {
+  border-color: #d9dddb;
+  background: #eeeeef;
+  color: #4f5753;
+  opacity: 1;
+}
+
+.agent-draft-panel .draft-strategy-snapshot strong {
+  overflow-wrap: anywhere;
+  color: #202523;
+  font-size: 14px;
+  line-height: 1.35;
+  letter-spacing: 0;
+}
+
+.agent-draft-panel .draft-strategy-snapshot small {
+  overflow-wrap: anywhere;
+  color: #68706d;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.agent-draft-panel .agent-signal-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.agent-draft-panel .agent-draft-table {
+  min-width: 1540px;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.agent-draft-panel .agent-draft-table th,
+.agent-draft-panel .agent-draft-table td {
+  white-space: nowrap;
+}
+
+.agent-draft-panel .agent-draft-table th:last-child,
+.agent-draft-panel .agent-draft-table td:last-child {
+  min-width: 260px;
+  white-space: normal;
+}
+
+@media (max-width: 1100px) {
+  .agent-draft-panel .draft-strategy-band {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .agent-draft-panel .draft-strategy-band > :nth-child(2) {
+    border-right: 0;
+  }
+
+  .agent-draft-panel .draft-strategy-band > :nth-child(-n + 2) {
+    border-bottom: 1px solid #d5d9d7;
+  }
+}
+
+@media (max-width: 720px) {
+  .agent-draft-panel .draft-strategy-band {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-draft-panel .draft-strategy-control,
+  .agent-draft-panel .draft-strategy-snapshot {
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid #d5d9d7;
+  }
+
+  .agent-draft-panel .draft-strategy-band > :last-child {
+    border-bottom: 0;
+  }
+}
+
     </style>
   </head>
   <body>
@@ -3912,15 +4039,46 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
 
           <section class="panel agent-draft-panel">
             <div class="panel-head"><div><h3>日前报价报量草稿</h3><p>山东售电侧 · 24点小时粒度 · 仅供人工复核，不可自动提交</p></div><span class="pill wait" id="draftStatus">尚未创建</span></div>
+            <div class="draft-strategy-band" aria-label="研究策略参数与后端快照">
+              <label class="draft-strategy-control" for="draftStrategyVersion">
+                <span>策略版本</span>
+                <select id="draftStrategyVersion">
+                  <option value="" disabled>后端未返回版本</option>
+                  <option value="historical_cvar_v02" selected>历史误差 CVaR（默认）</option>
+                  <option value="regime_cvar_v03">分时状态 CVaR（挑战者）</option>
+                  <option value="legacy_spread_v01">初版价差规则（挑战者）</option>
+                </select>
+              </label>
+              <label class="draft-strategy-control draft-risk-control" for="draftRiskAversion">
+                <span>风险厌恶系数</span>
+                <input id="draftRiskAversion" type="number" min="0" max="1" step="0.05" value="0.30" inputmode="decimal" />
+              </label>
+              <div class="draft-strategy-snapshot">
+                <span>研究策略</span>
+                <strong id="draftStrategyLabel">历史误差 CVaR</strong>
+                <small id="draftResearchTag">待后端锁定</small>
+              </div>
+              <div class="draft-strategy-snapshot draft-scenario-snapshot" aria-live="polite">
+                <span>场景来源 / 版本</span>
+                <strong id="draftScenarioSource">预期：目标日前历史配对误差</strong>
+                <small id="draftScenarioVersion">创建后以后端快照为准</small>
+              </div>
+            </div>
             <div class="agent-action-row">
               <label class="field"><span>草稿发起人</span><input id="draftInitiator" placeholder="请输入姓名" /></label>
               <button class="secondary-action" id="createDraftBtn" type="button">创建日前草稿</button>
               <label class="field"><span>导入 CSV/JSON</span><input id="draftFile" type="file" accept=".csv,.json" /></label>
               <button class="primary-action" id="uploadDraftBtn" type="button" disabled>生成草稿</button>
+              <label class="field"><span>送审人</span><input id="draftSubmitter" maxlength="128" placeholder="须填写姓名" /></label>
+              <button class="secondary-action" id="submitDraftReviewBtn" type="button" disabled>提交复核</button>
+              <label class="field"><span>审核人</span><input id="draftReviewer" maxlength="128" placeholder="须与发起人不同" /></label>
+              <label class="field"><span>审核结论</span><select id="draftReviewDecision"><option value="APPROVE">批准</option><option value="MODIFY">修改</option><option value="REJECT">拒绝</option></select></label>
+              <label class="field"><span>审核原因</span><input id="draftReviewReason" maxlength="1000" placeholder="修改或拒绝时必填" /></label>
+              <button class="primary-action" id="reviewDraftBtn" type="button" disabled>提交审核</button>
               <button class="secondary-action" id="exportDraftBtn" type="button" disabled>导出人工复核草稿</button>
             </div>
             <div class="agent-run-meta" id="draftMeta">请先创建任务，再导入包含24个时段的模板。</div>
-            <div class="table-wrap agent-signal-table-wrap"><table class="agent-signal-table"><thead><tr><th>时段</th><th>负荷</th><th>中长期</th><th>已成交</th><th>剩余敞口</th><th>预测P10/P50/P90</th><th>建议量</th><th>报价区间</th><th>门禁</th><th>风险/依据</th></tr></thead><tbody id="draftTable"></tbody></table></div>
+            <div class="table-wrap agent-signal-table-wrap"><table class="agent-signal-table agent-draft-table"><thead><tr><th>时段</th><th>负荷</th><th>中长期</th><th>已成交</th><th>剩余敞口</th><th>日前 P10/P50/P90</th><th>实时 P10/P50/P90</th><th>锁定比例</th><th>日前建议量</th><th>实时保留量</th><th>报价区间</th><th>门禁</th><th>风险/依据</th></tr></thead><tbody id="draftTable"></tbody></table></div>
           </section>
 
           <section class="panel agent-readiness-panel">
@@ -10703,33 +10861,1407 @@ function debounce(fn, wait) {
 }
 
     </script>
+    <script>window.__TRADING_AGENT_API_BASE__ = "https://power-trading-api-0902.onrender.com/agent";</script>
     <script>
-      (() => {
-        const setText = (id, value) => {
-          const element = document.getElementById(id);
-          if (element) element.textContent = value;
-        };
-        const disableOnlineOnlyControls = () => {
-          document.querySelectorAll("#agentView button, #agentView input, #agentView select, #agentView textarea, #policyView button, #policyView input, #policyView select, #policyView textarea").forEach((element) => {
-            element.disabled = true;
-          });
-          ["agentHealthStatus", "policyServiceStatus"].forEach((id) => {
-            const element = document.getElementById(id);
-            if (element) {
-              element.className = "pill wait";
-              element.textContent = "后端待部署";
-            }
-          });
-          setText("agentReadinessSubtitle", "公开前端已上线；运行、审核、政策上传将在 Agent 后端上线后开放。");
-          setText("agentRunHint", "线上演示暂不连接交易或审核服务；不会下单。");
-          setText("agentReportPreview", "公开演示不含 Agent 运行记录。后端上线后可在这里查看报告。");
-        };
-        if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", disableOnlineOnlyControls, { once: true });
-        } else {
-          disableOnlineOnlyControls();
-        }
-      })();
+(() => {
+  "use strict";
+
+  const agentApiRoot = String(window.__TRADING_AGENT_API_BASE__ || "http://127.0.0.1:8010").replace(/\/$/, "");
+  const API_BASE = `${agentApiRoot}/api/v1`;
+  const PLATFORM_API_BASE = window.__PLATFORM_API_BASE__ || "http://127.0.0.1:8002/api";
+  const ACTIVE_STATUSES = new Set(["QUEUED", "RUNNING"]);
+  const RUN_STATUSES = {
+    QUEUED: ["排队中", "wait"],
+    RUNNING: ["运行中", "wait"],
+    READY_FOR_REVIEW: ["待送审", "partial"],
+    PENDING_REVIEW: ["审核中", "partial"],
+    APPROVED: ["已批准", "ok"],
+    MODIFIED: ["已修改", "partial"],
+    REJECTED: ["已拒绝", "missing"],
+    NEEDS_ONBOARDING: ["待接入", "missing"],
+    FAILED: ["运行失败", "missing"],
+    CANCELLED: ["已取消", "wait"],
+    PENDING: ["待执行", "wait"],
+    SUCCEEDED: ["已完成", "ok"],
+    COMPLETED: ["已完成", "ok"],
+    SKIPPED: ["已跳过", "wait"],
+  };
+  const DEFAULT_STEPS = [
+    ["市场校验", "确认当前省份和交易主体是否具备独立运行条件"],
+    ["数据质量", "检查 24 点输入、版本和缺失项"],
+    ["政策规则", "核对当前业务日期可用的授权规则与原文引用"],
+    ["价格预测", "基于已接入模型生成 24 点预测"],
+    ["风险信号", "识别高价、负价与价差关注时段"],
+    ["正式建议门禁", "门禁未通过时，24 点建议保持 HOLD、0 MWh"],
+    ["报告草稿", "汇总证据、版本、缺口与送审前报告"],
+    ["送审与复核", "由不同人员完成送审和复核"],
+    ["审核后报告", "复核后生成最终报告版本"],
+  ];
+  const STEP_LABELS = {
+    market_validation: DEFAULT_STEPS[0],
+    data_quality: DEFAULT_STEPS[1],
+    policy_rules: DEFAULT_STEPS[2],
+    price_forecast: DEFAULT_STEPS[3],
+    risk_signals: DEFAULT_STEPS[4],
+    strategy_gate: DEFAULT_STEPS[5],
+    report_draft: DEFAULT_STEPS[6],
+    dual_review: DEFAULT_STEPS[7],
+    final_report: DEFAULT_STEPS[8],
+  };
+  const GATE_LABELS = {
+    market_supported: "市场与主体",
+    data_ready: "数据质量",
+    policy_ready: "政策规则",
+    platform_strategy_ready: "平台条件",
+    strategy_ready: "正式建议总门禁",
+  };
+  const REQUIREMENT_LABELS = {
+    platform_connection: "平台连接",
+    authorized_data_assets: "授权数据资产",
+    authorized_market_data: "本市场授权数据",
+    market_specific_model: "本市场专属模型",
+    effective_market_rules: "当前生效规则",
+    effective_policy_with_citation: "带原文引用的有效政策",
+  };
+  const DRAFT_STRATEGIES = Object.freeze({
+    historical_cvar_v02: {
+      label: "历史误差 CVaR",
+      pendingSource: "预期：目标日前历史配对误差",
+    },
+    regime_cvar_v03: {
+      label: "分时状态 CVaR",
+      pendingSource: "预期：历史配对误差与分时供需状态",
+    },
+    legacy_spread_v01: {
+      label: "初版价差规则",
+      pendingSource: "预期：日前与实时预测价差",
+    },
+  });
+  const agentStore = {
+    health: null,
+    readiness: [],
+    currentRun: null,
+    messages: [],
+    policies: [],
+    citations: [],
+    contextKey: "",
+    businessDate: "",
+    sourceDate: "",
+    pollTimer: 0,
+    loadingRun: false,
+    loadingReadiness: false,
+    loadingPolicies: false,
+    loadingPolicyAnswer: false,
+    policyAnswer: null,
+    policyConversation: [],
+    policyAgentScope: null,
+    policyAgentRelease: null,
+    lastReadinessAt: 0,
+    draftRun: null,
+    readinessSubject: "",
+    policyContextKey: "",
+  };
+
+  function finiteNumber(...values) {
+    for (const value of values) {
+      if (value === null || value === undefined || value === "") continue;
+      const number = Number(value);
+      if (Number.isFinite(number)) return number;
+    }
+    return null;
+  }
+
+  function draftStrategySnapshot(run) {
+    if (!run) return null;
+    const draft = run.draft || {};
+    const snapshot = run.strategy_snapshot || draft.strategy_snapshot || run.strategy_config_snapshot || draft.strategy_config_snapshot || {};
+    return {
+      version: snapshot.strategy_version || snapshot.version || run.strategy_version || draft.strategy_version || null,
+      effectiveVersion: snapshot.effective_strategy_version || run.effective_strategy_version || draft.effective_strategy_version || null,
+      riskAversion: finiteNumber(snapshot.risk_aversion, run.risk_aversion, draft.risk_aversion),
+      label: snapshot.strategy_label || run.strategy_label || draft.strategy_label || null,
+      statusLabel: snapshot.strategy_status || run.strategy_status || draft.strategy_status || null,
+      scenarioSource: snapshot.scenario_source || run.scenario_source || draft.scenario_source || null,
+      scenarioVersion: snapshot.scenario_version || run.scenario_version || draft.scenario_version || null,
+    };
+  }
+
+  function renderDraftStrategyBand(run) {
+    const versionSelect = byId("draftStrategyVersion");
+    const riskInput = byId("draftRiskAversion");
+    const snapshot = draftStrategySnapshot(run);
+    if (!run) {
+      const version = versionSelect?.value || "historical_cvar_v02";
+      const definition = DRAFT_STRATEGIES[version] || DRAFT_STRATEGIES.historical_cvar_v02;
+      if (versionSelect && !versionSelect.value) versionSelect.value = version;
+      if (riskInput && !riskInput.value) riskInput.value = "0.30";
+      if (versionSelect) versionSelect.disabled = false;
+      if (riskInput) riskInput.disabled = false;
+      setText("draftStrategyLabel", definition.label);
+      setText("draftResearchTag", "待后端锁定");
+      setText("draftScenarioSource", definition.pendingSource);
+      setText("draftScenarioVersion", "创建后以后端快照为准");
+      return;
+    }
+
+    if (versionSelect) {
+      if (snapshot?.version && !Array.from(versionSelect.options).some((option) => option.value === snapshot.version)) {
+        versionSelect.add(new Option(snapshot.version, snapshot.version));
+      }
+      versionSelect.value = snapshot?.version || "";
+      versionSelect.disabled = true;
+    }
+    if (riskInput) {
+      riskInput.value = snapshot?.riskAversion === null ? "" : snapshot.riskAversion.toFixed(2);
+      riskInput.disabled = true;
+    }
+
+    const blocked = run.status === "BLOCKED" || ["BLOCKED", "FAILED"].includes(String(run.draft?.formal_gate || "").toUpperCase());
+    const definition = snapshot?.version ? DRAFT_STRATEGIES[snapshot.version] : null;
+    setText("draftStrategyLabel", snapshot?.label || definition?.label || "策略快照缺失");
+    setText("draftResearchTag", !snapshot?.version ? "研究策略 · 快照缺失" : blocked ? `研究策略 · 门禁阻断${snapshot.statusLabel ? ` · ${snapshot.statusLabel}` : ""}` : snapshot.statusLabel || "研究策略 · 后端已锁定");
+    setText("draftScenarioSource", snapshot?.scenarioSource || "后端未返回场景来源");
+    const scenarioVersionText = snapshot?.scenarioVersion ? `场景版本 ${snapshot.scenarioVersion}` : "后端未返回场景版本";
+    const effectiveVersionText = snapshot?.effectiveVersion && snapshot.effectiveVersion !== snapshot.version
+      ? ` · 实际计算 ${snapshot.effectiveVersion}`
+      : "";
+    setText("draftScenarioVersion", `${scenarioVersionText}${effectiveVersionText}`);
+  }
+
+  function priceTriplet(row, market) {
+    const nested = market === "dayAhead"
+      ? row.day_ahead_price_yuan_per_mwh || row.day_ahead_forecast || {}
+      : row.real_time_price_yuan_per_mwh || row.realtime_price_yuan_per_mwh || row.real_time_forecast || row.realtime_forecast || {};
+    const prefixes = market === "dayAhead"
+      ? ["day_ahead_price_", "day_ahead_", "da_"]
+      : ["real_time_price_", "realtime_price_", "real_time_", "realtime_", "rt_"];
+    return ["p10", "p50", "p90"].map((quantile) => {
+      const values = prefixes.map((prefix) => row[`${prefix}${quantile}`]);
+      if (market === "dayAhead") values.push(row[`price_${quantile}`]);
+      const value = finiteNumber(...values, nested[quantile]);
+      return value === null ? "--" : value;
+    }).join("/");
+  }
+
+  function draftAllocation(row) {
+    const remaining = finiteNumber(row.remaining_exposure_mwh);
+    const dayAhead = finiteNumber(row.day_ahead_quantity_mwh, row.suggested_quantity_mwh);
+    const explicitRealtime = finiteNumber(row.real_time_reserved_mwh, row.realtime_reserved_mwh, row.reserved_realtime_mwh);
+    const realtime = explicitRealtime ?? (remaining !== null && dayAhead !== null ? Math.max(0, remaining - dayAhead) : null);
+    const explicitRatio = finiteNumber(row.lock_ratio, row.day_ahead_lock_ratio);
+    const ratio = explicitRatio ?? (remaining !== null && remaining > 0 && dayAhead !== null ? dayAhead / remaining : null);
+    return { dayAhead, realtime, ratio };
+  }
+
+  function renderTradingDraft() {
+    const run = agentStore.draftRun, draft = run?.draft || {};
+    renderDraftStrategyBand(run);
+    const status = byId("draftStatus"); if (status) { status.textContent = run?.status || "尚未创建"; status.className = `pill ${run?.status === "APPROVED" ? "ok" : run ? "partial" : "wait"}`; }
+    const strategySnapshot = draftStrategySnapshot(run);
+    const snapshotWarning = run && !strategySnapshot?.version ? " · 策略快照未返回，不能认定预选策略已生效" : "";
+    setText("draftMeta", run ? `运行 ${run.run_id} · 数据门禁 ${draft.formal_gate || "未生成"}${snapshotWarning} · 不可自动提交` : "请先创建任务，再导入包含24个时段的模板。");
+    const body = byId("draftTable"); if (!body) return; body.innerHTML = (draft.records || []).map(r => {
+      const allocation = draftAllocation(r);
+      const evidence = [
+        ...(Array.isArray(r.risk_flags) ? r.risk_flags : []),
+        ...(Array.isArray(r.strategy_reasons) ? r.strategy_reasons : []),
+        ...(Array.isArray(r.formal_strategy_blockers) ? r.formal_strategy_blockers : []),
+        r.reason,
+      ].filter(Boolean).join("；");
+      return `<tr><td>${escapeText(r.period)}</td><td>${escapeText(r.load_forecast_mwh ?? "--")}</td><td>${escapeText(r.medium_position_mwh ?? "--")}</td><td>${escapeText(r.cleared_energy_mwh ?? "--")}</td><td>${escapeText(r.remaining_exposure_mwh ?? "--")}</td><td>${escapeText(priceTriplet(r, "dayAhead"))}</td><td>${escapeText(priceTriplet(r, "realTime"))}</td><td>${escapeText(allocation.ratio === null ? "--" : `${(allocation.ratio * 100).toFixed(1)}%`)}</td><td>${escapeText(allocation.dayAhead ?? 0)}</td><td>${escapeText(allocation.realtime ?? "--")}</td><td>${escapeText(r.suggested_price_lower == null ? "--" : `${r.suggested_price_lower} - ${r.suggested_price_upper}`)}</td><td>${escapeText(r.gate_status)}</td><td>${escapeText(evidence)}</td></tr>`;
+    }).join("");
+    const upload = byId("uploadDraftBtn"), exportBtn = byId("exportDraftBtn"); if (upload) upload.disabled = !run; if (exportBtn) exportBtn.disabled = !run || !["APPROVED", "MODIFIED"].includes(run.status);
+    const submit = byId("submitDraftReviewBtn"), review = byId("reviewDraftBtn");
+    if (submit) submit.disabled = !run || run.status !== "READY_FOR_REVIEW";
+    if (review) review.disabled = !run || run.status !== "PENDING_REVIEW";
+  }
+
+  async function createTradingDraft() {
+    const initiator = byId("draftInitiator")?.value.trim();
+    if (!initiator) return toast("请输入草稿发起人。");
+    const strategyVersion = byId("draftStrategyVersion")?.value || "historical_cvar_v02";
+    const riskAversion = finiteNumber(byId("draftRiskAversion")?.value);
+    if (!DRAFT_STRATEGIES[strategyVersion]) return toast("请选择有效的策略版本。");
+    if (riskAversion === null || riskAversion < 0 || riskAversion > 1) return toast("风险厌恶系数必须在 0 至 1 之间。");
+    const date = byId("agentBusinessDate")?.value || localIsoDate();
+    try {
+      agentStore.draftRun = await apiRequest("/trading-draft-runs", {
+        method: "POST",
+        body: JSON.stringify({
+          request_id: newRequestId("draft"),
+          business_date: date,
+          initiated_by: initiator,
+          strategy_version: strategyVersion,
+          risk_aversion: riskAversion,
+        }),
+      });
+      renderTradingDraft();
+      const snapshot = draftStrategySnapshot(agentStore.draftRun);
+      toast(snapshot?.version
+        ? "日前草稿任务已创建，策略参数已由后端锁定。"
+        : "任务已创建，但后端未返回策略快照，不能视为预选策略已生效。");
+    } catch(e) {
+      toast(`创建失败：${e.message}`);
+    }
+  }
+  async function uploadTradingDraft() { const file = byId("draftFile")?.files?.[0]; if (!file || !agentStore.draftRun) return toast("请选择 CSV/JSON 文件。"); try { const payload = await file.text(); const result = await apiRequest(`/trading-draft-runs/${agentStore.draftRun.run_id}/inputs`, {method:"POST", headers:{"Content-Type": file.name.endsWith(".json") ? "application/json" : "text/csv"}, body:payload}); agentStore.draftRun = {...agentStore.draftRun, ...result, status: result.status || (result.errors?.length ? "BLOCKED" : "READY_FOR_REVIEW")}; renderTradingDraft(); toast(result.status === "BLOCKED" ? "已导入，但存在阻断项。" : "24点草稿已生成。"); } catch(e) { toast(`导入失败：${e.message}`); } }
+
+  async function submitTradingDraftReview() {
+    const run = agentStore.draftRun, submittedBy = byId("draftSubmitter")?.value.trim();
+    if (!run || run.status !== "READY_FOR_REVIEW") return;
+    if (!submittedBy) return toast("请输入送审人姓名。");
+    try { agentStore.draftRun = await apiRequest(`/trading-draft-runs/${encodeURIComponent(run.run_id)}/submit-review`, {method:"POST", body: JSON.stringify({submitted_by: submittedBy, reason: "提交人工复核"})}); renderTradingDraft(); toast("草稿已提交复核。"); }
+    catch (e) { toast(`送审失败：${e.message}`); }
+  }
+
+  async function reviewTradingDraft() {
+    const run = agentStore.draftRun, reviewer = byId("draftReviewer")?.value.trim(), decision = byId("draftReviewDecision")?.value || "APPROVE", reason = byId("draftReviewReason")?.value.trim() || "";
+    if (!run || run.status !== "PENDING_REVIEW") return;
+    if (!reviewer) return toast("请输入审核人姓名。");
+    if (["MODIFY", "REJECT"].includes(decision) && !reason) return toast("修改或拒绝时必须填写原因。");
+    try { agentStore.draftRun = await apiRequest(`/trading-draft-runs/${encodeURIComponent(run.run_id)}/review`, {method:"POST", body: JSON.stringify({decision, reviewed_by: reviewer, reason})}); renderTradingDraft(); toast(`草稿审核状态：${decision}`); }
+    catch (e) { toast(`审核失败：${e.message}`); }
+  }
+
+  const byId = (id) => document.getElementById(id);
+  const escapeText = (value) => String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+  function setText(id, value) {
+    const element = byId(id);
+    if (element) element.textContent = value ?? "";
+  }
+
+  function setHtml(id, value) {
+    const element = byId(id);
+    if (element) element.innerHTML = value;
+  }
+
+  function toast(message) {
+    if (typeof showToast === "function") showToast(message);
+  }
+
+  function localIsoDate() {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Shanghai",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  }
+
+  function currentContext() {
+    const marketCode = typeof state === "undefined" ? "national" : state.selectedMarket;
+    const subjectKey = typeof state === "undefined" ? "retail" : state.selectedSubject;
+    const market = typeof MARKET_PROFILES === "undefined"
+      ? null
+      : MARKET_PROFILES.find((item) => item.code === marketCode);
+    const subject = typeof TRADING_SUBJECTS === "undefined" ? null : TRADING_SUBJECTS[subjectKey];
+    return {
+      marketCode,
+      marketName: market?.name || "全国",
+      subjectKey,
+      subjectName: subject?.name || subjectKey,
+      businessDate: agentStore.businessDate || (typeof state === "undefined" ? "" : state.selectedDate) || localIsoDate(),
+    };
+  }
+
+  function errorMessage(payload, status) {
+    const detail = payload?.detail;
+    if (Array.isArray(detail)) return detail.map((item) => item?.msg || String(item)).join("；");
+    if (detail && typeof detail === "object") return detail.message || detail.code || JSON.stringify(detail);
+    return payload?.error?.message || payload?.message || detail || `HTTP ${status}`;
+  }
+
+  async function apiRequest(path, options = {}) {
+    const headers = new Headers(options.headers || {});
+    if (!(options.body instanceof FormData) && options.body !== undefined && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
+    if (!headers.has("Accept")) headers.set("Accept", "application/json");
+    let response;
+    try {
+      response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    } catch (error) {
+      throw new Error("Agent 服务不可达，请确认 8010 端口已启动");
+    }
+    const contentType = response.headers.get("content-type") || "";
+    const raw = await response.text();
+    let payload = raw;
+    if (contentType.includes("json") || raw.startsWith("{") || raw.startsWith("[")) {
+      try { payload = raw ? JSON.parse(raw) : null; } catch (error) { payload = raw; }
+    }
+    if (!response.ok) {
+      const requestError = new Error(errorMessage(payload, response.status));
+      requestError.status = response.status;
+      requestError.payload = payload;
+      throw requestError;
+    }
+    return payload;
+  }
+
+  async function platformRequest(path, options = {}) {
+    const headers = new Headers(options.headers || {});
+    if (options.body !== undefined && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+    headers.set("Accept", "application/json");
+    let response;
+    try {
+      response = await fetch(`${PLATFORM_API_BASE}${path}`, { ...options, headers });
+    } catch (error) {
+      throw new Error("平台后端不可达，请确认 8002 端口已启动");
+    }
+    const raw = await response.text();
+    let payload = raw;
+    try { payload = raw ? JSON.parse(raw) : null; } catch (error) { payload = raw; }
+    if (!response.ok) throw new Error(errorMessage(payload, response.status));
+    return payload;
+  }
+
+  function unwrapRun(payload) {
+    return payload?.run || payload?.agent_run || payload;
+  }
+
+  function unwrapList(payload, keys) {
+    if (Array.isArray(payload)) return payload;
+    for (const key of keys) if (Array.isArray(payload?.[key])) return payload[key];
+    return [];
+  }
+
+  function statusTag(status) {
+    const normalized = String(status || "PENDING").toUpperCase();
+    const [label, tone] = RUN_STATUSES[normalized] || [normalized, "wait"];
+    return `<span class="tag ${tone}">${escapeText(label)}</span>`;
+  }
+
+  function booleanTag(value, readyLabel = "通过", missingLabel = "未通过") {
+    return `<span class="tag ${value ? "ok" : "missing"}">${escapeText(value ? readyLabel : missingLabel)}</span>`;
+  }
+
+  function requirementText(value) {
+    return REQUIREMENT_LABELS[value] || String(value ?? "");
+  }
+
+  function stepDetailText(detail, fallback) {
+    if (typeof detail === "string" && detail.trim()) return detail;
+    if (!detail || typeof detail !== "object") return fallback;
+    const parts = [];
+    if (detail.message) parts.push(detail.message);
+    if (detail.code && !detail.message) parts.push(detail.code);
+    if (detail.reason) parts.push(requirementText(detail.reason));
+    if (Number.isFinite(Number(detail.point_count))) parts.push(`${Number(detail.point_count)} 个时段`);
+    if (Number.isFinite(Number(detail.citation_count))) parts.push(`${Number(detail.citation_count)} 条政策引用`);
+    if (detail.version !== undefined) parts.push(`报告版本 ${detail.version}`);
+    if (detail.strategy_ready === false) parts.push("正式建议门禁未通过");
+    if (detail.strategy_ready === true) parts.push("正式建议门禁已通过");
+    return parts.filter(Boolean).join(" · ") || fallback;
+  }
+
+  function bindEvents() {
+    byId("agentRefreshReadinessBtn")?.addEventListener("click", () => loadReadiness(true));
+    byId("agentStartRunBtn")?.addEventListener("click", startRun);
+    byId("agentCancelRunBtn")?.addEventListener("click", cancelRun);
+    byId("agentRerunBtn")?.addEventListener("click", rerun);
+    byId("agentBusinessDate")?.addEventListener("change", (event) => {
+      agentStore.businessDate = event.target.value;
+      if (typeof state !== "undefined" && state.dates?.includes(agentStore.businessDate) && typeof selectAnalysisDate === "function") {
+        selectAnalysisDate(agentStore.businessDate, { rerunMedium: false });
+      } else {
+        resetForContextChange();
+        syncContext();
+      }
+    });
+    byId("agentInitiatorInput")?.addEventListener("input", renderRunControls);
+    byId("agentSendMessageBtn")?.addEventListener("click", sendMessage);
+    byId("agentSubmitReviewBtn")?.addEventListener("click", submitReview);
+    byId("agentReviewBtn")?.addEventListener("click", reviewRun);
+    byId("agentViewReportBtn")?.addEventListener("click", viewHtmlReport);
+    byId("agentDownloadMarkdownBtn")?.addEventListener("click", () => downloadReport("markdown"));
+    byId("agentDownloadJsonBtn")?.addEventListener("click", () => downloadReport("json"));
+    byId("runPolicyBtn")?.addEventListener("click", uploadPolicy);
+    byId("policyRefreshBtn")?.addEventListener("click", () => loadPolicies(true));
+    byId("exportPolicyBtn")?.addEventListener("click", exportPolicyList);
+    byId("policySearchBtn")?.addEventListener("click", searchPolicies);
+    byId("policySearchInput")?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        searchPolicies();
+      }
+    });
+    byId("policyAskBtn")?.addEventListener("click", askPolicyAgent);
+    byId("policyQuestionInput")?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        askPolicyAgent();
+      }
+    });
+  }
+
+  function resetForContextChange() {
+    stopPolling();
+    agentStore.currentRun = null;
+    agentStore.messages = [];
+    const frame = byId("agentReportFrame");
+    if (frame) {
+      frame.hidden = true;
+      frame.srcdoc = "";
+    }
+    const preview = byId("agentReportPreview");
+    if (preview) {
+      preview.hidden = false;
+      preview.textContent = "完成一次历史陪跑后，可在这里查看或下载报告。";
+    }
+  }
+
+  function syncContext() {
+    const selectedDate = typeof state === "undefined" ? "" : state.selectedDate;
+    if (selectedDate && selectedDate !== agentStore.sourceDate) {
+      agentStore.businessDate = selectedDate;
+      agentStore.sourceDate = selectedDate;
+    }
+    if (!agentStore.businessDate) agentStore.businessDate = selectedDate || localIsoDate();
+    const context = currentContext();
+    const nextKey = `${context.marketCode}|${context.subjectKey}|${context.businessDate}`;
+    if (agentStore.contextKey && agentStore.contextKey !== nextKey) resetForContextChange();
+    agentStore.contextKey = nextKey;
+    setText("agentContextMarket", context.marketName === "全国" ? "全国公司视图" : `${context.marketName}电力市场`);
+    setText("agentContextSubject", context.subjectName);
+    setText("agentReadinessSummary", context.marketCode === "national" ? "查看 31 个市场接入矩阵" : `查看${context.marketName}接入结果`);
+    const dateInput = byId("agentBusinessDate");
+    if (dateInput && dateInput.value !== context.businessDate) dateInput.value = context.businessDate;
+    const nationalNotice = byId("agentNationalNotice");
+    if (nationalNotice) nationalNotice.hidden = context.marketCode !== "national";
+    const effectiveDate = byId("policyEffectiveDateInput");
+    if (effectiveDate && !effectiveDate.value) effectiveDate.value = context.businessDate;
+    renderReadiness();
+    renderRun();
+  }
+
+  async function loadHealth() {
+    try {
+      agentStore.health = await apiRequest("/health");
+      renderHealth();
+    } catch (error) {
+      agentStore.health = { unavailable: true, message: error.message };
+      renderHealth();
+    }
+  }
+
+  function renderHealth() {
+    const health = agentStore.health;
+    const unavailable = !health || health.unavailable;
+    const rawStatus = String(health?.status || health?.agent?.status || "").toLowerCase();
+    const healthy = !unavailable && ["ok", "healthy", "ready", "degraded"].includes(rawStatus || "ok");
+    const agentStatus = byId("agentHealthStatus");
+    const policyStatus = byId("policyServiceStatus");
+    for (const element of [agentStatus, policyStatus]) {
+      if (!element) continue;
+      element.className = `pill ${healthy ? (rawStatus === "degraded" ? "partial" : "ok") : "missing"}`;
+      element.textContent = healthy ? (rawStatus === "degraded" ? "服务降级" : "Agent 已连接") : "Agent 未连接";
+    }
+    const llmMode = health?.llm?.mode || health?.llm?.status;
+    const platformStatus = health?.platform?.status || (health?.platform?.reachable ? "online" : "");
+    if (!unavailable && (llmMode || platformStatus)) {
+      const platformLabel = {
+        available: "可用",
+        online: "可用",
+        healthy: "可用",
+        ok: "可用",
+        unavailable: "不可用",
+        offline: "不可用",
+      }[String(platformStatus).toLowerCase()] || "状态未知";
+      const explanationLabel = {
+        deterministic_fallback: "使用稳定模板",
+        fallback: "使用稳定模板",
+        unavailable: "使用稳定模板",
+        llm: "智能说明可用",
+        online: "智能说明可用",
+        available: "智能说明可用",
+      }[String(llmMode).toLowerCase()] || "说明功能可用";
+      setText("agentReadinessSubtitle", `服务已连接 · 平台：${platformLabel} · 结果说明：${explanationLabel}`);
+    } else if (unavailable) {
+      setText("agentReadinessSubtitle", health?.message || "Agent 服务不可达");
+    }
+  }
+
+  async function loadReadiness(force = false) {
+    const context = currentContext();
+    if (agentStore.loadingReadiness) return;
+    if (!force && agentStore.readiness.length && agentStore.readinessSubject === context.subjectKey && Date.now() - agentStore.lastReadinessAt < 30000) return;
+    agentStore.loadingReadiness = true;
+    renderReadiness();
+    try {
+      const payload = await apiRequest(`/readiness?trading_subject=${encodeURIComponent(context.subjectKey)}`);
+      agentStore.readiness = unwrapList(payload, ["markets", "items", "readiness"]);
+      agentStore.readinessSubject = context.subjectKey;
+      agentStore.lastReadinessAt = Date.now();
+    } catch (error) {
+      agentStore.readiness = [];
+      setText("agentReadinessSubtitle", error.message);
+      toast(error.message);
+    } finally {
+      agentStore.loadingReadiness = false;
+      renderReadiness();
+    }
+  }
+
+  function renderReadiness() {
+    const table = byId("agentReadinessTable");
+    if (!table) return;
+    if (agentStore.loadingReadiness && !agentStore.readiness.length) {
+      table.innerHTML = '<tr><td colspan="7">正在读取全国接入状态...</td></tr>';
+      return;
+    }
+    if (!agentStore.readiness.length) {
+      table.innerHTML = '<tr><td colspan="7">暂无接入状态，请确认 Agent 服务已启动。</td></tr>';
+      return;
+    }
+    const context = currentContext();
+    const subjectRows = agentStore.readiness.filter((row) => !row.trading_subject || row.trading_subject === context.subjectKey);
+    const rows = (context.marketCode === "national" ? subjectRows : subjectRows.filter((row) => row.market_code === context.marketCode));
+    table.innerHTML = rows.map((row) => {
+      const dataReady = row.data_ready ?? row.data?.ready ?? false;
+      const modelReady = row.model_ready ?? row.model?.ready ?? false;
+      const policyReady = row.policy_ready ?? row.policy?.ready ?? false;
+      const runnable = row.ready ?? (row.run_supported && dataReady && modelReady && policyReady);
+      const missingItems = row.missing_requirements ?? row.missing ?? [];
+      const missing = (Array.isArray(missingItems) ? missingItems.map(requirementText).join("；") : requirementText(missingItems)) || "无";
+      return `<tr>
+        <td><strong>${escapeText(row.market_name || row.market_code)}</strong><br><span class="muted">${escapeText(row.market_code)}</span></td>
+        <td>${escapeText(row.trading_subject || context.subjectKey)}</td>
+        <td>${booleanTag(dataReady)}</td>
+        <td>${booleanTag(modelReady)}</td>
+        <td>${booleanTag(policyReady)}</td>
+        <td>${booleanTag(runnable, "可运行", "待补条件")}</td>
+        <td>${escapeText(missing)}</td>
+      </tr>`;
+    }).join("") || '<tr><td colspan="7">当前市场与交易主体没有接入记录。</td></tr>';
+    const refresh = byId("agentRefreshReadinessBtn");
+    if (refresh) refresh.disabled = agentStore.loadingReadiness;
+  }
+
+  function newRequestId(prefix = "agent") {
+    const random = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    return `${prefix}-${random}`;
+  }
+
+  async function startRun() {
+    const context = currentContext();
+    const initiatedBy = byId("agentInitiatorInput")?.value.trim() || "";
+    if (context.marketCode === "national") return toast("请先选择具体省份。");
+    if (!context.businessDate) return toast("请选择业务日期。");
+    if (!initiatedBy) return toast("请输入发起人姓名。");
+    agentStore.loadingRun = true;
+    renderRunControls();
+    try {
+      const payload = await apiRequest("/agent-runs", {
+        method: "POST",
+        body: JSON.stringify({
+          request_id: newRequestId("run"),
+          market_code: context.marketCode,
+          trading_subject: context.subjectKey,
+          business_date: context.businessDate,
+          initiated_by: initiatedBy,
+        }),
+      });
+      agentStore.currentRun = unwrapRun(payload);
+      agentStore.messages = [];
+      renderRun();
+      beginPolling();
+      toast(payload?.idempotent_replay ? "已返回相同请求的运行记录。" : "历史陪跑已启动，完成后请查看风险和依据并送审。");
+    } catch (error) {
+      toast(`启动失败：${error.message}`);
+    } finally {
+      agentStore.loadingRun = false;
+      renderRunControls();
+    }
+  }
+
+  function stopPolling() {
+    window.clearTimeout(agentStore.pollTimer);
+    agentStore.pollTimer = 0;
+  }
+
+  function beginPolling() {
+    stopPolling();
+    if (!ACTIVE_STATUSES.has(agentStore.currentRun?.status)) return;
+    agentStore.pollTimer = window.setTimeout(refreshCurrentRun, 1600);
+  }
+
+  async function refreshCurrentRun() {
+    const runId = agentStore.currentRun?.run_id;
+    if (!runId) return;
+    try {
+      agentStore.currentRun = unwrapRun(await apiRequest(`/agent-runs/${encodeURIComponent(runId)}`));
+      renderRun();
+      if (!ACTIVE_STATUSES.has(agentStore.currentRun?.status)) await loadMessages();
+    } catch (error) {
+      setText("agentRunMeta", `状态刷新失败：${error.message}`);
+    } finally {
+      beginPolling();
+    }
+  }
+
+  async function cancelRun() {
+    const run = agentStore.currentRun;
+    if (!run?.run_id || !ACTIVE_STATUSES.has(run.status)) return;
+    const actor = byId("agentInitiatorInput")?.value.trim() || run.initiated_by;
+    if (!actor) return toast("请输入操作人姓名。");
+    try {
+      agentStore.currentRun = unwrapRun(await apiRequest(`/agent-runs/${encodeURIComponent(run.run_id)}/cancel`, {
+        method: "POST",
+        body: JSON.stringify({ actor, reason: "用户从交易 Agent 工作区取消" }),
+      }));
+      stopPolling();
+      renderRun();
+      toast("任务已取消。");
+    } catch (error) {
+      toast(`取消失败：${error.message}`);
+    }
+  }
+
+  async function rerun() {
+    const run = agentStore.currentRun;
+    if (!run?.run_id) return;
+    const actor = byId("agentInitiatorInput")?.value.trim() || run.initiated_by;
+    if (!actor) return toast("请输入操作人姓名。");
+    agentStore.loadingRun = true;
+    renderRunControls();
+    try {
+      agentStore.currentRun = unwrapRun(await apiRequest(`/agent-runs/${encodeURIComponent(run.run_id)}/rerun`, {
+        method: "POST",
+        body: JSON.stringify({
+          request_id: newRequestId("rerun"),
+          actor,
+          reason: "从交易 Agent 工作区按原快照重跑",
+        }),
+      }));
+      agentStore.messages = [];
+      renderRun();
+      beginPolling();
+      toast("已基于原运行快照创建重跑任务。");
+    } catch (error) {
+      toast(`重跑失败：${error.message}`);
+    } finally {
+      agentStore.loadingRun = false;
+      renderRunControls();
+    }
+  }
+
+  function renderRun() {
+    const run = agentStore.currentRun;
+    const statusElement = byId("agentRunStatus");
+    if (statusElement) {
+      const [label, tone] = RUN_STATUSES[run?.status] || [run?.status || "尚未开始", "wait"];
+      statusElement.className = `pill ${tone}`;
+      statusElement.textContent = label;
+    }
+    if (!run) {
+      setText("agentRunMeta", "尚未开始。设定范围并填写发起人后，即可启动；本工具不会下单。");
+    } else {
+      const parts = [
+        `运行 ${run.run_id}`,
+        run.parent_run_id ? `来源 ${run.parent_run_id}` : "",
+        run.model_version ? `模型 ${run.model_version}` : "",
+        run.data_version ? `数据 ${run.data_version}` : "",
+        `下单权限 ${run.execution_allowed === true ? "异常开启" : "关闭"}`,
+        run.error?.message ? `错误 ${run.error.message}` : "",
+      ].filter(Boolean);
+      setText("agentRunMeta", parts.join(" · "));
+    }
+    renderSteps(run);
+    renderGates(run);
+    renderSignals(run);
+    renderEvidence(run);
+    renderMessages();
+    renderReview(run);
+    renderReportSummary(run);
+    renderRunControls();
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    byId("draftStrategyVersion")?.addEventListener("change", () => renderDraftStrategyBand(agentStore.draftRun));
+    byId("draftRiskAversion")?.addEventListener("change", () => renderDraftStrategyBand(agentStore.draftRun));
+    byId("createDraftBtn")?.addEventListener("click", createTradingDraft);
+    byId("uploadDraftBtn")?.addEventListener("click", uploadTradingDraft);
+    byId("submitDraftReviewBtn")?.addEventListener("click", submitTradingDraftReview);
+    byId("reviewDraftBtn")?.addEventListener("click", reviewTradingDraft);
+    byId("exportDraftBtn")?.addEventListener("click", () => {
+      const id = agentStore.draftRun?.run_id; if (id) window.open(`${API_BASE}/trading-draft-runs/${encodeURIComponent(id)}/export?format=csv`, "_blank");
+    });
+    renderTradingDraft();
+  });
+
+  function renderReportSummary(run) {
+    const target = byId("agentReportPreview");
+    if (!target) return;
+    if (!run) {
+      target.textContent = "完成一次历史陪跑后，可在这里查看或下载报告。";
+      return;
+    }
+    const reports = Array.isArray(run.reports) ? run.reports : [];
+    const latest = reports.at(-1);
+    const phase = latest?.phase || (run.status === "READY_FOR_REVIEW" ? "DRAFT" : "--");
+    target.textContent = latest
+      ? `报告版本 ${latest.version} · ${phase} · 生成于 ${latest.created_at || "--"}。点击上方按钮查看或下载。`
+      : run.status === "NEEDS_ONBOARDING"
+        ? "当前市场尚未接入，不生成策略报告。"
+        : "报告尚未生成，请等待工作流完成。";
+  }
+
+  function renderRunControls() {
+    const run = agentStore.currentRun;
+    const context = currentContext();
+    const initiator = byId("agentInitiatorInput")?.value.trim() || "";
+    const start = byId("agentStartRunBtn");
+    if (start) {
+      start.disabled = agentStore.loadingRun || context.marketCode === "national" || !context.businessDate || !initiator;
+      start.title = context.marketCode === "national"
+        ? "请先在左侧选择具体省份"
+        : !context.businessDate
+          ? "请选择业务日期"
+            : !initiator
+            ? "请先在左侧输入发起人姓名"
+            : "使用当前范围启动历史数据陪跑";
+    }
+    const cancel = byId("agentCancelRunBtn");
+    if (cancel) cancel.disabled = !run || !ACTIVE_STATUSES.has(run.status) || agentStore.loadingRun;
+    const rerunButton = byId("agentRerunBtn");
+    if (rerunButton) rerunButton.disabled = !run || ACTIVE_STATUSES.has(run.status) || agentStore.loadingRun;
+    const hint = context.marketCode === "national"
+      ? "第 1 步：请在左侧选择具体省份；全国视图只能查看接入情况"
+      : context.marketCode === "SD" && context.subjectKey === "retail"
+        ? "第 2 步：可启动历史陪跑；正式建议仍固定为 HOLD，不下单"
+        : "第 2 步：可运行接入检查；不会读取山东数据、模型或证据";
+    setText("agentRunHint", hint);
+
+    const stable = run && !ACTIVE_STATUSES.has(run.status) && run.status !== "FAILED";
+    const canReport = Boolean(stable && run.status !== "CANCELLED");
+    for (const id of ["agentViewReportBtn", "agentDownloadMarkdownBtn", "agentDownloadJsonBtn"]) {
+      const button = byId(id);
+      if (button) button.disabled = !canReport;
+    }
+    const send = byId("agentSendMessageBtn");
+    if (send) send.disabled = !run || ACTIVE_STATUSES.has(run.status);
+    const submit = byId("agentSubmitReviewBtn");
+    if (submit) submit.disabled = !run || run.status !== "READY_FOR_REVIEW";
+    const review = byId("agentReviewBtn");
+    if (review) review.disabled = !run || run.status !== "PENDING_REVIEW";
+  }
+
+  function renderSteps(run) {
+    const steps = Array.isArray(run?.steps) && run.steps.length
+      ? run.steps
+      : DEFAULT_STEPS.map(([name, detail], index) => ({ sequence: index + 1, name, detail, status: "PENDING" }));
+    setHtml("agentStepList", steps.map((step, index) => {
+      const status = String(step.status || "PENDING").toUpperCase();
+      const descriptor = STEP_LABELS[step.name] || DEFAULT_STEPS[index] || [step.name, "等待执行"];
+      const name = descriptor[0] || step.name;
+      const detail = stepDetailText(step.detail, descriptor[1] || "等待执行");
+      return `<div class="agent-step" data-status="${escapeText(status)}">
+        <span class="agent-step-index">${String(step.sequence || index + 1).padStart(2, "0")}</span>
+        <div><strong>${escapeText(name)}</strong><p>${escapeText(detail)}</p></div>
+        ${statusTag(status)}
+      </div>`;
+    }).join(""));
+  }
+
+  function renderGates(run) {
+    const gates = run?.gates || {};
+    const missingData = Array.isArray(run?.missing_data) ? run.missing_data.map(requirementText).join("；") : requirementText(run?.missing_data);
+    const rows = Object.entries(GATE_LABELS).map(([key, label], index) => {
+      const value = gates[key];
+      let detail = value === true ? "门禁已通过" : value === false ? "门禁未通过，正式建议保持 HOLD" : "等待工作流检查";
+      if (key === "data_ready" && missingData) detail = missingData;
+      if (key === "strategy_ready" && value === true) detail = "平台与政策条件均已通过；仍不开放自动执行";
+      return `<div class="agent-gate-item">
+        <span class="agent-step-index">${String(index + 1).padStart(2, "0")}</span>
+        <div><strong>${escapeText(label)}</strong><p>${escapeText(detail)}</p></div>
+        ${value === undefined ? '<span class="tag wait">待检查</span>' : booleanTag(value)}
+      </div>`;
+    });
+    setHtml("agentGateList", rows.join(""));
+  }
+
+  function firstArray(value, keys) {
+    if (Array.isArray(value)) return value;
+    for (const key of keys) if (Array.isArray(value?.[key])) return value[key];
+    return [];
+  }
+
+  function periodOf(row, fallback) {
+    const value = row?.period ?? row?.time_point ?? row?.point_index ?? row?.hour ?? fallback;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function firstNumber(row, keys) {
+    for (const key of keys) {
+      const value = row?.[key];
+      if (value !== null && value !== undefined && Number.isFinite(Number(value))) return Number(value);
+    }
+    return null;
+  }
+
+  function quantileP50(row, key) {
+    const value = row?.[key];
+    if (!value || typeof value !== "object") return null;
+    return Number.isFinite(Number(value.p50)) ? Number(value.p50) : null;
+  }
+
+  function numberText(value, suffix = "") {
+    return value === null || value === undefined || !Number.isFinite(Number(value)) ? "--" : `${Number(value).toFixed(1)}${suffix}`;
+  }
+
+  function forecastRows(run) {
+    const forecast = run?.forecast;
+    return firstArray(forecast, ["periods", "hourly", "points", "results", "forecasts", "predictions"]);
+  }
+
+  function renderSignals(run) {
+    const target = byId("agentSignalTable");
+    if (!target) return;
+    if (!run) {
+      target.innerHTML = '<tr><td colspan="8">完成历史陪跑后，在这里核对 24 点风险与 HOLD 建议。</td></tr>';
+      return;
+    }
+    const signals = firstArray(run?.signals, ["items", "signals"]);
+    const formal = firstArray(run?.formal_strategy, ["items", "suggestions", "strategy"]);
+    const forecasts = forecastRows(run);
+    const signalMap = new Map(signals.map((row, index) => [periodOf(row, index + 1), row]));
+    const formalMap = new Map(formal.map((row, index) => [periodOf(row, index + 1), row]));
+    const forecastMap = new Map(forecasts.map((row, index) => [periodOf(row, index + 1), row]));
+    const periods = [...new Set([...signalMap.keys(), ...formalMap.keys(), ...forecastMap.keys()])].sort((a, b) => a - b);
+    if (!periods.length) {
+      target.innerHTML = `<tr><td colspan="8">${escapeText(run.status === "NEEDS_ONBOARDING" ? "当前市场待接入，不生成跨市场信号。" : "本次运行暂无小时信号。")}</td></tr>`;
+      return;
+    }
+    target.innerHTML = periods.map((period) => {
+      const signal = signalMap.get(period) || {};
+      const point = forecastMap.get(period) || {};
+      const suggestion = formalMap.get(period) || {};
+      const dayAhead = firstNumber(signal, ["day_ahead_p50_yuan_per_mwh", "forecast_price"])
+        ?? quantileP50(point, "day_ahead_price_yuan_per_mwh")
+        ?? firstNumber(point, ["day_ahead_p50_yuan_per_mwh", "day_ahead_p50", "day_ahead_price_p50", "day_ahead_price", "predicted_day_ahead_price"]);
+      const realtime = firstNumber(signal, ["real_time_p50_yuan_per_mwh", "reference_price"])
+        ?? quantileP50(point, "real_time_price_yuan_per_mwh")
+        ?? firstNumber(point, ["real_time_p50_yuan_per_mwh", "realtime_p50", "real_time_p50", "realtime_price_p50", "real_time_price", "predicted_realtime_price"]);
+      const spread = firstNumber(signal, ["spread_yuan_per_mwh", "spread", "predicted_spread"])
+        ?? firstNumber(point, ["spread_yuan_per_mwh", "spread", "spread_p50"]);
+      const reasons = Array.isArray(signal.risk_reason_codes)
+        ? signal.risk_reason_codes
+        : Array.isArray(signal.reason_codes) ? signal.reason_codes : [];
+      const highRiskLevel = typeof signal.high_price_risk === "object"
+        ? String(signal.high_price_risk.level || "LOW").toUpperCase()
+        : signal.high_price_risk ? "HIGH" : "LOW";
+      const negativeRiskLevel = typeof signal.negative_price_risk === "object"
+        ? String(signal.negative_price_risk.level || "LOW").toUpperCase()
+        : signal.negative_price_risk ? "HIGH" : "LOW";
+      const highRisk = highRiskLevel !== "LOW";
+      const negativeRisk = negativeRiskLevel !== "LOW";
+      const flags = [
+        highRisk ? "高价" : "",
+        negativeRisk ? "负价" : "",
+        signal.spread_attention ? "价差关注" : "",
+        ...reasons,
+      ].filter(Boolean);
+      const backendRiskLevel = String(signal.risk_level || "").toUpperCase();
+      const riskLevel = backendRiskLevel === "HIGH" || highRiskLevel === "HIGH" || negativeRiskLevel === "HIGH"
+        ? "高"
+        : backendRiskLevel === "MEDIUM" || highRiskLevel === "MEDIUM" || negativeRiskLevel === "MEDIUM" || signal.spread_attention
+          ? "关注"
+          : "常规";
+      const action = suggestion.action || suggestion.recommendation || "--";
+      const quantity = firstNumber(suggestion, ["quantity_mwh", "energy_mwh", "volume_mwh", "quantity"]);
+      return `<tr>
+        <td>${escapeText(String(period).padStart(2, "0"))}</td>
+        <td>${numberText(dayAhead)}</td>
+        <td>${numberText(realtime)}</td>
+        <td>${numberText(spread)}</td>
+        <td><span class="tag ${riskLevel === "高" ? "missing" : riskLevel === "关注" ? "partial" : "ok"}">${escapeText(riskLevel)}</span></td>
+        <td>${escapeText(flags.join(" / ") || "无特别关注")}</td>
+        <td><span class="tag ${action === "HOLD" ? "hold" : "wait"}">${escapeText(action)}</span></td>
+        <td>${numberText(quantity, " MWh")}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  function compactJson(value) {
+    if (value === null || value === undefined || value === "") return "";
+    if (typeof value === "string") return value;
+    try { return JSON.stringify(value, null, 2); } catch (error) { return String(value); }
+  }
+
+  function renderEvidence(run) {
+    const evidence = Array.isArray(run?.evidence) ? [...run.evidence] : [];
+    const policyCitations = firstArray(run?.policies, ["citations", "items"]);
+    for (const citation of policyCitations) {
+      evidence.push({
+        kind: "policy_citation",
+        source: citation.source_reference || citation.source || "政策库",
+        title: citation.title || citation.filename || "政策引用",
+        citation,
+        data: citation,
+        created_at: citation.created_at,
+      });
+    }
+    setText("agentEvidenceCount", `${evidence.length} 条证据`);
+    if (!evidence.length) {
+      setHtml("agentEvidenceList", `<p class="agent-empty">${run ? "本次运行没有可展示的依据。" : "完成历史陪跑后，这里会列出数据、模型和政策依据。"}</p>`);
+      return;
+    }
+    setHtml("agentEvidenceList", evidence.map((item) => {
+      const citation = item.citation || {};
+      const location = typeof citation === "object"
+        ? [citation.document || citation.filename, citation.page_number ? `第 ${citation.page_number} 页` : "", citation.section].filter(Boolean).join(" · ")
+        : String(citation || "");
+      const excerpt = typeof citation === "object"
+        ? citation.snippet || citation.excerpt || item.data?.snippet || ""
+        : item.data?.snippet || "";
+      const payload = item.data && Object.keys(item.data).length ? compactJson(item.data) : "";
+      return `<details class="agent-evidence-item">
+        <summary>${escapeText(item.title || item.kind || "运行证据")}</summary>
+        <div class="agent-evidence-meta">${escapeText([item.source, item.kind, location, item.created_at].filter(Boolean).join(" · "))}</div>
+        ${excerpt ? `<div class="agent-evidence-excerpt">${escapeText(excerpt)}</div>` : ""}
+        ${payload ? `<pre class="agent-evidence-excerpt">${escapeText(payload)}</pre>` : ""}
+      </details>`;
+    }).join(""));
+  }
+
+  async function loadMessages() {
+    const runId = agentStore.currentRun?.run_id;
+    if (!runId) return;
+    try {
+      const payload = await apiRequest(`/agent-runs/${encodeURIComponent(runId)}/messages`);
+      agentStore.messages = unwrapList(payload, ["messages", "items"]);
+      renderMessages();
+    } catch (error) {
+      setHtml("agentMessageList", `<p class="agent-empty agent-error-text">${escapeText(error.message)}</p>`);
+    }
+  }
+
+  function renderMessages() {
+    const target = byId("agentMessageList");
+    if (!target) return;
+    if (!agentStore.currentRun) {
+      target.innerHTML = '<p class="agent-empty">完成历史陪跑后，可围绕风险、门禁或依据提问。</p>';
+      return;
+    }
+    if (!agentStore.messages.length) {
+      target.innerHTML = '<p class="agent-empty">暂无问答记录。</p>';
+      return;
+    }
+    target.innerHTML = agentStore.messages.map((message) => {
+      const role = String(message.role || message.message_type || message.type || "user").toLowerCase();
+      const assistant = ["assistant", "agent", "ai"].includes(role);
+      const author = message.created_by || message.author || (assistant ? "交易 Agent" : "用户");
+      const content = message.content || message.message || message.text || "";
+      return `<div class="agent-message ${assistant ? "agent-assistant" : ""}">
+        <span>${escapeText(author)}</span>${message.created_at ? ` · <time>${escapeText(message.created_at)}</time>` : ""}
+        <p>${escapeText(content)}</p>
+      </div>`;
+    }).join("");
+    target.scrollTop = target.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const runId = agentStore.currentRun?.run_id;
+    const content = byId("agentMessageInput")?.value.trim() || "";
+    const createdBy = byId("agentMessageAuthor")?.value.trim() || "";
+    if (!runId) return toast("请先完成一次历史陪跑。");
+    if (!createdBy) return toast("请输入提问人姓名。");
+    if (!content) return toast("请输入问题。");
+    const button = byId("agentSendMessageBtn");
+    if (button) button.disabled = true;
+    try {
+      const payload = await apiRequest(`/agent-runs/${encodeURIComponent(runId)}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ content, created_by: createdBy }),
+      });
+      const returned = [payload?.user_message, payload?.assistant_message].filter(Boolean);
+      if (returned.length) agentStore.messages.push(...returned);
+      else await loadMessages();
+      byId("agentMessageInput").value = "";
+      renderMessages();
+    } catch (error) {
+      toast(`问答失败：${error.message}`);
+    } finally {
+      renderRunControls();
+    }
+  }
+
+  async function submitReview() {
+    const run = agentStore.currentRun;
+    const submittedBy = byId("agentSubmitterInput")?.value.trim() || "";
+    if (!run?.run_id || run.status !== "READY_FOR_REVIEW") return;
+    if (!submittedBy) return toast("请输入提交人姓名。");
+    try {
+      agentStore.currentRun = unwrapRun(await apiRequest(`/agent-runs/${encodeURIComponent(run.run_id)}/submit-review`, {
+        method: "POST",
+        body: JSON.stringify({ submitted_by: submittedBy, reason: "提交人工复核" }),
+      }));
+      renderRun();
+      toast("运行结果已提交人工复核。");
+    } catch (error) {
+      toast(`送审失败：${error.message}`);
+    }
+  }
+
+  async function reviewRun() {
+    const run = agentStore.currentRun;
+    if (!run?.run_id || run.status !== "PENDING_REVIEW") return;
+    const decision = byId("agentReviewDecision")?.value || "APPROVED";
+    const reviewedBy = byId("agentReviewerInput")?.value.trim() || "";
+    const reason = byId("agentReviewReason")?.value.trim() || "";
+    const submittedBy = run.review?.submitted_by || byId("agentSubmitterInput")?.value.trim() || "";
+    if (!reviewedBy) return toast("请输入审批人姓名。");
+    if ([run.initiated_by, submittedBy].filter(Boolean).includes(reviewedBy)) {
+      return toast("审批人必须与发起人和提交人不同。");
+    }
+    if (["MODIFIED", "REJECTED"].includes(decision) && !reason) return toast("修改或拒绝时必须填写审核原因。");
+    const modifiedSuggestions = decision === "MODIFIED"
+      ? Array.from({ length: 24 }, (_, index) => ({ period: index + 1, action: "HOLD", reason }))
+      : undefined;
+    try {
+      agentStore.currentRun = unwrapRun(await apiRequest(`/agent-runs/${encodeURIComponent(run.run_id)}/review`, {
+        method: "POST",
+        body: JSON.stringify({ decision, reviewed_by: reviewedBy, reason, modified_suggestions: modifiedSuggestions }),
+      }));
+      renderRun();
+      toast(`审核状态已更新为 ${decision}。`);
+    } catch (error) {
+      toast(`审核失败：${error.message}`);
+    }
+  }
+
+  function renderReview(run) {
+    const review = run?.review_history?.length ? run.review_history : run?.review;
+    const target = byId("agentReviewHistory");
+    if (!target) return;
+    if (!review || (typeof review === "object" && !Object.keys(review).length)) {
+      target.innerHTML = '<p>暂无审核记录。</p>';
+      return;
+    }
+    const entries = Array.isArray(review) ? review : [review];
+    target.innerHTML = entries.map((entry) => {
+      const status = entry.status || entry.review_status || entry.to_status || run.review_status || "DRAFT";
+      const actor = entry.reviewed_by || entry.submitted_by || entry.reviewer || entry.actor || "--";
+      const reason = entry.reason || "未填写原因";
+      const time = entry.reviewed_at || entry.submitted_at || entry.updated_at || entry.created_at || "";
+      return `<div class="agent-review-entry">
+        <div><strong>${escapeText(status)}</strong><p>${escapeText(actor)} · ${escapeText(reason)}</p></div>
+        <span class="muted">${escapeText(time)}</span>
+      </div>`;
+    }).join("");
+  }
+
+  async function getReport(format) {
+    const runId = agentStore.currentRun?.run_id;
+    if (!runId) throw new Error("尚无可用运行报告");
+    const response = await fetch(`${API_BASE}/agent-runs/${encodeURIComponent(runId)}/report?format=${encodeURIComponent(format)}`, {
+      headers: { Accept: format === "json" ? "application/json" : format === "html" ? "text/html" : "text/markdown" },
+    }).catch(() => { throw new Error("Agent 服务不可达，请确认 8010 端口已启动"); });
+    const body = await response.text();
+    if (!response.ok) {
+      let payload = body;
+      try { payload = JSON.parse(body); } catch (error) { /* keep text */ }
+      throw new Error(errorMessage(payload, response.status));
+    }
+    return body;
+  }
+
+  async function viewHtmlReport() {
+    try {
+      const html = await getReport("html");
+      const frame = byId("agentReportFrame");
+      const preview = byId("agentReportPreview");
+      if (preview) preview.hidden = true;
+      if (frame) {
+        frame.srcdoc = html;
+        frame.hidden = false;
+      }
+    } catch (error) {
+      toast(`报告读取失败：${error.message}`);
+    }
+  }
+
+  async function downloadReport(format) {
+    try {
+      const body = await getReport(format);
+      const run = agentStore.currentRun;
+      const filename = `交易Agent_${run.market_code}_${run.business_date}_${run.run_id}.${format === "json" ? "json" : "md"}`;
+      let content = body;
+      if (format === "json") {
+        try { content = JSON.stringify(JSON.parse(body), null, 2); } catch (error) { /* retain raw body */ }
+      }
+      downloadContent(filename, content, format === "json" ? "application/json;charset=utf-8" : "text/markdown;charset=utf-8");
+    } catch (error) {
+      toast(`报告下载失败：${error.message}`);
+    }
+  }
+
+  function downloadContent(filename, content, type) {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function loadPolicies(force = false, query = "") {
+    const context = currentContext();
+    const policyContextKey = `${context.marketCode}|${context.businessDate}`;
+    if (agentStore.loadingPolicies) return;
+    if (!force && agentStore.policies.length && !query && agentStore.policyContextKey === policyContextKey) return;
+    agentStore.loadingPolicies = true;
+    try {
+      const params = new URLSearchParams();
+      if (context.marketCode !== "national") params.set("market_code", context.marketCode);
+      if (query) {
+        params.set("q", query);
+        params.set("business_date", context.businessDate);
+        params.set("limit", "50");
+      }
+      const payload = await apiRequest(`/policies${params.toString() ? `?${params}` : ""}`);
+      agentStore.policies = unwrapList(payload, ["policies", "documents"]);
+      agentStore.citations = Array.isArray(payload?.citations) ? payload.citations : [];
+      agentStore.policyContextKey = policyContextKey;
+      renderPolicies(payload);
+    } catch (error) {
+      setHtml("policySample", `<p class="agent-error-text">${escapeText(error.message)}</p>`);
+      toast(`政策读取失败：${error.message}`);
+    } finally {
+      agentStore.loadingPolicies = false;
+    }
+  }
+
+  function renderPolicies(payload = null) {
+    const target = byId("policySample");
+    if (!target) return;
+    const citations = Array.isArray(payload?.citations) ? payload.citations : agentStore.citations;
+    const docs = agentStore.policies;
+    const docsHtml = docs.length
+      ? docs.map((doc) => `<article class="policy-document-item">
+          <strong>${escapeText(doc.title || doc.filename || "未命名政策")}</strong>
+          <div class="policy-document-meta">${escapeText([doc.market_code, `版本 ${doc.version || "--"}`, doc.effective_date ? `生效 ${doc.effective_date}` : "", doc.status, doc.source_authorized ? "来源已授权" : "未授权"].filter(Boolean).join(" · "))}</div>
+          <div class="policy-document-meta">${escapeText([doc.filename, doc.sha256 ? `SHA-256 ${doc.sha256}` : "", doc.chunk_count !== undefined ? `${doc.chunk_count} 个引用片段` : ""].filter(Boolean).join(" · "))}</div>
+        </article>`).join("")
+      : '<p class="agent-empty">当前市场暂无有效政策文档；没有政策依据时，正式策略门禁不会通过。</p>';
+    const citationsHtml = citations.length
+      ? citations.map((item) => `<article class="policy-citation-item">
+          <strong>${escapeText(item.title || item.filename || "政策引用")}</strong>
+          <div class="policy-citation-meta">${escapeText([item.market_code, item.version ? `版本 ${item.version}` : "", item.page_number ? `第 ${item.page_number} 页` : "", item.section || "", item.source_reference].filter(Boolean).join(" · "))}</div>
+          <div class="policy-citation-excerpt">${escapeText(item.snippet || item.excerpt || "未返回原文片段")}</div>
+        </article>`).join("")
+      : '<p class="agent-empty">输入关键词后检索带页码或章节的原文引用。</p>';
+    target.innerHTML = `<div class="policy-results-layout">
+      <section><h4>已登记政策（${docs.length}）</h4><div class="policy-document-list">${docsHtml}</div></section>
+      <section><h4>引用结果（${citations.length}）</h4><div class="policy-citation-list">${citationsHtml}</div></section>
+    </div>`;
+  }
+
+  async function uploadPolicy() {
+    const context = currentContext();
+    const file = byId("policyUpload")?.files?.[0];
+    const title = byId("policyTitleInput")?.value.trim() || file?.name?.replace(/\.[^.]+$/, "") || "";
+    const version = byId("policyVersionInput")?.value.trim() || "";
+    const effectiveDate = byId("policyEffectiveDateInput")?.value || context.businessDate;
+    const sourceReference = byId("policySourceInput")?.value.trim() || "";
+    const authorized = Boolean(byId("policyAuthorizedCheck")?.checked);
+    if (context.marketCode === "national") return toast("请先选择具体省份，再登记该省政策。");
+    if (!file) return toast("请选择政策文件。");
+    if (file.size > 20 * 1024 * 1024) return toast("政策文件不得超过 20 MiB。");
+    if (!title || !version || !effectiveDate || !sourceReference) return toast("请完整填写标题、版本、生效日期和授权来源说明。");
+    if (!authorized) return toast("请确认已获得政策文件处理与存储授权。");
+    const form = new FormData();
+    form.append("file", file);
+    form.append("market_code", context.marketCode);
+    form.append("title", title);
+    form.append("version", version);
+    form.append("effective_date", effectiveDate);
+    form.append("source_reference", sourceReference);
+    form.append("source_authorized", "true");
+    const button = byId("runPolicyBtn");
+    if (button) button.disabled = true;
+    try {
+      const payload = await apiRequest("/policies", { method: "POST", body: form });
+      const policy = payload?.policy || payload;
+      toast(policy?.status === "NEEDS_OCR" ? "政策已登记，但该 PDF 需要 OCR，暂不能通过门禁。" : "政策文件已上传并解析。");
+      byId("policyUpload").value = "";
+      await loadPolicies(true);
+    } catch (error) {
+      toast(`政策上传失败：${error.message}`);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function searchPolicies() {
+    const query = byId("policySearchInput")?.value.trim() || "";
+    if (!query) return toast("请输入检索关键词。");
+    await loadPolicies(true, query);
+  }
+
+  async function loadPolicyAgentStatus() {
+    const status = byId("policyAgentStatus");
+    if (status) {
+      status.className = "pill wait";
+      status.textContent = "问答服务检查中";
+    }
+    try {
+      const [health, scope, release] = await Promise.all([
+        platformRequest("/policy-agent/health"),
+        platformRequest("/policy-agent/supported-scope"),
+        platformRequest("/policy-agent/active-release"),
+      ]);
+      agentStore.policyAgentScope = scope;
+      agentStore.policyAgentRelease = release;
+      if (status) {
+        status.className = "pill ok";
+        status.textContent = health?.status === "ok" || health?.status === "healthy" ? "正式问答可用" : "问答服务已连接";
+      }
+      renderPolicyAgentScope();
+    } catch (error) {
+      if (status) {
+        status.className = "pill missing";
+        status.textContent = "问答服务未启动";
+      }
+      setText("policyAgentScope", error.message);
+    }
+  }
+
+  function renderPolicyAgentScope() {
+    const scope = agentStore.policyAgentScope || {};
+    const release = agentStore.policyAgentRelease || {};
+    const releaseId = release.release_id || release.active_release_id || scope.release_id || "未返回";
+    const answerable = scope.answerable_scope_count ?? scope.answerable_count ?? scope.answerable_scopes?.length;
+    const refused = scope.must_refuse_scope_count ?? scope.must_refuse_count ?? scope.must_refuse_scopes?.length;
+    const parts = [`正式版本 ${releaseId}`];
+    if (Number.isFinite(Number(answerable))) parts.push(`${Number(answerable)} 个可回答范围`);
+    if (Number.isFinite(Number(refused))) parts.push(`${Number(refused)} 个必须拒答范围`);
+    parts.push("严格引用 · 只读接入");
+    setText("policyAgentScope", parts.join(" · "));
+  }
+
+  async function askPolicyAgent() {
+    if (agentStore.loadingPolicyAnswer) return;
+    const question = byId("policyQuestionInput")?.value.trim() || "";
+    const context = currentContext();
+    if (!question) return toast("请输入政策问题。");
+    if (context.marketCode === "national") return toast("请先选择具体省份，避免跨省套用规则。");
+    const button = byId("policyAskBtn");
+    agentStore.loadingPolicyAnswer = true;
+    if (button) {
+      button.disabled = true;
+      button.textContent = "正在核对证据";
+    }
+    setHtml("policyAnswerResult", '<p class="agent-empty">正在核对正式发布范围、证据引用和质量门禁。</p>');
+    try {
+      const payload = await platformRequest("/policy-agent/query", {
+        method: "POST",
+        body: JSON.stringify({
+          question,
+          marketCode: context.marketCode,
+          marketHint: `${context.subjectName}市场`,
+          conversationHistory: agentStore.policyConversation.slice(-8),
+        }),
+      });
+      agentStore.policyAnswer = payload;
+      agentStore.policyConversation.push({ role: "user", content: question });
+      agentStore.policyConversation.push({ role: "assistant", content: payload.answer || "未形成正式回答" });
+      agentStore.policyConversation = agentStore.policyConversation.slice(-8);
+      renderPolicyAnswer();
+    } catch (error) {
+      setHtml("policyAnswerResult", `<p class="agent-error-text">${escapeText(error.message)}</p>`);
+      toast(`政策问答失败：${error.message}`);
+    } finally {
+      agentStore.loadingPolicyAnswer = false;
+      if (button) {
+        button.disabled = false;
+        button.textContent = "查询正式规则";
+      }
+    }
+  }
+
+  function renderPolicyAnswer() {
+    const target = byId("policyAnswerResult");
+    const answer = agentStore.policyAnswer;
+    if (!target || !answer) return;
+    const citations = Array.isArray(answer.citations) ? answer.citations : [];
+    const gate = answer.quality_gate || {};
+    const coverage = answer.coverage || {};
+    const refusal = answer.refusal || {};
+    const warnings = Array.isArray(answer.warnings) ? answer.warnings : [];
+    const followUps = Array.isArray(answer.follow_up_questions) ? answer.follow_up_questions : [];
+    const refused = Boolean(refusal.refused) || ["refused", "blocked"].includes(String(answer.answer_status || "").toLowerCase());
+    const gateTone = refused || !answer.grounded ? "missing" : "ok";
+    const citationsHtml = citations.length ? citations.map((item, index) => `<article class="policy-citation-item">
+      <strong>[${index + 1}] ${escapeText(item.policy_title || item.title || "政策证据")}</strong>
+      <div class="policy-citation-meta">${escapeText([item.region, item.market_type, item.article_id, item.effective_date, item.source_label, item.citation_confidence].filter(Boolean).join(" · "))}</div>
+      ${item.excerpt ? `<div class="policy-citation-excerpt">${escapeText(item.excerpt)}</div>` : ""}
+    </article>`).join("") : '<p class="agent-empty">本次未返回可用于正式回答的引用。</p>';
+    const boundary = [
+      ...(coverage.missing_parts || []),
+      ...(coverage.boundary_notes || []),
+      ...warnings,
+    ];
+    target.innerHTML = `<div class="policy-answer-head">
+        <div>${statusTag(answer.answer_status || (refused ? "REJECTED" : "COMPLETED"))} <span class="tag ${gateTone}">${escapeText(answer.grounded ? "证据已落地" : "证据不足")}</span></div>
+        <span class="policy-document-meta">${escapeText([answer.region, answer.market_type, answer.release_id ? `版本 ${answer.release_id}` : "", gate.status ? `门禁 ${gate.status}` : ""].filter(Boolean).join(" · "))}</span>
+      </div>
+      ${refused && refusal.reason ? `<div class="policy-refusal"><strong>拒答边界</strong><p>${escapeText(refusal.reason)}</p></div>` : ""}
+      <div class="agent-message agent-assistant"><strong>${refused ? "规则覆盖结果" : "政策回答"}</strong><p>${escapeText(answer.answer || "当前证据不足，未形成回答。")}</p></div>
+      ${answer.public_audit_summary ? `<div class="policy-audit-summary"><strong>公开审计摘要</strong><p>${escapeText(answer.public_audit_summary)}</p></div>` : ""}
+      ${boundary.length ? `<div class="policy-boundary"><strong>覆盖边界</strong><p>${escapeText(boundary.join("；"))}</p></div>` : ""}
+      <div class="policy-answer-citations"><h4>正式引用（${citations.length}）</h4>${citationsHtml}</div>
+      ${followUps.length ? `<div class="policy-follow-ups"><strong>可继续核对</strong><p>${escapeText(followUps.join("；"))}</p></div>` : ""}`;
+  }
+
+  function exportPolicyList() {
+    const context = currentContext();
+    downloadContent(`政策文档清单_${context.marketCode}.json`, JSON.stringify({
+      market_code: context.marketCode,
+      business_date: context.businessDate,
+      policies: agentStore.policies,
+      citations: agentStore.citations,
+    }, null, 2), "application/json;charset=utf-8");
+  }
+
+  function activate(view) {
+    document.body.classList.toggle("agent-view-active", view === "agent");
+    if (view === "agent") {
+      syncContext();
+      loadHealth();
+      loadReadiness();
+    }
+    if (view === "policy") {
+      loadPolicyAgentStatus();
+    }
+  }
+
+  window.TradingAgent = {
+    activate,
+    syncContext,
+    renderPolicies,
+  };
+
+  function boot() {
+    bindEvents();
+    syncContext();
+    loadPolicyAgentStatus();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
+  else boot();
+})();
+
     </script>
   </body>
 </html>
