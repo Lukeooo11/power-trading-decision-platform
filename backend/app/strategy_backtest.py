@@ -5,6 +5,7 @@ from collections import defaultdict
 from typing import Any, Callable
 
 from .bidding_strategy import build_historical_price_scenarios, generate_strategy
+from .advanced_strategies import ADVANCED_KEY, ADVANCED_VERSION, generate_advanced_strategy
 
 
 def _number(value: Any) -> float | None:
@@ -41,6 +42,8 @@ def run_strategy_backtest(*, forecast_doc: dict[str, Any], load_rows: list[dict[
     dates = sorted(set(forecasts) & set(loads) & set(prices))
     dates = [d for d in dates if (not start or d >= start) and (not end or d <= end)]
     policy_names = ("full_day_ahead", "full_realtime", "fixed_half", "spread_strategy")
+    if strategy_version == ADVANCED_KEY:
+        policy_names = (*policy_names, ADVANCED_KEY)
     totals = {name: 0.0 for name in policy_names}
     daily: list[dict[str, Any]] = []
     for date in dates:
@@ -57,18 +60,25 @@ def run_strategy_backtest(*, forecast_doc: dict[str, Any], load_rows: list[dict[
                 continue
             allocated = position * load / total_load if position is not None else None
             forecast = forecast_by.get(period, {})
-            strategy = generate_strategy(load_mwh=load, medium_position_mwh=allocated,
-                                         cleared_energy_mwh=0.0, forecast=forecast, actual=actual,
-                                         risk_aversion=risk_aversion,
-                                         period=period if strategy_version == "regime_cvar_v03" else None,
-                                         supply_context=(supply[date].get(period)
-                                                         if strategy_version == "regime_cvar_v03" else None),
-                                         historical_scenarios=build_historical_price_scenarios(
-                                             forecast_doc=forecast_doc, target_date=date,
-                                             period=period,
-                                             target_da=(forecast.get("day_ahead_price_yuan_per_mwh") or {}),
-                                             target_rt=(forecast.get("real_time_price_yuan_per_mwh") or {}),
-                                         ))
+            strategy_kwargs = dict(load_mwh=load, medium_position_mwh=allocated,
+                                   cleared_energy_mwh=0.0, forecast=forecast, actual=actual,
+                                   risk_aversion=risk_aversion,
+                                   period=period if strategy_version == "regime_cvar_v03" else None,
+                                   supply_context=(supply[date].get(period)
+                                                   if strategy_version == "regime_cvar_v03" else None))
+            if strategy_version == ADVANCED_KEY:
+                strategy = generate_advanced_strategy(
+                    forecast_doc=forecast_doc, target_date=date, period=period,
+                    weather_doc=None, target_model_version=(day_forecast.get("model") or forecast_doc.get("model") or {}).get("version"),
+                    **strategy_kwargs)
+            else:
+                strategy = generate_strategy(**strategy_kwargs,
+                                             historical_scenarios=build_historical_price_scenarios(
+                                                 forecast_doc=forecast_doc, target_date=date,
+                                                 period=period,
+                                                 target_da=(forecast.get("day_ahead_price_yuan_per_mwh") or {}),
+                                                 target_rt=(forecast.get("real_time_price_yuan_per_mwh") or {}),
+                                             ))
             remaining = _number(strategy.get("remaining_exposure_mwh")) or 0.0
             da_actual = _number(actual.get("actual_day_ahead_price_yuan_per_mwh", actual.get("dayAheadPriceYuanMwh")))
             rt_actual = _number(actual.get("actual_real_time_price_yuan_per_mwh", actual.get("realtimePriceYuanMwh")))
@@ -81,14 +91,19 @@ def run_strategy_backtest(*, forecast_doc: dict[str, Any], load_rows: list[dict[
                 "spread_strategy": (_number(strategy.get("day_ahead_quantity_mwh")) or 0.0,
                                     _number(strategy.get("real_time_reserved_mwh")) or 0.0),
             }
+            if strategy_version == ADVANCED_KEY:
+                quantities[ADVANCED_KEY] = quantities["spread_strategy"]
             costs = {name: round(_cost(*qty, actual) or 0.0, 4) for name, qty in quantities.items()}
-            for name, value in costs.items():
-                totals[name] += value
             rows.append({"period": period, "remaining_exposure_mwh": round(remaining, 6),
                          "actual_day_ahead_price": da_actual, "actual_real_time_price": rt_actual,
-                         "strategy_lock_ratio": strategy.get("lock_ratio"), "costs": costs})
+                         "strategy_lock_ratio": strategy.get("lock_ratio"), "strategy_action": strategy.get("action"),
+                         "costs": costs})
         if rows:
+            if strategy_version == ADVANCED_KEY and (len(rows) != 24 or any(row["strategy_action"] != "BUY_SPLIT" for row in rows)):
+                continue
             daily_costs = {name: round(sum(x["costs"][name] for x in rows), 4) for name in policy_names}
+            for name, value in daily_costs.items():
+                totals[name] += value
             daily.append({"date": date, "costs": daily_costs,
                           "strategy_vs_full_da_yuan": round(daily_costs["full_day_ahead"] - daily_costs["spread_strategy"], 4),
                           "periods": rows})
@@ -96,7 +111,8 @@ def run_strategy_backtest(*, forecast_doc: dict[str, Any], load_rows: list[dict[
     savings = {name: round(baseline - value, 4) for name, value in totals.items()}
     losses = [x["strategy_vs_full_da_yuan"] for x in daily]
     negative = sorted((x for x in losses if x < 0), key=lambda x: x)
-    version_label = ("da-rt-split-regime-cvar-v0.3" if strategy_version == "regime_cvar_v03"
+    version_label = (ADVANCED_VERSION if strategy_version == ADVANCED_KEY else
+                     "da-rt-split-regime-cvar-v0.3" if strategy_version == "regime_cvar_v03"
                      else "da-rt-split-historical-cvar-v0.2")
     return {"mode": "historical_strategy_backtest", "strategy_version": version_label,
             "risk_aversion": risk_aversion,

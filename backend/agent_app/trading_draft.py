@@ -4,7 +4,8 @@ import csv
 import io
 import json
 import math
-from datetime import datetime, timezone
+from copy import deepcopy
+from datetime import date, datetime, timezone
 from typing import Any
 
 
@@ -15,6 +16,32 @@ SUPPORTED_STRATEGY_VERSIONS = {
     "regime_cvar_v03",
     "legacy_spread_v01",
 }
+
+
+class InputValidationError(ValueError):
+    def __init__(self, errors: list[str]) -> None:
+        self.errors = errors
+        super().__init__("; ".join(errors))
+
+
+def strict_period(value: Any) -> int | None:
+    if type(value) is int:
+        return value if 1 <= value <= 24 else None
+    if isinstance(value, str) and value.strip().isascii() and value.strip().isdigit():
+        number = int(value.strip())
+        return number if 1 <= number <= 24 else None
+    return None
+
+
+def ensure_finite_output(value: Any) -> None:
+    if isinstance(value, float) and not math.isfinite(value):
+        raise InputValidationError(["计算结果超出有限数值范围，未生成可审核草稿"])
+    if isinstance(value, dict):
+        for item in value.values():
+            ensure_finite_output(item)
+    elif isinstance(value, list):
+        for item in value:
+            ensure_finite_output(item)
 
 
 def parse_input(payload: bytes, content_type: str = "") -> list[dict[str, Any]]:
@@ -40,20 +67,39 @@ def _num(value: Any) -> float | None:
 
 def validate_rows(rows: list[dict[str, Any]], business_date: str, market_code: str) -> list[str]:
     errors: list[str] = []
+    if not isinstance(rows, list):
+        return ["records 必须是记录数组"]
+    try:
+        if date.fromisoformat(business_date).isoformat() != business_date:
+            raise ValueError
+    except (TypeError, ValueError):
+        errors.append("business_date 必须为 YYYY-MM-DD 日期")
+    if market_code != "SD":
+        errors.append("首版仅支持 SD 市场")
     periods = []
-    for row in rows:
-        try:
-            period = int(row.get("period"))
-            periods.append(period)
-        except (TypeError, ValueError):
-            errors.append("period 必须为整数")
+    versions: set[str] = set()
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            errors.append(f"第 {index + 1} 行必须是对象")
             continue
-        if period not in range(1, 25):
-            errors.append(f"period {period} 超出 1-24")
-        if row.get("business_date") and str(row["business_date"]) != business_date:
-            errors.append(f"period {period} 日期不一致")
-        if row.get("market_code") and str(row["market_code"]).upper() != market_code:
-            errors.append(f"period {period} 市场不一致")
+        period = strict_period(row.get("period"))
+        if period is None:
+            errors.append(f"第 {index + 1} 行 period 必须为 1-24 整数")
+        else:
+            periods.append(period)
+        if row.get("business_date") != business_date:
+            errors.append(f"period {period} 日期缺失或不一致")
+        if row.get("market_code") != market_code:
+            errors.append(f"period {period} 市场缺失或不一致")
+        version = row.get("data_version")
+        if not isinstance(version, str) or not version.strip():
+            errors.append(f"period {period} data_version 必填")
+        else:
+            versions.add(version.strip())
+        # The existing *_mwh columns declare MWh; an explicit unit cannot override it.
+        for unit_field in ("unit", "energy_unit"):
+            if unit_field in row and row[unit_field] != "MWh":
+                errors.append(f"period {period} {unit_field} 必须为 MWh")
         for field in (
             "load_forecast_mwh",
             "medium_position_mwh",
@@ -77,12 +123,43 @@ def validate_rows(rows: list[dict[str, Any]], business_date: str, market_code: s
                 errors.append(f"period {period} 调整下限不能大于上限")
         except (TypeError, ValueError):
             pass
+    if len(versions) > 1:
+        errors.append("同一批 records 的 data_version 必须一致")
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        values = [_num(row.get(key)) for key in ("load_forecast_mwh", "medium_position_mwh", "cleared_energy_mwh")]
+        if all(value is not None for value in values) and not math.isfinite(values[0] - values[1] - values[2]):
+            errors.append(f"period {row.get('period')} 敞口计算超出有限数值范围")
     if len(rows) != 24:
         errors.append(f"必须提供24条记录，当前 {len(rows)} 条")
     if len(set(periods)) != len(periods):
         errors.append("period 不得重复")
     if set(periods) != set(range(1, 25)):
         errors.append("period 必须覆盖1-24")
+    return errors
+
+
+def validate_forecasts(forecasts: Any, business_date: str) -> list[str]:
+    if forecasts is None:
+        return []
+    if not isinstance(forecasts, list):
+        return ["forecasts 必须是记录数组"]
+    errors: list[str] = []
+    periods: set[int] = set()
+    for item in forecasts:
+        if not isinstance(item, dict):
+            errors.append("forecasts 每条记录必须是对象")
+            continue
+        period = strict_period(item.get("period"))
+        if period is None or period in periods:
+            errors.append("forecasts period 必须为 1-24 且不可重复")
+        else:
+            periods.add(period)
+        if "business_date" in item and item["business_date"] != business_date:
+            errors.append(f"forecast period {period} 日期不一致")
+        if "market_code" in item and item["market_code"] != "SD":
+            errors.append(f"forecast period {period} 市场不一致")
     return errors
 
 
@@ -211,7 +288,11 @@ def _supplied_scenarios(
             or scenario.get("market_date")
             or ""
         )
-        if source_date and source_date >= business_date:
+        try:
+            valid_date = date.fromisoformat(source_date).isoformat() == source_date
+        except (TypeError, ValueError):
+            valid_date = False
+        if not valid_date or source_date >= business_date:
             rejected += 1
             continue
         day_ahead_price = _num(
@@ -249,6 +330,27 @@ def _weighted_cvar(losses: list[tuple[float, float]], confidence: float = 0.95) 
     return weighted_loss / tail_mass
 
 
+def evaluate_allocation(
+    scenarios: list[dict[str, Any]], ratio: float, risk_aversion: float,
+    confidence: float = 0.95,
+) -> dict[str, float]:
+    # Scale first to avoid overflow when individually finite weights are very large.
+    scale = max(float(item["weight"]) for item in scenarios)
+    total = sum(float(item["weight"]) / scale for item in scenarios)
+    losses = [
+        (ratio * float(item["day_ahead_price"]) + (1 - ratio) * float(item["real_time_price"]),
+         (float(item["weight"]) / scale) / total)
+        for item in scenarios
+    ]
+    expected = sum(loss * weight for loss, weight in losses)
+    cvar = _weighted_cvar(losses, confidence)
+    return {
+        "expected_cost_yuan_per_mwh": round(expected, 6),
+        "cvar_cost_yuan_per_mwh": round(cvar, 6),
+        "objective_yuan_per_mwh": round((1 - risk_aversion) * expected + risk_aversion * cvar, 6),
+    }
+
+
 def _optimize_lock_ratio(
     scenarios: list[dict[str, Any]],
     risk_aversion: float,
@@ -256,33 +358,16 @@ def _optimize_lock_ratio(
     minimum_ratio: float = 0.05,
     maximum_ratio: float = 0.95,
 ) -> dict[str, Any]:
-    total_weight = sum(float(item["weight"]) for item in scenarios)
-    normalized = [
-        {**item, "weight": float(item["weight"]) / total_weight} for item in scenarios
-    ]
     candidates: list[dict[str, float]] = []
     # The bounded grid matches the platform research backtest and prevents an
     # unaudited all-in recommendation.
     candidate_count = int(round((maximum_ratio - minimum_ratio) / 0.05)) + 1
     for index in range(candidate_count):
         ratio = round(minimum_ratio + index * 0.05, 6)
-        losses = [
-            (
-                ratio * float(item["day_ahead_price"])
-                + (1.0 - ratio) * float(item["real_time_price"]),
-                float(item["weight"]),
-            )
-            for item in normalized
-        ]
-        expected = sum(loss * weight for loss, weight in losses)
-        cvar = _weighted_cvar(losses, confidence)
-        objective = (1.0 - risk_aversion) * expected + risk_aversion * cvar
         candidates.append(
             {
                 "ratio": ratio,
-                "expected_cost_yuan_per_mwh": round(expected, 6),
-                "cvar_cost_yuan_per_mwh": round(cvar, 6),
-                "objective_yuan_per_mwh": round(objective, 6),
+                **evaluate_allocation(scenarios, ratio, risk_aversion, confidence),
             }
         )
     selected = min(
@@ -340,22 +425,26 @@ def build_draft(
     scenario_source: str | None = None,
     scenario_version: str | None = None,
 ) -> dict[str, Any]:
+    errors = validate_rows(rows, business_date, market_code)
+    errors.extend(validate_forecasts(forecasts, business_date))
+    if rules is not None and not isinstance(rules, dict):
+        errors.append("rules 必须是对象")
+    if errors:
+        raise InputValidationError(errors)
     if strategy_version not in SUPPORTED_STRATEGY_VERSIONS:
         raise ValueError(f"不支持的策略版本：{strategy_version}")
     if isinstance(risk_aversion, bool) or not 0 <= float(risk_aversion) <= 1:
         raise ValueError("risk_aversion 必须在 0 到 1 之间")
     risk_aversion = float(risk_aversion)
     forecast_by = {
-        int(item["period"]): item
+        strict_period(item["period"]): item
         for item in (forecasts or [])
-        if isinstance(item, dict) and str(item.get("period", "")).isdigit()
     }
     rules = rules or {}
     formal_rules, price_floor, price_ceiling = _rules_status(rules)
     rows_by = {
-        int(item["period"]): item
+        strict_period(item["period"]): item
         for item in rows
-        if isinstance(item, dict) and str(item.get("period", "")).isdigit()
     }
     result: list[dict[str, Any]] = []
     for period in range(1, 25):
@@ -378,6 +467,8 @@ def build_draft(
             missing.append("day_ahead_price_quantiles")
         if not _valid_quantiles(real_time):
             missing.append("real_time_price_quantiles")
+        if not isinstance(forecast.get("forecast_version"), str) or not forecast["forecast_version"].strip():
+            missing.append("forecast_version")
         if not formal_rules:
             missing.append("confirmed_rules")
 
@@ -388,6 +479,8 @@ def build_draft(
         )
         remaining = max(0.0, gross) if gross is not None else None
         risk_flags: list[str] = []
+        if medium is not None and medium < 0:
+            risk_flags.append("NEGATIVE_POSITION_REVIEW")
         if gross is not None and gross < 0:
             risk_flags.append("OVER_COVERED_REVIEW")
 
@@ -395,7 +488,7 @@ def build_draft(
         suggested_price_lower = None
         suggested_price_upper = None
         action = "HOLD"
-        gate_status = "BLOCKED" if missing or risk_flags else "PASSED"
+        gate_status = "BLOCKED" if missing or "OVER_COVERED_REVIEW" in risk_flags else "PASSED"
         optimization: dict[str, Any] | None = None
         scenario_method = None
         record_scenario_source = forecast.get("scenario_source") or scenario_source
@@ -506,9 +599,7 @@ def build_draft(
                 gate_status = "PASSED"
             else:
                 target_quantity = remaining * float(optimization["lock_ratio"])
-                suggested_quantity = round(
-                    min(maximum, max(minimum, target_quantity)), 6
-                )
+                suggested_quantity = min(maximum, max(minimum, round(target_quantity, 6)))
                 suggested_price_lower = max(float(day_ahead["p10"]), price_floor)
                 suggested_price_upper = min(float(day_ahead["p90"]), price_ceiling)
                 if suggested_price_lower > suggested_price_upper:
@@ -518,7 +609,15 @@ def build_draft(
                     suggested_price_lower = suggested_price_upper = None
                     risk_flags.append("PRICE_RANGE_INVALID")
                 else:
-                    action = "BUY_DRAFT"
+                    action = "BUY_DRAFT" if suggested_quantity > 0 else "HOLD"
+
+        if optimization and gate_status == "PASSED" and remaining:
+            applied_ratio = suggested_quantity / remaining
+            optimization = {
+                **optimization,
+                "applied_lock_ratio": applied_ratio,
+                **evaluate_allocation(scenarios, applied_ratio, effective_risk_aversion),
+            }
 
         reason = "; ".join(missing)
         if not reason:
@@ -619,8 +718,28 @@ def build_draft(
             for blocker in item["formal_strategy_blockers"]
         }
     )
+    # Keep research allocations separate from gated, reviewable draft quantities.
+    for item in result:
+        item["research_quantity_mwh"] = item["suggested_quantity_mwh"]
+        item["research_real_time_reserved_mwh"] = item["real_time_reserved_mwh"]
+        item["research_lock_ratio"] = item["lock_ratio"]
+        item["research_price_lower"] = item["suggested_price_lower"]
+        item["research_price_upper"] = item["suggested_price_upper"]
+        item["research_optimization"] = deepcopy(item["optimization"])
+        if formal_gate == "BLOCKED":
+            item["gate_status"] = "BLOCKED"
+            item["action"] = "HOLD"
+            item["suggested_quantity_mwh"] = 0.0
+            item["suggested_price_lower"] = item["suggested_price_upper"] = None
+            item["real_time_reserved_mwh"] = item["remaining_exposure_mwh"]
+            item["lock_ratio"] = 0.0 if item["remaining_exposure_mwh"] is not None else None
+            for key in ("expected_cost_yuan_per_mwh", "cvar_cost_yuan_per_mwh", "objective_yuan_per_mwh"):
+                item[key] = None
+            item["optimization"] = None
+            item["risk_flags"].append("BATCH_GATE_BLOCKED")
+            item["reason"] = "; ".join(["整批草稿门禁阻断", *item["formal_strategy_blockers"], item["reason"]])
     actionable = [item for item in result if item["action"] == "BUY_DRAFT"]
-    return {
+    draft = {
         "business_date": business_date,
         "market_code": market_code,
         "strategy_version": strategy_version,
@@ -636,6 +755,7 @@ def build_draft(
         "formal_strategy_blockers": formal_strategy_blockers,
         "records": result,
         "summary": {
+            "research_day_ahead_quantity_mwh": round(sum(item["research_quantity_mwh"] for item in result), 6),
             "suggested_day_ahead_quantity_mwh": round(
                 sum(float(item["suggested_quantity_mwh"]) for item in actionable), 6
             ),
@@ -651,3 +771,70 @@ def build_draft(
         "formal_gate": formal_gate,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
+    ensure_finite_output(draft)
+    return draft
+
+
+def apply_draft_modifications(
+    draft: dict[str, Any], snapshot: dict[str, Any], changes: list[dict[str, Any]],
+    *, reason: str,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    modified = deepcopy(draft)
+    records = {row["period"]: row for row in modified["records"]}
+    inputs = {strict_period(row["period"]): row for row in snapshot["records"]}
+    forecasts = {strict_period(row["period"]): row for row in snapshot["forecasts"]}
+    rules = snapshot["rules"]
+    audit: list[dict[str, Any]] = []
+    seen: set[tuple[int, str]] = set()
+    for change in changes:
+        period = strict_period(change.get("period"))
+        field = change.get("field")
+        value = _num(change.get("value"))
+        if period not in records or field not in {"suggested_quantity_mwh", "suggested_price_lower", "suggested_price_upper"} or value is None:
+            raise ValueError("修改必须指定有效时段、量价字段和有限数值")
+        if (period, field) in seen:
+            raise ValueError("同一次修改不能重复指定同一时段和字段")
+        seen.add((period, field))
+        record = records[period]
+        if modified.get("formal_gate") != "PASSED" or record["gate_status"] != "PASSED":
+            raise ValueError("门禁阻断的草稿不得通过人工修改绕过校验")
+        if field == "suggested_quantity_mwh":
+            lower = _num(inputs[period].get("adjustable_min_mwh"))
+            upper = _num(inputs[period].get("adjustable_max_mwh"))
+            lower = 0.0 if lower is None else lower
+            remaining = record["remaining_exposure_mwh"]
+            upper = remaining if upper is None else min(upper, remaining)
+            if not lower <= value <= upper:
+                raise ValueError(f"period {period} 申报量超出原始调整上下限或剩余敞口")
+        elif not float(rules["price_floor"]) <= value <= float(rules["price_ceiling"]):
+            raise ValueError(f"period {period} 报价超出任务锁定的规则限价")
+        audit.append({"period": period, "field": field, "old_value": record.get(field), "new_value": value})
+        record[field] = value
+
+    for period in {period for period, _ in seen}:
+        record = records[period]
+        if record["suggested_price_lower"] > record["suggested_price_upper"]:
+            raise ValueError(f"period {period} 修改后报价下限不得高于上限")
+        remaining, quantity = record["remaining_exposure_mwh"], record["suggested_quantity_mwh"]
+        ratio = quantity / remaining if remaining else 0.0
+        record["real_time_reserved_mwh"] = round(remaining - quantity, 6)
+        record["lock_ratio"] = round(ratio, 6)
+        record["action"] = "BUY_DRAFT" if quantity > 0 else "HOLD"
+        scenarios, _ = _supplied_scenarios(forecasts[period], draft["business_date"])
+        if not scenarios:
+            raise ValueError("原始历史场景不可用，不能修改为可审核草稿")
+        metrics = evaluate_allocation(scenarios, ratio, record["effective_risk_aversion"])
+        record.update(metrics)
+        record["optimization"] = {
+            **(record["optimization"] or {}), **metrics,
+            "applied_lock_ratio": ratio, "selection_method": "manual_review_adjustment",
+        }
+        record["reason"] = f"人工调整后重新计算分配及场景成本；原因：{reason}"
+        record["strategy_reasons"] = ["MANUAL_REVIEW_ADJUSTMENT"]
+    modified["summary"].update({
+        "suggested_day_ahead_quantity_mwh": round(sum(row["suggested_quantity_mwh"] for row in records.values()), 6),
+        "reserved_real_time_quantity_mwh": round(sum(row["real_time_reserved_mwh"] or 0 for row in records.values()), 6),
+        "actionable_period_count": sum(row["action"] == "BUY_DRAFT" for row in records.values()),
+    })
+    ensure_finite_output(modified)
+    return modified, audit

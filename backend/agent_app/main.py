@@ -7,17 +7,19 @@ import json
 import csv
 import io
 import math
+import hashlib
 from contextlib import asynccontextmanager, closing
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 
 from .config import Settings, get_settings
-from .db import Database, utc_now
+from .db import Database, DraftConflict, content_sha256, utc_now
 from .platform_client import PlatformClient, PlatformError
 from .schemas import (
     AgentRunCreate,
@@ -30,9 +32,11 @@ from .schemas import (
     SubmitReviewRequest,
     TradingDraftRunCreate,
     TradingDraftReview,
+    TradingResearchRunCreate,
     model_to_dict,
 )
 from .workflow import AgentWorkflow
+from .research_workflow import ResearchWorkflow
 
 
 MARKETS: tuple[tuple[str, str], ...] = (
@@ -157,6 +161,16 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
     database = Database(settings.database_path, settings.retention_days)
     platform = PlatformClient(settings)
     workflow = AgentWorkflow(database, platform, settings)
+    research_workflow = ResearchWorkflow(database, platform, workflow._policy_bundle)
+
+    def schedule_research(run_id: str) -> None:
+        tasks = application.state.workflow_tasks
+        key = f"research:{run_id}"
+        if key in tasks and not tasks[key].done():
+            return
+        task = asyncio.create_task(research_workflow.run(run_id))
+        tasks[key] = task
+        task.add_done_callback(lambda completed: tasks.pop(key, None) if tasks.get(key) is completed else None)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
@@ -169,6 +183,8 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
                 init_policy_store(connection)
         except Exception:
             pass
+        for pending_id in database.pending_research_runs():
+            schedule_research(pending_id)
         yield
         tasks = list(application.state.workflow_tasks.values())
         for task in tasks:
@@ -185,8 +201,8 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
     application.state.db = database
     application.state.platform = platform
     application.state.workflow = workflow
+    application.state.research_workflow = research_workflow
     application.state.workflow_tasks = {}
-    application.state.trading_drafts = {}
     application.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.cors_origins),
@@ -203,10 +219,14 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
                 "detail": {
                     "code": "VALIDATION_ERROR",
                     "message": "请求参数校验失败",
-                    "errors": exc.errors(),
+                    "errors": jsonable_encoder(exc.errors(), custom_encoder={ValueError: str}),
                 }
             },
         )
+
+    @application.exception_handler(DraftConflict)
+    async def draft_conflict_handler(_: Request, exc: DraftConflict) -> JSONResponse:
+        return JSONResponse(status_code=409, content={"detail": {"code": "DRAFT_CONFLICT", "message": str(exc)}})
 
     @application.get("/api/v1/health")
     async def health() -> dict[str, Any]:
@@ -864,13 +884,35 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
         run["idempotent_replay"] = replay
         return run
 
+    @application.post("/api/v1/trading-research-runs", status_code=202)
+    async def create_research_run(request: TradingResearchRunCreate) -> dict[str, Any]:
+        run, replay = database.create_trading_draft(
+            request_id=request.request_id, business_date=str(request.business_date),
+            initiated_by=request.initiated_by, strategy_version=request.strategy_version,
+            risk_aversion=request.risk_aversion, input_source="PLATFORM",
+        )
+        if run["status"] in {"DRAFT", "RUNNING"}:
+            schedule_research(run["run_id"])
+        return {**run, "run_type": "TRADING_RESEARCH", "idempotent_replay": replay}
+
     def _draft_or_404(run_id: str) -> dict[str, Any]:
         try:
             run = database.get_trading_draft(run_id)
         except KeyError:
             raise api_error(404, "RUN_NOT_FOUND", f"未知日前草稿运行：{run_id}")
-        run["run_type"] = "DAY_AHEAD_DRAFT"
+        run["run_type"] = "TRADING_RESEARCH" if run.get("input_source") == "PLATFORM" else "DAY_AHEAD_DRAFT"
         return run
+
+    def _require_draft_integrity(run: dict[str, Any]) -> None:
+        if (
+            not run.get("input_sha256") or not run.get("draft_sha256")
+            or content_sha256(run.get("input_snapshot")) != run["input_sha256"]
+            or content_sha256(run.get("draft")) != run["draft_sha256"]
+        ):
+            raise api_error(409, "DRAFT_SNAPSHOT_UNVERIFIED", "快照未锁定或内容已变化，请创建新任务重新复核")
+
+    def _update_draft(run: dict[str, Any], **changes: Any) -> dict[str, Any]:
+        return database.update_trading_draft(run["run_id"], expected_revision=run["revision"], **changes)
 
     def _draft_strategy_metadata(run: dict[str, Any]) -> dict[str, Any]:
         return {
@@ -926,6 +968,10 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
     @application.post("/api/v1/trading-draft-runs/{run_id}/inputs")
     async def upload_trading_draft_inputs(run_id: str, request: Request) -> dict[str, Any]:
         run = _draft_or_404(run_id)
+        if run.get("input_source") == "PLATFORM":
+            raise api_error(409, "INPUT_SOURCE_LOCKED", "该任务从平台读取数据，不能再用手工文件覆盖")
+        if run.get("input_sha256") or run.get("inputs") or run["status"] != "DRAFT":
+            raise api_error(409, "INPUT_SNAPSHOT_LOCKED", "任务输入已冻结；更换数据请创建新任务，原任务不会被覆盖")
         content_type = request.headers.get("content-type", "")
         forecasts = None; rules = None; payload = None
         if "multipart/form-data" in content_type:
@@ -935,13 +981,20 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
         else:
             raw = await request.body(); parsed_type = content_type
         try:
-            from .trading_draft import parse_input, validate_rows, build_draft
-            payload = json.loads(raw.decode("utf-8-sig")) if "json" in parsed_type and raw.lstrip().startswith(b"{") else None
+            from .trading_draft import parse_input, validate_rows, validate_forecasts, build_draft, InputValidationError
+            text = raw.decode("utf-8-sig")
+            payload = json.loads(text) if text.lstrip().startswith("{") else None
             if payload is not None:
                 rows = payload.get("records", payload.get("inputs", [])); forecasts = payload.get("forecasts"); rules = payload.get("rules")
             else:
                 rows = parse_input(raw, parsed_type)
             errors = validate_rows(rows, run["business_date"], "SD")
+            errors.extend(validate_forecasts(forecasts, run["business_date"]))
+            if rules is not None and not isinstance(rules, dict):
+                errors.append("rules 必须是对象")
+            if errors:
+                raise InputValidationError(errors)
+            content_sha256({"records": rows, "forecasts": forecasts, "rules": rules})
             uploaded_scenario_source = _uploaded_snapshot_value(
                 payload, forecasts, "scenario_source"
             )
@@ -966,6 +1019,8 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
             rule_version = _lock_uploaded_value(
                 run, "rule_version", uploaded_rule_version
             )
+            if forecasts is not None and forecast_version:
+                forecasts = [{**item, "forecast_version": item.get("forecast_version") or forecast_version} for item in forecasts]
             draft = build_draft(
                 rows,
                 forecasts,
@@ -978,6 +1033,8 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
             )
         except HTTPException:
             raise
+        except InputValidationError as error:
+            raise api_error(422, "INVALID_INPUT", "输入校验失败，未生成草稿", errors=error.errors) from error
         except Exception as error:
             raise api_error(422, "INVALID_INPUT", str(error)) from error
         strategy_metadata = {
@@ -993,14 +1050,17 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
             "rule_version": rule_version,
             "strategy": strategy_metadata,
             "captured_at": utc_now(),
+            "source_file_sha256": hashlib.sha256(raw).hexdigest(),
+            "energy_unit": "MWh",
             "execution_allowed": False,
         }
         audit = list(run.get("audit") or [])
         audit.append({"action": "INPUT_INGESTED", "row_count": len(rows), "errors": errors,
+                      "input_sha256": content_sha256(input_snapshot), "draft_sha256": content_sha256(draft),
                       **strategy_metadata, "execution_allowed": False, "at": utc_now()})
         draft_status = "READY_FOR_REVIEW" if not errors and draft.get("formal_gate") == "PASSED" else "BLOCKED"
-        database.update_trading_draft(
-            run_id, input_json=rows, input_snapshot_json=input_snapshot,
+        _update_draft(
+            run, input_json=rows, input_snapshot_json=input_snapshot,
             draft_json=draft, error_json=errors,
             forecast_version=forecast_version, rule_version=rule_version,
             scenario_source=scenario_source, scenario_version=scenario_version,
@@ -1008,8 +1068,7 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
             review_status="DRAFT", audit_json=audit,
         )
         run = _draft_or_404(run_id)
-        return {"run_id": run_id, "row_count": len(rows), "errors": errors,
-                "status": draft_status, "draft": draft, "execution_allowed": False}
+        return {**run, "row_count": len(rows), "errors": errors}
 
     @application.get("/api/v1/trading-draft-runs/{run_id}")
     async def get_trading_draft(run_id: str) -> dict[str, Any]:
@@ -1023,17 +1082,26 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
     @application.post("/api/v1/trading-draft-runs/{run_id}/submit-review")
     async def submit_trading_draft(run_id: str, request: SubmitReviewRequest) -> dict[str, Any]:
         run = _draft_or_404(run_id)
-        if not run.get("draft") or run.get("status") == "BLOCKED": raise api_error(409, "DRAFT_BLOCKED", "草稿存在阻断项，不能送审")
+        is_research = run.get("input_source") == "PLATFORM"
+        ready = run.get("research", {}).get("research_status") == "READY" if is_research else (run.get("draft") or {}).get("formal_gate") == "PASSED"
+        if run["status"] not in {"READY_FOR_REVIEW", "RESEARCH_READY", "MODIFIED"} or not ready:
+            raise api_error(409, "DRAFT_BLOCKED", "仅待复核或修改后待重审的有效草稿可以送审")
+        _require_draft_integrity(run)
         review = {"status": "PENDING_REVIEW", "submitted_by": request.submitted_by,
                   "submitted_at": utc_now(), "reason": request.reason,
+                  "input_sha256": run["input_sha256"], "draft_sha256": run["draft_sha256"],
+                  "review_scope": "RESEARCH_REPORT" if is_research else "MANUAL_DRAFT",
+                  "research_sha256": content_sha256(run.get("research", {})),
                   **_draft_strategy_metadata(run), "execution_allowed": False}
         audit = list(run.get("audit") or [])
         audit.append({"action": "SUBMIT", "submitted_by": request.submitted_by,
+                      "input_sha256": run["input_sha256"], "draft_sha256": run["draft_sha256"],
                       "reason": request.reason, **_draft_strategy_metadata(run),
                       "at": utc_now()})
-        database.update_trading_draft(run_id, status="PENDING_REVIEW",
+        _update_draft(run, status="PENDING_REVIEW",
                                       review_status="PENDING_REVIEW",
-                                      review_json=review, audit_json=audit)
+                                      review_json=review, audit_json=audit,
+                                      **({"steps_json": [{**item, "status": "RUNNING"} if item["sequence"] == 10 else item for item in run["steps"]]} if is_research else {}))
         run = _draft_or_404(run_id)
         return run
 
@@ -1041,111 +1109,53 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
     async def review_trading_draft(run_id: str, request: TradingDraftReview) -> dict[str, Any]:
         run = _draft_or_404(run_id)
         if run.get("status") != "PENDING_REVIEW": raise api_error(409, "RUN_NOT_REVIEWABLE", "草稿尚未送审")
+        if request.expected_revision != run["revision"]:
+            raise api_error(409, "DRAFT_REVISION_MISMATCH", "审核页面版本已过期，请重新读取草稿后审核")
+        _require_draft_integrity(run)
+        submitted_review = run.get("review") or {}
+        if any(submitted_review.get(key) != run[key] for key in ("input_sha256", "draft_sha256")):
+            raise api_error(409, "REVIEW_SNAPSHOT_MISMATCH", "送审版本与当前草稿不一致，不能审核")
+        is_research = run.get("input_source") == "PLATFORM"
+        if is_research and submitted_review.get("research_sha256") != content_sha256(run["research"]):
+            raise api_error(409, "REVIEW_SNAPSHOT_MISMATCH", "研究方案与送审版本不一致")
+        if is_research and request.decision == "MODIFY":
+            raise api_error(409, "RESEARCH_RECALCULATION_REQUIRED", "平台研究方案不能手改算法输出；更换策略参数请重新生成并复核")
         submitted_by = (run.get("review") or {}).get("submitted_by", "")
-        if _normalized_identity(request.reviewed_by) in {_normalized_identity(run.get("initiated_by", "")), _normalized_identity(submitted_by)}: raise api_error(409, "REVIEWER_SEPARATION_REQUIRED", "审核人与发起人/送审人必须不同")
+        excluded_reviewers = {run.get("initiated_by", ""), submitted_by}
+        excluded_reviewers.update(event.get("reviewed_by", "") for event in run["audit"] if event.get("action") == "MODIFY")
+        if _normalized_identity(request.reviewed_by) in {_normalized_identity(actor) for actor in excluded_reviewers}:
+            raise api_error(409, "REVIEWER_SEPARATION_REQUIRED", "审核人与发起人、送审人及本草稿修改人必须不同")
         if request.decision in {"MODIFY", "REJECT"} and not request.reason.strip(): raise api_error(422, "REVIEW_REASON_REQUIRED", "修改或驳回必须填写原因")
         if request.decision == "MODIFY" and not request.modifications: raise api_error(422, "MODIFICATIONS_REQUIRED", "修改必须指定时段")
+        if request.decision != "MODIFY" and request.modifications:
+            raise api_error(422, "INVALID_MODIFICATION", "APPROVE/REJECT 不得携带修改内容，请使用 MODIFY 后重新送审")
         draft = json.loads(json.dumps(run.get("draft") or {}))
-        records = {int(row.get("period")): row for row in draft.get("records", [])}
-        modifications = request.modifications or []
-        snapshot_rules = (run.get("input_snapshot") or {}).get("rules") or {}
-        price_floor = snapshot_rules.get("price_floor")
-        price_ceiling = snapshot_rules.get("price_ceiling")
-        for change in modifications:
+        modifications = []
+        if request.decision == "MODIFY":
+            from .trading_draft import apply_draft_modifications
             try:
-                period = int(change.get("period")); field = str(change.get("field")); value = change.get("value")
-            except (TypeError, ValueError):
-                raise api_error(422, "INVALID_MODIFICATION", "修改必须包含有效 period、field 和 value")
-            if period not in records or field not in {"suggested_quantity_mwh", "suggested_price_lower", "suggested_price_upper"}:
-                raise api_error(422, "INVALID_MODIFICATION", "只能修改已有时段的申报量或报价区间")
-            old = records[period].get(field)
-            try: value = float(value)
-            except (TypeError, ValueError): raise api_error(422, "INVALID_MODIFICATION", "数值修改必须是数字")
-            if not math.isfinite(value):
-                raise api_error(422, "INVALID_MODIFICATION", "数值修改必须是有限数字")
-            if field == "suggested_quantity_mwh":
-                remaining = records[period].get("remaining_exposure_mwh")
-                if value < 0:
-                    raise api_error(422, "INVALID_MODIFICATION", "申报量不得为负数")
-                if remaining is None or value > float(remaining):
-                    raise api_error(
-                        422,
-                        "INVALID_MODIFICATION",
-                        "申报量不得超过该时段剩余敞口",
-                        period=period,
-                        remaining_exposure_mwh=remaining,
-                    )
-            else:
-                if price_floor is not None and value < float(price_floor):
-                    raise api_error(
-                        422,
-                        "INVALID_MODIFICATION",
-                        "报价不得低于任务锁定的规则下限",
-                        period=period,
-                        price_floor=price_floor,
-                    )
-                if price_ceiling is not None and value > float(price_ceiling):
-                    raise api_error(
-                        422,
-                        "INVALID_MODIFICATION",
-                        "报价不得高于任务锁定的规则上限",
-                        period=period,
-                        price_ceiling=price_ceiling,
-                    )
-            records[period][field] = value
-            change["old_value"] = old; change["new_value"] = value
-            lower = records[period].get("suggested_price_lower")
-            upper = records[period].get("suggested_price_upper")
-            if lower is not None and upper is not None and float(lower) > float(upper):
-                records[period][field] = old
-                raise api_error(
-                    422,
-                    "INVALID_MODIFICATION",
-                    "修改后报价下限不得高于报价上限",
-                    period=period,
+                draft, modifications = apply_draft_modifications(
+                    draft, run["input_snapshot"], request.modifications, reason=request.reason,
                 )
-        for record in records.values():
-            remaining = record.get("remaining_exposure_mwh")
-            quantity = record.get("suggested_quantity_mwh")
-            if remaining is None or quantity is None:
-                continue
-            remaining_value = float(remaining)
-            quantity_value = float(quantity)
-            record["real_time_reserved_mwh"] = round(
-                max(0.0, remaining_value - quantity_value), 6
-            )
-            record["lock_ratio"] = (
-                round(quantity_value / remaining_value, 6)
-                if remaining_value > 0
-                else 0.0
-            )
-            record["action"] = "BUY_DRAFT" if quantity_value > 0 else "HOLD"
-        draft["records"] = list(records.values())
-        draft["summary"] = {
-            "suggested_day_ahead_quantity_mwh": round(
-                sum(float(row.get("suggested_quantity_mwh") or 0) for row in records.values()), 6
-            ),
-            "reserved_real_time_quantity_mwh": round(
-                sum(float(row.get("real_time_reserved_mwh") or 0) for row in records.values()), 6
-            ),
-            "actionable_period_count": sum(
-                row.get("action") == "BUY_DRAFT" for row in records.values()
-            ),
-            "blocked_period_count": sum(
-                row.get("gate_status") == "BLOCKED" for row in records.values()
-            ),
-        }
+            except (ValueError, TypeError, KeyError) as error:
+                raise api_error(422, "INVALID_MODIFICATION", str(error)) from error
         next_status = {"APPROVE": "APPROVED", "MODIFY": "MODIFIED", "REJECT": "REJECTED"}[request.decision]
         review = {"status": next_status, "submitted_by": (run.get("review") or {}).get("submitted_by"),
                   "reviewed_by": request.reviewed_by, "reviewed_at": utc_now(),
                   "reason": request.reason, "modifications": modifications,
+                  "input_sha256": run["input_sha256"], "draft_sha256": content_sha256(draft),
+                  "review_scope": "RESEARCH_REPORT" if is_research else "MANUAL_DRAFT",
+                  "research_sha256": content_sha256(run.get("research", {})),
                   **_draft_strategy_metadata(run), "execution_allowed": False}
         audit = list(run.get("audit") or [])
         audit.append({"action": request.decision, "reviewed_by": request.reviewed_by,
                       "modifications": modifications, "reason": request.reason,
+                      "input_sha256": run["input_sha256"],
+                      "old_draft_sha256": run["draft_sha256"], "new_draft_sha256": content_sha256(draft),
                       **_draft_strategy_metadata(run), "at": utc_now()})
-        database.update_trading_draft(run_id, status=next_status, review_status=next_status,
-                                      draft_json=draft, review_json=review, audit_json=audit)
+        _update_draft(run, status=next_status, review_status=next_status,
+                                      draft_json=draft, review_json=review, audit_json=audit,
+                                      **({"steps_json": [{**item, "status": "SUCCEEDED" if request.decision == "APPROVE" else "BLOCKED"} if item["sequence"] == 10 else item for item in run["steps"]]} if is_research else {}))
         run = _draft_or_404(run_id)
         return run
 
@@ -1155,27 +1165,53 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
         normalized_format = format.lower()
         if normalized_format not in {"csv", "json"}:
             raise api_error(422, "INVALID_EXPORT_FORMAT", "format 仅支持 csv 或 json")
-        if run.get("status") not in {"APPROVED", "MODIFIED"}: raise api_error(409, "EXPORT_NOT_ALLOWED", "草稿须经独立审核批准或修改后才能导出")
-        draft = run.get("draft") or {}; title = "人工复核申报草稿 - 不可自动提交"
+        if run.get("status") != "APPROVED":
+            raise api_error(409, "EXPORT_NOT_ALLOWED", "仅独立审核批准的草稿可以导出；修改后必须重新送审")
+        _require_draft_integrity(run)
+        if any((run.get("review") or {}).get(key) != run[key] for key in ("input_sha256", "draft_sha256")):
+            raise api_error(409, "REVIEW_SNAPSHOT_MISMATCH", "批准版本与当前草稿不一致，禁止导出")
+        is_research = run.get("input_source") == "PLATFORM"
+        if is_research and run["review"].get("research_sha256") != content_sha256(run["research"]):
+            raise api_error(409, "REVIEW_SNAPSHOT_MISMATCH", "研究方案不属于已批准版本")
+        draft = run.get("draft") or {}
+        title = "交易研究方案 - 人工复核材料 - 不可自动提交" if is_research else "人工复核申报草稿 - 不可自动提交"
         strategy_metadata = _draft_strategy_metadata(run)
         audit = list(run.get("audit") or [])
         audit.append({"action": "EXPORTED", "format": normalized_format,
+                      "input_sha256": run["input_sha256"], "draft_sha256": run["draft_sha256"],
                       **strategy_metadata, "at": utc_now()})
-        database.update_trading_draft(run_id, audit_json=audit)
+        _update_draft(run, audit_json=audit,
+                      **({"steps_json": [{**item, "status": "SUCCEEDED"} if item["sequence"] == 11 else item for item in run["steps"]]} if is_research else {}))
         if normalized_format == "csv":
             rows = [
                 {
                     "document_title": title,
                     **strategy_metadata,
                     "review_status": run.get("review_status"),
+                    "business_date": run["business_date"],
+                    "review_scope": run["review"].get("review_scope"),
+                    "submitted_by": run["review"].get("submitted_by"),
+                    "reviewed_by": run["review"].get("reviewed_by"),
+                    "reviewed_at": run["review"].get("reviewed_at"),
+                    "research_mode": run.get("research", {}).get("mode"),
+                    "source_sha256": run.get("research", {}).get("source_sha256"),
+                    "research_assumptions": "；".join(run.get("research", {}).get("assumptions", [])),
+                    "input_sha256": run["input_sha256"], "draft_sha256": run["draft_sha256"],
                     **row,
                 }
                 for row in draft.get("records", [])
             ]
-            out = io.StringIO(); writer = csv.DictWriter(out, fieldnames=list(rows[0]) if rows else ["document_title", "period"]); writer.writeheader(); writer.writerows(rows)
+            out = io.StringIO()
+            writer = csv.DictWriter(out, fieldnames=list(rows[0]) if rows else ["document_title", "period"])
+            writer.writeheader()
+            # Protect user-authored text from spreadsheet formula interpretation;
+            # numeric negative prices remain numeric, not escaped text.
+            writer.writerows({key: "'" + value if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")) else value for key, value in row.items()} for row in rows)
             return PlainTextResponse(out.getvalue(), media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="manual-review-draft-{run_id}.csv"'})
         return JSONResponse({"title": title, "run_id": run_id, "strategy": strategy_metadata,
+                             "input_sha256": run["input_sha256"], "draft_sha256": run["draft_sha256"],
                              "review": run.get("review"), "audit": audit,
+                             "research": run.get("research", {}),
                              "draft": draft, "execution_allowed": False})
 
     @application.post("/api/v1/policies", status_code=201)
