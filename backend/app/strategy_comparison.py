@@ -11,6 +11,9 @@ from .bidding_strategy import (
     generate_strategy,
     lock_ratio,
 )
+from .similar_day_scenarios import (STRATEGY_KEY, CONFIG, build_similar_day_scenarios,
+                                    generate_similar_day_strategy)
+from .advanced_strategies import ADVANCED_KEY, ADVANCED_VERSION, generate_advanced_strategy
 
 
 def _actual_prices(row: dict[str, Any]) -> tuple[float | None, float | None]:
@@ -71,6 +74,7 @@ def _metric(rows: list[dict[str, Any]], name: str, baseline: str = "full_day_ahe
 def compare_strategy_versions(*, forecast_doc: dict[str, Any], load_rows: list[dict[str, Any]],
                               position_doc: dict[str, Any], price_rows: list[dict[str, Any]],
                               supply_rows: list[dict[str, Any]] | None = None,
+                              weather_doc: dict[str, Any] | None = None,
                               start: str | None = None, end: str | None = None,
                               risk_aversion: float = 0.5) -> dict[str, Any]:
     forecasts = {str(x.get("market_date")): x for x in forecast_doc.get("results", [])}
@@ -95,6 +99,8 @@ def compare_strategy_versions(*, forecast_doc: dict[str, Any], load_rows: list[d
         "full_day_ahead", "full_realtime", "fixed_half",
         "legacy_spread_v01", "quantile_cvar_v02", "historical_cvar_v02", "regime_cvar_v03",
     )
+
+    similar_diagnostics = []
 
     def collect(dates: list[str], include_forecast_policies: bool) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
@@ -137,9 +143,30 @@ def compare_strategy_versions(*, forecast_doc: dict[str, Any], load_rows: list[d
                                                   risk_aversion=risk_aversion, period=period,
                                                   supply_context=supply[date].get(period),
                                                   historical_scenarios=historical)
+                        advanced = generate_advanced_strategy(
+                            forecast_doc=forecast_doc, target_date=date, period=period,
+                            weather_doc=weather_doc, target_model_version=(forecast_day.get("model") or forecast_doc.get("model") or {}).get("version"),
+                            supply_context=supply[date].get(period),
+                            load_mwh=load, medium_position_mwh=float(position) * float(load) / total_load,
+                            cleared_energy_mwh=0.0, forecast=forecast, actual=actual,
+                            risk_aversion=risk_aversion)
                         ratios["quantile_cvar_v02"] = float(q.get("lock_ratio") or 0.05)
                         ratios["historical_cvar_v02"] = float(h.get("lock_ratio") or 0.05)
                         ratios["regime_cvar_v03"] = float(regime.get("lock_ratio") or 0.05)
+                        if advanced.get("lock_ratio") is not None and advanced.get("action") == "BUY_SPLIT":
+                            ratios[ADVANCED_KEY] = float(advanced["lock_ratio"])
+                        audit = build_similar_day_scenarios(forecast_doc=forecast_doc, target_date=date,
+                            period=period, target_forecast=forecast, weather_doc=weather_doc,
+                            target_model_version=(forecast_day.get("model") or forecast_doc.get("model") or {}).get("version"))
+                        similar = generate_similar_day_strategy(scenario_audit=audit,
+                            load_mwh=load, medium_position_mwh=float(position) * float(load) / total_load,
+                            cleared_energy_mwh=0.0, forecast=forecast, risk_aversion=risk_aversion)
+                        similar_diagnostics.append({"date": date, "period": period,
+                            "status": similar["gate_status"], "blockers": audit["blockers"],
+                            "selected_count": audit["selected_count"], "effective_sample_size": audit["effective_sample_size"],
+                            "selection_basis": audit["selection_basis"]})
+                        if similar.get("lock_ratio") is not None and similar["action"] == "BUY_SPLIT":
+                            ratios[STRATEGY_KEY] = similar["lock_ratio"]
                 costs = {name: round(_cost(remaining, ratio, da, rt), 4)
                          for name, ratio in ratios.items()}
                 rows.append({"date": date, "period": period, "costs": costs, "ratios": ratios})
@@ -149,6 +176,11 @@ def compare_strategy_versions(*, forecast_doc: dict[str, Any], load_rows: list[d
     forecast_rows = collect(forecast_dates, include_forecast_policies=True)
     benchmark_metrics = {name: _metric(benchmark_rows, name) for name in ("full_day_ahead", "full_realtime", "fixed_half")}
     forecast_metrics = {name: _metric(forecast_rows, name) for name in policy_names}
+    # Keep incumbent coverage unchanged; do not score blocked hours as free power.
+    eligible_dates = [d for d in forecast_dates if
+        len([r for r in forecast_rows if r["date"] == d and STRATEGY_KEY in r["costs"] and ADVANCED_KEY in r["costs"]]) == 24]
+    matched_rows = [r for r in forecast_rows if r["date"] in eligible_dates]
+    similar_names = (*policy_names, STRATEGY_KEY, ADVANCED_KEY)
 
     def grouped_metrics(rows: list[dict[str, Any]], names: tuple[str, ...]) -> dict[str, dict[str, Any]]:
         months = sorted({row["date"][:7] for row in rows})
@@ -174,6 +206,20 @@ def compare_strategy_versions(*, forecast_doc: dict[str, Any], load_rows: list[d
             benchmark_rows, ("full_day_ahead", "full_realtime", "fixed_half")),
         "monthly_strategies_forecast_comparable_window": grouped_metrics(
             forecast_rows, policy_names),
+        "similar_day_evaluation": {
+            "config": dict(CONFIG), "risk_aversion": risk_aversion,
+            "status": "RESEARCH_COMPARISON" if eligible_dates else "INSUFFICIENT_COMPLETE_DAYS",
+            "date_start": eligible_dates[0] if eligible_dates else None,
+            "date_end": eligible_dates[-1] if eligible_dates else None,
+            "eligible_dates": eligible_dates, "day_count": len(eligible_dates), "period_count": len(matched_rows),
+            "excluded_dates": [d for d in forecast_dates if d not in eligible_dates],
+            "strategies": {name: _metric(matched_rows, name) for name in similar_names} if matched_rows else {},
+            "monthly": grouped_metrics(matched_rows, similar_names),
+            "period_quality": similar_diagnostics,
+            "daily": [{"date": d, "saving_vs_full_day_ahead": {name: round(sum(r["costs"]["full_day_ahead"] - r["costs"][name] for r in matched_rows if r["date"] == d), 4) for name in similar_names}} for d in eligible_dates],
+            "limitations": ["仅比较新版24小时全部通过的共同日期；缺样本日不计为0成本或0收益",
+                "已有历史预测的发布时间和训练泄漏仍待完整审计，不称严格样本外实盘收益",
+                "相似度与门槛是预设研究参数；对比结果不得用于同窗反复择优调参"]},
         "daily_forecast_comparison": [
             {"date": date, "saving_vs_full_day_ahead": {
                 name: round(sum(float(row["costs"]["full_day_ahead"]) - float(row["costs"][name])

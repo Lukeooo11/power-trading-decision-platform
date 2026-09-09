@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sqlite3
 import threading
 import uuid
@@ -59,6 +60,15 @@ def json_loads(value: str | None, default: Any) -> Any:
         return json.loads(value)
     except (TypeError, json.JSONDecodeError):
         return default
+
+
+def content_sha256(value: Any) -> str:
+    canonical = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+class DraftConflict(ValueError):
+    pass
 
 
 class Database:
@@ -252,6 +262,12 @@ class Database:
                     "scenario_source": "TEXT",
                     "scenario_version": "TEXT",
                     "input_snapshot_json": "TEXT NOT NULL DEFAULT '{}'",
+                    "revision": "INTEGER NOT NULL DEFAULT 0",
+                    "input_sha256": "TEXT",
+                    "draft_sha256": "TEXT",
+                    "input_source": "TEXT NOT NULL DEFAULT 'MANUAL'",
+                    "research_json": "TEXT NOT NULL DEFAULT '{}'",
+                    "steps_json": "TEXT NOT NULL DEFAULT '[]'",
                 }
                 for column, definition in draft_migrations.items():
                     if column not in existing_columns:
@@ -284,6 +300,7 @@ class Database:
         forecast_version: str | None = None, rule_version: str | None = None,
         strategy_version: str = "historical_cvar_v02", risk_aversion: float = 0.3,
         scenario_source: str | None = None, scenario_version: str | None = None,
+        input_source: str = "MANUAL",
     ) -> tuple[dict[str, Any], bool]:
         self.initialize()
         strategy_version = str(strategy_version or "").strip()
@@ -293,11 +310,24 @@ class Database:
         if not 0.0 <= risk_aversion <= 1.0:
             raise ValueError("risk_aversion must be between 0 and 1")
         with closing(self.connect()) as connection, connection:
+            connection.execute("BEGIN IMMEDIATE")
             existing = connection.execute(
                 "SELECT run_id FROM trading_draft_runs WHERE request_id = ?", (request_id,)
             ).fetchone()
             if existing:
-                return self.get_trading_draft(existing["run_id"]), True
+                previous = self.get_trading_draft(existing["run_id"])
+                expected = {
+                    "business_date": business_date, "initiated_by": initiated_by,
+                    "strategy_version": strategy_version, "risk_aversion": risk_aversion,
+                    "input_source": input_source,
+                }
+                if any(previous[key] != value for key, value in expected.items()):
+                    raise DraftConflict("同一 request_id 不得用于不同交易日、发起人或策略参数")
+                for key, value in {"forecast_version": forecast_version, "rule_version": rule_version,
+                                   "scenario_source": scenario_source, "scenario_version": scenario_version}.items():
+                    if value is not None and previous[key] != value:
+                        raise DraftConflict(f"同一 request_id 的 {key} 不一致")
+                return previous, True
             run_id = f"draft-{uuid.uuid4().hex}"
             now = utc_now()
             strategy_snapshot = {
@@ -319,15 +349,15 @@ class Database:
                  business_date, initiated_by, forecast_version, rule_version,
                  strategy_version, risk_aversion, scenario_source, scenario_version,
                  status, review_status, input_snapshot_json, audit_json,
-                 created_at, updated_at)
+                 created_at, updated_at, input_source)
                 VALUES (?, ?, 'SD', 'retail', 'HOUR_24', ?, ?, ?, ?, ?, ?, ?, ?,
-                        'DRAFT', 'DRAFT', ?, ?, ?, ?)""",
+                        'DRAFT', 'DRAFT', ?, ?, ?, ?, ?)""",
                 (
                     run_id, request_id, business_date, initiated_by,
                     forecast_version, rule_version, strategy_version,
                     risk_aversion, scenario_source, scenario_version,
                     json_dumps({"strategy": strategy_snapshot}), json_dumps(audit),
-                    now, now,
+                    now, now, input_source,
                 ),
             )
         self.add_audit(None, "TRADING_DRAFT_CREATED", initiated_by,
@@ -347,16 +377,19 @@ class Database:
             ("input_snapshot_json", "input_snapshot", {}),
             ("error_json", "input_errors", []), ("review_json", "review", {}),
             ("audit_json", "audit", []),
+            ("research_json", "research", {}), ("steps_json", "steps", []),
         ):
             item[public_name] = json_loads(item.pop(column), default)
         item["execution_allowed"] = False
         return item
 
-    def update_trading_draft(self, run_id: str, **changes: Any) -> dict[str, Any]:
+    def update_trading_draft(
+        self, run_id: str, *, expected_revision: int | None = None, **changes: Any
+    ) -> dict[str, Any]:
         allowed = {"status", "review_status", "forecast_version", "rule_version",
                    "strategy_version", "risk_aversion", "scenario_source",
                    "scenario_version", "input_json", "input_snapshot_json",
-                   "draft_json", "error_json", "review_json", "audit_json"}
+                   "draft_json", "error_json", "review_json", "audit_json", "research_json", "steps_json"}
         invalid = set(changes) - allowed
         if invalid:
             raise ValueError(f"Unsupported trading draft columns: {sorted(invalid)}")
@@ -371,14 +404,43 @@ class Database:
             changes["risk_aversion"] = risk_aversion
         normalized = {k: (json_dumps(v) if k.endswith("_json") and not isinstance(v, str) else v)
                       for k, v in changes.items()}
-        normalized["updated_at"] = utc_now()
-        assignments = ", ".join(f"{k} = ?" for k in normalized)
         with closing(self.connect()) as connection, connection:
+            connection.execute("BEGIN IMMEDIATE")
+            current = connection.execute(
+                "SELECT * FROM trading_draft_runs WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            if current is None:
+                raise KeyError(run_id)
+            if expected_revision is not None and current["revision"] != expected_revision:
+                raise DraftConflict("任务已被另一请求更新，请刷新后重试")
+            locked_columns = {
+                "input_json", "input_snapshot_json", "forecast_version", "rule_version",
+                "strategy_version", "risk_aversion", "scenario_source", "scenario_version",
+            }
+            has_snapshot = bool(current["input_sha256"] or json_loads(current["input_json"], []))
+            if has_snapshot and any(
+                key in normalized and normalized[key] != current[key] for key in locked_columns
+            ):
+                raise DraftConflict("输入快照已冻结；变更输入请创建新任务，原任务保留用于审计")
+            if "input_snapshot_json" in normalized and not has_snapshot:
+                normalized["input_sha256"] = content_sha256(json.loads(normalized["input_snapshot_json"]))
+            if "draft_json" in normalized:
+                normalized["draft_sha256"] = content_sha256(json.loads(normalized["draft_json"]))
+            normalized["revision"] = current["revision"] + 1
+            normalized["updated_at"] = utc_now()
+            assignments = ", ".join(f"{k} = ?" for k in normalized)
             cursor = connection.execute(f"UPDATE trading_draft_runs SET {assignments} WHERE run_id = ?",
                                          [*normalized.values(), run_id])
             if cursor.rowcount == 0:
                 raise KeyError(run_id)
         return self.get_trading_draft(run_id)
+
+    def pending_research_runs(self) -> list[str]:
+        self.initialize()
+        with closing(self.connect()) as connection:
+            return [row["run_id"] for row in connection.execute(
+                "SELECT run_id FROM trading_draft_runs WHERE input_source = 'PLATFORM' AND status IN ('DRAFT', 'RUNNING')"
+            )]
 
     def create_run(
         self,

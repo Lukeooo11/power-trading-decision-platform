@@ -3868,6 +3868,32 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
     border-bottom: 0;
   }
 }
+[data-draft-modification][hidden] { display: none; }
+#draftFileField[hidden] { display: none; }
+.research-task-controls > .field { min-width: 0; }
+.research-task-controls input, .research-task-controls select { max-width: 100%; }
+.research-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 20px 0; }
+.research-summary > div { border-bottom: 1px solid #d5d9d7; padding-bottom: 14px; }
+.research-summary span, .research-provenance span, .research-provenance small { display: block; font-size: 12px; color: #68706d; }
+.research-summary strong { display: block; font-size: 22px; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.research-provenance { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 20px; margin: 16px 0; }
+.research-provenance strong, .research-provenance small, #researchEvidence, #draftMeta, #draftWorkflowSteps, #researchReviewHistory { overflow-wrap: anywhere; }
+#draftWorkflowSteps .agent-step > div { min-width: 0; }
+#agentView .primary-action:hover:not(:disabled) { color: #fff; }
+#draftWorkflowSteps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px; }
+#researchEvidence { margin-top: 16px; font-size: 13px; }
+#researchScenarioEvidence { margin-top: 20px; font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+#researchScenarioEvidence h4 { margin: 0 0 8px; font-size: 15px; }
+#researchScenarioEvidence > p { margin: 0 0 12px; color: var(--muted); }
+#researchScenarioEvidence details { min-width: 0; padding: 10px 0; border-top: 1px solid var(--line); }
+#researchScenarioEvidence summary { cursor: pointer; font-weight: 600; }
+#researchScenarioEvidence details p { margin: 8px 0; }
+#researchScenarioEvidence ul { margin: 8px 0; padding-left: 22px; }
+#researchScenarioEvidence li { padding: 5px 0; font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) {
+  .research-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .research-provenance, #draftWorkflowSteps { grid-template-columns: minmax(0, 1fr); }
+}
 
     </style>
   </head>
@@ -3990,201 +4016,55 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
         </section>
 
         <section class="view" id="agentView">
-          <section class="agent-workspace-brief" aria-labelledby="agentWorkspaceTitle">
-            <div class="agent-workspace-copy">
-              <span class="agent-kicker">历史陪跑 · 人工审核</span>
-              <h3 id="agentWorkspaceTitle">看风险、查依据、送审核，不下单</h3>
-              <p>面向内部交易员和分析员：使用已接入的历史数据检查 24 点风险、数据和政策依据，只生成供人工判断的陪跑材料。</p>
-            </div>
-            <ol class="agent-quick-steps" aria-label="交易 Agent 使用步骤">
-              <li><span>1</span><div><strong>设定范围</strong><p>左侧选省份，填写日期和发起人</p></div></li>
-              <li><span>2</span><div><strong>启动陪跑</strong><p>检查数据、规则与 24 点风险</p></div></li>
-              <li><span>3</span><div><strong>查看并送审</strong><p>核对依据后由不同人员复核</p></div></li>
-            </ol>
-          </section>
-
-          <section class="panel agent-run-panel">
-            <div class="panel-head">
-              <div>
-                <h3>第 1-2 步：设定范围并启动陪跑</h3>
-                <p>运行范围继承左侧省份和交易主体；只处理历史数据，不连接交易终端。</p>
-              </div>
-              <div class="inline-actions">
-                <span class="pill wait" id="agentHealthStatus">服务检查中</span>
-                <span class="pill wait" id="agentRunStatus">尚未开始</span>
-              </div>
-            </div>
-            <div class="agent-context-row" aria-label="当前 Agent 上下文">
-              <div><span>省份（左侧选择）</span><strong id="agentContextMarket">全国</strong></div>
-              <div><span>交易主体（左侧选择）</span><strong id="agentContextSubject">售电侧</strong></div>
-              <div><span>业务日期</span><input id="agentBusinessDate" type="date" aria-label="Agent 业务日期" /></div>
-              <div><span>运行方式</span><strong>历史陪跑 · 不下单</strong></div>
-            </div>
-            <div class="agent-national-notice" id="agentNationalNotice">
-              <strong>先选择具体省份</strong>
-              <p>全国视图仅查看接入情况。未接入市场只显示缺口，不会读取或复用山东数据。</p>
-            </div>
-            <div class="agent-action-row">
-              <label class="field">
-                <span>发起人（必填）</span>
-                <input id="agentInitiatorInput" type="text" maxlength="128" autocomplete="name" placeholder="请输入姓名" />
-              </label>
-              <button class="primary-action" id="agentStartRunBtn" type="button" aria-describedby="agentRunHint">启动历史陪跑</button>
-              <button class="secondary-action" id="agentCancelRunBtn" type="button" disabled>取消本次运行</button>
-              <button class="secondary-action" id="agentRerunBtn" type="button" disabled>按原条件重跑</button>
-              <span class="agent-inline-note" id="agentRunHint" aria-live="polite">第 1 步：请选择具体省份后运行</span>
-            </div>
-            <div class="agent-run-meta" id="agentRunMeta" aria-live="polite"></div>
-          </section>
-
           <section class="panel agent-draft-panel">
-            <div class="panel-head"><div><h3>日前报价报量草稿</h3><p>山东售电侧 · 24点小时粒度 · 仅供人工复核，不可自动提交</p></div><span class="pill wait" id="draftStatus">尚未创建</span></div>
-            <div class="draft-strategy-band" aria-label="研究策略参数与后端快照">
-              <label class="draft-strategy-control" for="draftStrategyVersion">
-                <span>策略版本</span>
-                <select id="draftStrategyVersion">
-                  <option value="" disabled>后端未返回版本</option>
-                  <option value="historical_cvar_v02" selected>历史误差 CVaR（默认）</option>
-                  <option value="regime_cvar_v03">分时状态 CVaR（挑战者）</option>
-                  <option value="legacy_spread_v01">初版价差规则（挑战者）</option>
-                </select>
-              </label>
-              <label class="draft-strategy-control draft-risk-control" for="draftRiskAversion">
-                <span>风险厌恶系数</span>
-                <input id="draftRiskAversion" type="number" min="0" max="1" step="0.05" value="0.30" inputmode="decimal" />
-              </label>
-              <div class="draft-strategy-snapshot">
-                <span>研究策略</span>
-                <strong id="draftStrategyLabel">历史误差 CVaR</strong>
-                <small id="draftResearchTag">待后端锁定</small>
-              </div>
-              <div class="draft-strategy-snapshot draft-scenario-snapshot" aria-live="polite">
-                <span>场景来源 / 版本</span>
-                <strong id="draftScenarioSource">预期：目标日前历史配对误差</strong>
-                <small id="draftScenarioVersion">创建后以后端快照为准</small>
-              </div>
-            </div>
-            <div class="agent-action-row">
-              <label class="field"><span>草稿发起人</span><input id="draftInitiator" placeholder="请输入姓名" /></label>
-              <button class="secondary-action" id="createDraftBtn" type="button">创建日前草稿</button>
-              <label class="field"><span>导入 CSV/JSON</span><input id="draftFile" type="file" accept=".csv,.json" /></label>
-              <button class="primary-action" id="uploadDraftBtn" type="button" disabled>生成草稿</button>
-              <label class="field"><span>送审人</span><input id="draftSubmitter" maxlength="128" placeholder="须填写姓名" /></label>
-              <button class="secondary-action" id="submitDraftReviewBtn" type="button" disabled>提交复核</button>
-              <label class="field"><span>审核人</span><input id="draftReviewer" maxlength="128" placeholder="须与发起人不同" /></label>
-              <label class="field"><span>审核结论</span><select id="draftReviewDecision"><option value="APPROVE">批准</option><option value="MODIFY">修改</option><option value="REJECT">拒绝</option></select></label>
-              <label class="field"><span>审核原因</span><input id="draftReviewReason" maxlength="1000" placeholder="修改或拒绝时必填" /></label>
-              <button class="primary-action" id="reviewDraftBtn" type="button" disabled>提交审核</button>
-              <button class="secondary-action" id="exportDraftBtn" type="button" disabled>导出人工复核草稿</button>
-            </div>
-            <div class="agent-run-meta" id="draftMeta">请先创建任务，再导入包含24个时段的模板。</div>
-            <div class="table-wrap agent-signal-table-wrap"><table class="agent-signal-table agent-draft-table"><thead><tr><th>时段</th><th>负荷</th><th>中长期</th><th>已成交</th><th>剩余敞口</th><th>日前 P10/P50/P90</th><th>实时 P10/P50/P90</th><th>锁定比例</th><th>日前建议量</th><th>实时保留量</th><th>报价区间</th><th>门禁</th><th>风险/依据</th></tr></thead><tbody id="draftTable"></tbody></table></div>
-          </section>
-
-          <section class="panel agent-readiness-panel">
             <div class="panel-head">
-              <div>
-                <h3>接入检查</h3>
-                <p id="agentReadinessSubtitle">确认当前市场的数据、模型与政策是否齐全；全国视图可查看 31 个市场的接入覆盖。</p>
-              </div>
-              <div class="inline-actions">
-                <button class="secondary-action" id="agentRefreshReadinessBtn" type="button">刷新检查</button>
-              </div>
+              <div><h3>交易研究任务</h3><p>山东售电侧 · 日前 / 实时分配研究 · 24点 · 不可自动提交</p></div>
+              <div class="inline-actions"><span class="pill wait" id="agentHealthStatus">服务检查中</span><span class="pill wait" id="draftStatus">尚未创建</span></div>
             </div>
-            <details class="agent-readiness-details">
-              <summary id="agentReadinessSummary">查看当前市场接入矩阵</summary>
-              <div class="table-wrap agent-readiness-table-wrap">
-                <table class="agent-readiness-table">
-                  <thead>
-                    <tr><th>市场</th><th>交易主体</th><th>数据</th><th>模型</th><th>政策</th><th>可运行</th><th>缺口</th></tr>
-                  </thead>
-                  <tbody id="agentReadinessTable"></tbody>
-                </table>
-              </div>
-            </details>
-          </section>
-
-          <div class="grid agent-two-column">
-            <section class="panel">
-              <div class="panel-head">
-                <div><h3>运行进度</h3><p>完成后依次查看门禁、24 点风险与证据，再送审。</p></div>
-              </div>
-              <div class="agent-step-list" id="agentStepList"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-head">
-                <div><h3>正式建议门禁</h3><p>任一项未通过，24 点全部保持 HOLD、0 MWh；不会下单。</p></div>
-              </div>
-              <div class="agent-gate-list" id="agentGateList"></div>
-            </section>
-          </div>
-
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <h3>第 3 步：查看 24 点风险</h3>
-                <p>用于人工复核高价、负价与价差信号；不产生可执行买卖量价。</p>
-              </div>
-              <span class="pill partial">关注阈值 45 元/MWh</span>
+            <div class="agent-action-row research-task-controls">
+              <label class="field"><span>交易日期</span><input id="agentBusinessDate" type="date" aria-label="交易日期" /></label>
+              <label class="field"><span>发起人</span><input id="draftInitiator" maxlength="128" placeholder="请输入姓名" /></label>
+              <label class="field"><span>策略版本</span><select id="draftStrategyVersion"><option value="historical_cvar_v02">历史误差 CVaR（默认）</option><option value="regime_cvar_v03">分时状态 CVaR（挑战者）</option><option value="similar_day_cvar_v04">预测与相似日 CVaR（挑战者）</option><option value="advanced_cvar_v05">混合场景 + 校准 + Newsvendor CVaR（挑战者）</option><option value="joint_cvar_v06">24小时联合混合 CVaR（挑战者）</option></select></label>
+              <label class="field"><span>风险厌恶系数</span><input id="draftRiskAversion" type="number" min="0" max="1" step="0.05" value="0.30" /></label>
+              <label class="field"><span>数据来源</span><select id="draftInputSource"><option value="PLATFORM">平台已有数据</option><option value="MANUAL">补充 CSV / JSON</option></select></label>
+              <label class="field" id="draftFileField" hidden><span>补充文件</span><input id="draftFile" type="file" accept=".csv,.json" /></label>
+              <button class="primary-action" id="createDraftBtn" type="button">生成研究方案</button>
+            </div>
+            <div class="agent-run-meta" id="draftMeta">尚未生成研究方案。</div>
+            <div class="research-summary" id="researchSummary"></div>
+            <div class="research-provenance">
+              <div><span>当前方案</span><strong id="draftStrategyLabel">--</strong><small id="draftResearchTag">待生成</small></div>
+              <div><span>数据与预测来源</span><strong id="draftScenarioSource">--</strong><small id="draftScenarioVersion">--</small></div>
             </div>
             <div class="table-wrap agent-signal-table-wrap">
-              <table class="agent-signal-table">
-                <thead>
-                  <tr><th>时段</th><th>日前预测</th><th>实时预测</th><th>预测价差</th><th>风险等级</th><th>研究信号</th><th>正式建议</th><th>电量</th></tr>
-                </thead>
-                <tbody id="agentSignalTable"></tbody>
+              <table class="agent-signal-table agent-draft-table">
+                <thead><tr><th>时段</th><th>用电量</th><th>中长期</th><th>已成交</th><th>剩余敞口</th><th>日前 P10/P50/P90</th><th>实时 P10/P50/P90</th><th>研究锁定比例</th><th>日前研究量</th><th>实时保留敞口</th><th>预测价格参考区间</th><th>正式申报门禁</th><th>风险 / 依据 / 口径</th></tr></thead>
+                <tbody id="draftTable"></tbody>
               </table>
             </div>
           </section>
-
           <section class="panel">
-            <div class="panel-head">
-              <div><h3>风险依据</h3><p>核对数据版本、模型版本和政策原文引用。</p></div>
-              <span class="pill wait" id="agentEvidenceCount">0 条证据</span>
-            </div>
-            <div class="agent-evidence-list" id="agentEvidenceList"></div>
+            <div class="panel-head"><div><h3>运行进度与数据依据</h3></div></div>
+            <div class="agent-step-list" id="draftWorkflowSteps"></div>
+            <div class="agent-evidence-list" id="researchEvidence"></div>
+            <div class="agent-evidence-list" id="researchScenarioEvidence"></div>
           </section>
-
-          <div class="grid agent-two-column">
-            <section class="panel">
-              <div class="panel-head">
-                <div><h3>结果问答</h3><p>询问本次风险、门禁或依据；只解释结果，不改变结论。</p></div>
-              </div>
-              <div class="agent-message-list" id="agentMessageList" aria-live="polite"></div>
-              <div class="agent-message-form">
-                <label class="field"><span>提问人</span><input id="agentMessageAuthor" type="text" maxlength="128" placeholder="请输入姓名" /></label>
-                <label class="field agent-message-content"><span>问题</span><textarea id="agentMessageInput" maxlength="8000" rows="3" placeholder="询问本次运行的门禁、风险或证据"></textarea></label>
-                <button class="primary-action" id="agentSendMessageBtn" type="button" disabled>发送</button>
-              </div>
-            </section>
-
-            <section class="panel">
-              <div class="panel-head">
-                <div><h3>送审与复核</h3><p>先送审，再由不同人员复核；姓名录入暂不等同于正式认证。</p></div>
-              </div>
-              <div class="agent-review-form">
-                <label class="field"><span>提交人</span><input id="agentSubmitterInput" type="text" maxlength="128" placeholder="送审人姓名" /></label>
-                <button class="secondary-action" id="agentSubmitReviewBtn" type="button" disabled>提交复核</button>
-                <label class="field"><span>审批人</span><input id="agentReviewerInput" type="text" maxlength="128" placeholder="须与提交人不同" /></label>
-                <label class="field"><span>审核结论</span><select id="agentReviewDecision"><option value="APPROVED">批准</option><option value="MODIFIED">修改</option><option value="REJECTED">拒绝</option></select></label>
-                <label class="field agent-review-reason"><span>审核原因</span><textarea id="agentReviewReason" maxlength="1000" rows="3" placeholder="修改或拒绝时必填"></textarea></label>
-                <button class="primary-action" id="agentReviewBtn" type="button" disabled>提交审核结论</button>
-              </div>
-              <div class="agent-review-history" id="agentReviewHistory"></div>
-            </section>
-          </div>
-
           <section class="panel">
-            <div class="panel-head">
-              <div><h3>陪跑报告</h3><p>运行后生成草稿，审核后更新定稿；不含交易指令。</p></div>
-              <div class="inline-actions">
-                <button class="secondary-action" id="agentViewReportBtn" type="button" disabled>查看网页报告</button>
-                <button class="secondary-action" id="agentDownloadMarkdownBtn" type="button" disabled>下载 Markdown</button>
-                <button class="secondary-action" id="agentDownloadJsonBtn" type="button" disabled>下载 JSON</button>
-              </div>
+            <div class="panel-head"><div><h3>人工复核与导出</h3><p id="researchReviewScope">研究材料审核不解除正式申报门禁。</p></div></div>
+            <div class="agent-action-row">
+              <label class="field"><span>送审人</span><input id="draftSubmitter" maxlength="128" placeholder="须填写姓名" /></label>
+              <button class="secondary-action" id="submitDraftReviewBtn" type="button" disabled>提交复核</button>
+              <label class="field"><span>审核人</span><input id="draftReviewer" maxlength="128" placeholder="独立审核人" /></label>
+              <label class="field"><span>审核结论</span><select id="draftReviewDecision"><option value="APPROVE">批准</option><option value="MODIFY">修改</option><option value="REJECT">拒绝</option></select></label>
+              <label class="field"><span>审核原因</span><input id="draftReviewReason" maxlength="1000" placeholder="修改或拒绝时必填" /></label>
+              <label class="field" data-draft-modification hidden><span>修改时段</span><input id="draftModifyPeriod" type="number" min="1" max="24" step="1" /></label>
+              <label class="field" data-draft-modification hidden><span>修改字段</span><select id="draftModifyField"><option value="suggested_quantity_mwh">日前申报量（MWh）</option><option value="suggested_price_lower">报价下限（元/MWh）</option><option value="suggested_price_upper">报价上限（元/MWh）</option></select></label>
+              <label class="field" data-draft-modification hidden><span>修改后数值</span><input id="draftModifyValue" type="number" step="any" /></label>
+              <button class="primary-action" id="reviewDraftBtn" type="button" disabled>提交审核</button>
+              <button class="secondary-action" id="exportDraftBtn" type="button" disabled>导出 CSV</button>
+              <button class="secondary-action" id="exportDraftJsonBtn" type="button" disabled>导出 JSON</button>
             </div>
-            <div class="agent-report-preview" id="agentReportPreview">完成一次历史陪跑后，可在这里查看或下载报告。</div>
-            <iframe class="agent-report-frame" id="agentReportFrame" title="Agent 陪跑报告" sandbox hidden></iframe>
+            <div class="agent-review-history" id="researchReviewHistory"></div>
           </section>
         </section>
 
@@ -5666,7 +5546,7 @@ const DATA_SOURCES = {
 };
 
 const MODULES = [
-  { name: "交易 Agent", status: "partial", text: "按市场、主体和交易日运行可审计陪跑流程，输出门禁、研究信号、证据和人工审核记录。" },
+  { name: "交易 Agent", status: "partial", text: "按日期读取平台已有数据与策略，生成24点交易研究方案，保存数据快照、缺口与独立人工复核记录。" },
   { name: "盘前工作台", status: "ok", text: "集中展示关键指标、风险提示、执行窗口和市场状态。" },
   { name: "预测评估", status: "partial", text: "接入价格预测模型，展示24点P10/P50/P90、价差风险、回测指标和人工复核边界。" },
   { name: "现货市场", status: "partial", text: "读取预测结果并结合山东小时日前/实时价格，形成出清分析、复盘和价差判断。" },
@@ -5811,8 +5691,8 @@ const DATA_REQUIREMENTS = [
 const INTERFACES = [
   { path: "http://127.0.0.1:8010/api/v1/health", use: "交易 Agent 健康检查", method: "GET", input: "无", output: "Agent、平台、模型与降级状态", status: "Agent 服务" },
   { path: "http://127.0.0.1:8010/api/v1/readiness", use: "全国市场接入矩阵", method: "GET", input: "market_code,trading_subject（可选）", output: "31个市场数据、模型、政策门禁与缺口", status: "Agent 服务" },
-  { path: "http://127.0.0.1:8010/api/v1/agent-runs", use: "启动交易日陪跑", method: "POST", input: "request_id,market_code,trading_subject,business_date,initiated_by", output: "运行状态、步骤、门禁、证据、研究信号与正式HOLD建议", status: "Agent 服务" },
-  { path: "http://127.0.0.1:8010/api/v1/agent-runs/{run_id}/review", use: "双人送审与审核", method: "POST", input: "decision,reviewed_by,reason,modified_suggestions", output: "审核状态、最终报告版本；execution_allowed=false", status: "Agent 服务" },
+  { path: "http://127.0.0.1:8010/api/v1/trading-research-runs", use: "生成交易研究方案", method: "POST", input: "request_id,business_date,initiated_by,strategy_version,risk_aversion", output: "自动读取平台数据、24点研究分配、来源快照、步骤与门禁；execution_allowed=false", status: "Agent 服务" },
+  { path: "http://127.0.0.1:8010/api/v1/trading-draft-runs/{run_id}/review", use: "独立人工复核", method: "POST", input: "decision,reviewed_by,reason,expected_revision", output: "研究材料审核状态、批准后CSV/JSON导出；不解除正式申报门禁", status: "Agent 服务" },
   { path: "/api/policy-agent/query", use: "正式政策规则问答", method: "POST", input: "question,marketCode,marketHint,conversationHistory", output: "回答、正式引用、覆盖边界、拒答原因、质量门禁与发布版本", status: "只读适配已接入" },
   { path: "/api/v1/health", use: "算法测试环境健康检查", method: "GET", input: "无", output: "API版本、环境、鉴权、上传/超时/留存限制", status: "真实后端已接入" },
   { path: "/api/v1/models", use: "模型注册与接入状态", method: "GET", input: "无", output: "模型ID、版本、运行方式、结果契约", status: "真实后端已接入" },
@@ -10882,6 +10762,8 @@ function debounce(fn, wait) {
     FAILED: ["运行失败", "missing"],
     CANCELLED: ["已取消", "wait"],
     PENDING: ["待执行", "wait"],
+    BLOCKED: ["已阻断", "partial"],
+    RESEARCH_READY: ["研究方案已生成", "ok"],
     SUCCEEDED: ["已完成", "ok"],
     COMPLETED: ["已完成", "ok"],
     SKIPPED: ["已跳过", "wait"],
@@ -10932,6 +10814,18 @@ function debounce(fn, wait) {
       label: "分时状态 CVaR",
       pendingSource: "预期：历史配对误差与分时供需状态",
     },
+    similar_day_cvar_v04: {
+      label: "预测与相似日 CVaR",
+      pendingSource: "预期：目标日预测、申报前天气预测与相似日配对误差",
+    },
+    advanced_cvar_v05: {
+      label: "混合场景 + 校准 + Newsvendor CVaR",
+      pendingSource: "预期：相似日、近期误差、极端尾部、直接价差与分位数校准",
+    },
+    joint_cvar_v06: {
+      label: "24小时联合混合 CVaR",
+      pendingSource: "预期：混合场景下的24小时共同价格路径与联合尾部风险",
+    },
     legacy_spread_v01: {
       label: "初版价差规则",
       pendingSource: "预期：日前与实时预测价差",
@@ -10958,6 +10852,11 @@ function debounce(fn, wait) {
     policyAgentRelease: null,
     lastReadinessAt: 0,
     draftRun: null,
+    draftPollTimer: 0,
+    draftGenerating: false,
+    draftConnectionError: "",
+    draftPollFailures: 0,
+    draftInputErrors: [],
     readinessSubject: "",
     policyContextKey: "",
   };
@@ -11004,17 +10903,8 @@ function debounce(fn, wait) {
       return;
     }
 
-    if (versionSelect) {
-      if (snapshot?.version && !Array.from(versionSelect.options).some((option) => option.value === snapshot.version)) {
-        versionSelect.add(new Option(snapshot.version, snapshot.version));
-      }
-      versionSelect.value = snapshot?.version || "";
-      versionSelect.disabled = true;
-    }
-    if (riskInput) {
-      riskInput.value = snapshot?.riskAversion === null ? "" : snapshot.riskAversion.toFixed(2);
-      riskInput.disabled = true;
-    }
+    if (versionSelect) versionSelect.disabled = agentStore.draftGenerating;
+    if (riskInput) riskInput.disabled = agentStore.draftGenerating;
 
     const blocked = run.status === "BLOCKED" || ["BLOCKED", "FAILED"].includes(String(run.draft?.formal_gate || "").toUpperCase());
     const definition = snapshot?.version ? DRAFT_STRATEGIES[snapshot.version] : null;
@@ -11026,6 +10916,13 @@ function debounce(fn, wait) {
       ? ` · 实际计算 ${snapshot.effectiveVersion}`
       : "";
     setText("draftScenarioVersion", `${scenarioVersionText}${effectiveVersionText}`);
+    if (run.input_source === "PLATFORM") {
+      const research = run.research || {};
+      const sourceLabels = {price_forecast:"盘前电价预测", load:"组合实际负荷", positions:"日级净持仓", load_forecast:"目标日组合负荷预测", medium_long_term_positions:"分时中长期持仓", clearing_results:"已成交电量"};
+      setText("draftResearchTag", research.mode === "historical_research" ? "历史日期研究 · 非严格事前回测" : research.mode === "target_day_research" ? "目标日研究 · 不使用目标日实测负荷" : "平台数据读取中");
+      setText("draftScenarioSource", (research.sources || []).map(source => sourceLabels[source.domain] || source.domain).join(" · ") || "目标日期来源待确认");
+      setText("draftScenarioVersion", `预测 ${research.forecast_version || "缺失"} · 参数 ${run.risk_aversion} · 正式申报未开放`);
+    }
   }
 
   function priceTriplet(row, market) {
@@ -11039,8 +10936,12 @@ function debounce(fn, wait) {
       const values = prefixes.map((prefix) => row[`${prefix}${quantile}`]);
       if (market === "dayAhead") values.push(row[`price_${quantile}`]);
       const value = finiteNumber(...values, nested[quantile]);
-      return value === null ? "--" : value;
-    }).join("/");
+      return value === null ? "--" : displayDraftNumber(value, 1);
+    }).join(" / ");
+  }
+
+  function displayDraftNumber(value, digits = 3) {
+    return value === null || value === undefined ? "--" : Number(value).toLocaleString("zh-CN", {maximumFractionDigits: digits, useGrouping: false});
   }
 
   function draftAllocation(row) {
@@ -11055,25 +10956,132 @@ function debounce(fn, wait) {
 
   function renderTradingDraft() {
     const run = agentStore.draftRun, draft = run?.draft || {};
+    if (run?.run_id) {
+      try { localStorage.setItem(`trading-draft-run:${API_BASE}`, run.run_id); } catch (_) { /* Storage may be unavailable. */ }
+    }
     renderDraftStrategyBand(run);
-    const status = byId("draftStatus"); if (status) { status.textContent = run?.status || "尚未创建"; status.className = `pill ${run?.status === "APPROVED" ? "ok" : run ? "partial" : "wait"}`; }
+    const labels = {DRAFT: "任务已创建", RUNNING: "正在生成", RESEARCH_READY: "研究方案已生成", READY_FOR_REVIEW: "草稿待复核", BLOCKED: "研究数据不足", FAILED: "读取失败", PENDING_REVIEW: "待独立审核", APPROVED: "人工复核通过", REJECTED: "已拒绝", MODIFIED: "已修改，待重新送审"};
+    const status = byId("draftStatus"); if (status) { status.textContent = labels[run?.status] || "尚未创建"; status.dataset.status = run?.status || ""; status.className = `pill ${run?.status === "APPROVED" ? "ok" : run ? "partial" : "wait"}`; }
     const strategySnapshot = draftStrategySnapshot(run);
     const snapshotWarning = run && !strategySnapshot?.version ? " · 策略快照未返回，不能认定预选策略已生效" : "";
-    setText("draftMeta", run ? `运行 ${run.run_id} · 数据门禁 ${draft.formal_gate || "未生成"}${snapshotWarning} · 不可自动提交` : "请先创建任务，再导入包含24个时段的模板。");
+    setText("draftMeta", run ? `交易日 ${run.business_date} · 运行 ${run.run_id} · 版本 ${run.revision ?? "--"} · 正式申报门禁 ${draft.formal_gate || "未生成"}${snapshotWarning}${run.input_sha256 ? ` · 快照 ${run.input_sha256.slice(0, 12)}` : ""} · 不可自动提交` : "尚无研究任务 · 不可自动提交");
     const body = byId("draftTable"); if (!body) return; body.innerHTML = (draft.records || []).map(r => {
-      const allocation = draftAllocation(r);
+      const fromPlatform = run?.input_source === "PLATFORM";
+      const allocation = fromPlatform ? {dayAhead: r.research_quantity_mwh, realtime: r.research_real_time_reserved_mwh, ratio: r.research_lock_ratio ?? null} : draftAllocation(r);
       const evidence = [
         ...(Array.isArray(r.risk_flags) ? r.risk_flags : []),
         ...(Array.isArray(r.strategy_reasons) ? r.strategy_reasons : []),
         ...(Array.isArray(r.formal_strategy_blockers) ? r.formal_strategy_blockers : []),
         r.reason,
+        fromPlatform ? `负荷口径：${r.load_basis === "FORECAST" ? "负荷预测" : r.load_basis === "HISTORICAL_ACTUAL" ? "历史实际，仅供研究" : "缺失"}；持仓口径：${r.position_basis === "HOURLY_INPUT" ? "平台分时输入" : r.position_basis === "DAILY_ALLOCATION_ASSUMPTION" ? "日持仓分摊假设" : "缺失"}` : "",
       ].filter(Boolean).join("；");
-      return `<tr><td>${escapeText(r.period)}</td><td>${escapeText(r.load_forecast_mwh ?? "--")}</td><td>${escapeText(r.medium_position_mwh ?? "--")}</td><td>${escapeText(r.cleared_energy_mwh ?? "--")}</td><td>${escapeText(r.remaining_exposure_mwh ?? "--")}</td><td>${escapeText(priceTriplet(r, "dayAhead"))}</td><td>${escapeText(priceTriplet(r, "realTime"))}</td><td>${escapeText(allocation.ratio === null ? "--" : `${(allocation.ratio * 100).toFixed(1)}%`)}</td><td>${escapeText(allocation.dayAhead ?? 0)}</td><td>${escapeText(allocation.realtime ?? "--")}</td><td>${escapeText(r.suggested_price_lower == null ? "--" : `${r.suggested_price_lower} - ${r.suggested_price_upper}`)}</td><td>${escapeText(r.gate_status)}</td><td>${escapeText(evidence)}</td></tr>`;
+      const research = r.gate_status === "BLOCKED" && r.research_quantity_mwh > 0 ? `；研究参考分配 ${r.research_quantity_mwh} MWh（不可申报）` : "";
+      const lower = fromPlatform ? r.research_price_lower : r.suggested_price_lower;
+      const upper = fromPlatform ? r.research_price_upper : r.suggested_price_upper;
+      const reasonLabels = {SCENARIO_CVAR_OPTIMIZATION:"场景成本与尾部风险优化", NEWSVENDOR_UNDER_OVERAGE_BALANCE:"兼顾日前多买与少买成本", HIGH_PRICE_RISK:"高价风险关注", HIGH_PRICE_REVIEW_ONLY:"高价标记仅供复核", NEGATIVE_PRICE_RISK:"负价风险关注", DAILY_POSITION_ALLOCATION_RESEARCH_ASSUMPTION:"日级持仓分摊研究假设", NEGATIVE_POSITION_REVIEW:"负持仓待核验", OVER_COVERED_REVIEW:"持仓超覆盖，人工处理"};
+      Object.assign(reasonLabels, {SIMILAR_DAY_FORECAST_CONDITIONED:"目标预测与相似日配对误差", FORECAST_PUBLICATION_TIMES_NOT_FULLY_AUDITED:"精确发布时间待核验", TAIL_SAMPLE_LIMITED:"尾部样本有限", SIMILAR_DAY_HISTORY_INSUFFICIENT:"合格相似日不足10个", SIMILAR_DAY_EFFECTIVE_SAMPLE_INSUFFICIENT:"有效样本不足8", SIMILAR_DAY_OUT_OF_DISTRIBUTION:"历史样本与目标预测差异过大", SIMILAR_DAY_HISTORY_STALE:"相似日数据过旧", SIMILAR_DAY_MODEL_VERSION_UNVERIFIED:"模型版本未核验一致", SIMILAR_DAY_TARGET_QUANTILES_MISSING:"目标日预测区间缺失", SIMILAR_DAY_WEATHER_UNAVAILABLE_PRICE_ONLY:"天气缺失，仅按价格匹配", SIMILAR_DAY_DUPLICATE_HISTORY_DATE:"历史日期重复"});
+      const readableEvidence = (evidence + (fromPlatform ? "" : research)).replace(/[A-Z][A-Z0-9_]+/g, code => reasonLabels[code] || code);
+      return `<tr><td>${escapeText(r.period)}</td><td>${escapeText(displayDraftNumber(fromPlatform ? r.research_load_mwh : r.load_forecast_mwh))}</td><td>${escapeText(displayDraftNumber(r.medium_position_mwh))}</td><td>${escapeText(displayDraftNumber(r.cleared_energy_mwh))}</td><td>${escapeText(displayDraftNumber(r.remaining_exposure_mwh))}</td><td>${escapeText(priceTriplet(r, "dayAhead"))}</td><td>${escapeText(priceTriplet(r, "realTime"))}</td><td>${escapeText(allocation.ratio === null ? "--" : `${(allocation.ratio * 100).toFixed(1)}%`)}</td><td>${escapeText(displayDraftNumber(allocation.dayAhead))}</td><td>${escapeText(displayDraftNumber(allocation.realtime))}</td><td>${escapeText(lower == null ? "--" : `${displayDraftNumber(lower, 1)} - ${displayDraftNumber(upper, 1)}`)}</td><td>${escapeText(r.gate_status)} / ${escapeText(r.action)} / ${escapeText(r.suggested_quantity_mwh)} MWh</td><td>${escapeText(readableEvidence)}</td></tr>`;
     }).join("");
-    const upload = byId("uploadDraftBtn"), exportBtn = byId("exportDraftBtn"); if (upload) upload.disabled = !run; if (exportBtn) exportBtn.disabled = !run || !["APPROVED", "MODIFIED"].includes(run.status);
+    const upload = byId("uploadDraftBtn"), exportBtn = byId("exportDraftBtn");
+    if (upload) upload.disabled = !run || run.status !== "DRAFT" || Boolean(run.input_sha256);
+    if (exportBtn) exportBtn.disabled = !run || run.status !== "APPROVED";
+    if (byId("exportDraftJsonBtn")) byId("exportDraftJsonBtn").disabled = !run || run.status !== "APPROVED";
     const submit = byId("submitDraftReviewBtn"), review = byId("reviewDraftBtn");
-    if (submit) submit.disabled = !run || run.status !== "READY_FOR_REVIEW";
+    if (submit) submit.disabled = !run || !["READY_FOR_REVIEW", "RESEARCH_READY", "MODIFIED"].includes(run.status);
     if (review) review.disabled = !run || run.status !== "PENDING_REVIEW";
+    renderResearchDetails(run);
+  }
+
+  function renderResearchDetails(run) {
+    const research = run?.research || {}, summary = research.summary || {};
+    const format = value => value === null || value === undefined ? "--" : Number(value).toLocaleString("zh-CN", {maximumFractionDigits: 3});
+    setHtml("researchSummary", run?.input_source === "PLATFORM" ? [
+      ["日前研究量（MWh）", summary.day_ahead_quantity_mwh], ["实时保留敞口（MWh）", summary.reserved_realtime_mwh],
+      ["可研究时段", summary.actionable_periods], ["相对全实时的预期成本优势（元）", summary.expected_cost_advantage_yuan],
+    ].map(([label, value]) => `<div><span>${escapeText(label)}</span><strong>${escapeText(format(value))}</strong></div>`).join("") : "");
+    setHtml("draftWorkflowSteps", (run?.steps || []).map(step => `<div class="agent-step" data-status="${escapeText(step.status)}"><span class="agent-step-index">${step.sequence}</span><div><strong>${escapeText(step.name)}</strong><p>${escapeText(step.detail)}</p></div>${statusTag(step.status)}</div>`).join(""));
+    const gapLabels = {load_forecast_mwh:"目标日负荷预测", medium_position_mwh:"目标日分时持仓", cleared_energy_mwh:"已成交电量", day_ahead_p50:"日前价格预测", real_time_p50:"实时价格预测", real_time_quantiles:"实时预测区间", TARGET_DATE_PRE_MARKET_FORECAST_MISSING:"目标日期盘前价格预测"};
+    const gaps = [...(run?.input_errors || []), ...agentStore.draftInputErrors].map(value => typeof value === "string" ? gapLabels[value] || value : value.message || JSON.stringify(value));
+    setHtml("researchEvidence", [
+      agentStore.draftConnectionError ? `<p class="agent-error-text">${escapeText(agentStore.draftConnectionError)}</p>` : "",
+      gaps.length ? `<p class="agent-error-text">数据缺口：${escapeText(gaps.join("；"))}</p>` : "",
+      ...(research.assumptions || []).map(value => `<p>${escapeText(value)}</p>`),
+      ...(research.sources || []).map(value => `<p>${escapeText(`${value.domain} · ${value.source || "--"} · ${value.version || "版本待核验"} · ${value.basis}`)}</p>`),
+           research.joint_cvar ? `<p>24小时联合 CVaR：${escapeText(research.joint_cvar.status || "--")} · 价格路径 ${escapeText(research.joint_cvar.path_count ?? "--")} 条 · 全日比例调整 ${escapeText(format((research.joint_cvar.selected_delta || 0) * 100))}%；${escapeText(research.joint_cvar.path_method || "")}</p>` : "",
+      research.policy_evidence ? `<p>政策证据：${escapeText(research.policy_evidence.status || "待确认")}；政策引用不等于正式申报规则已齐备。</p>` : "",
+    ].join(""));
+    const scenarioLabels = {
+      SIMILAR_DAY_TARGET_QUANTILES_MISSING: "目标日价格区间缺失或无效",
+      SIMILAR_DAY_MODEL_VERSION_UNVERIFIED: "历史与目标预测模型版本未确认一致",
+      SIMILAR_DAY_HISTORY_INSUFFICIENT: "合格相似日不足10个",
+      SIMILAR_DAY_EFFECTIVE_SAMPLE_INSUFFICIENT: "有效样本量不足8",
+      SIMILAR_DAY_OUT_OF_DISTRIBUTION: "历史日与目标预测差异过大",
+      SIMILAR_DAY_HISTORY_STALE: "最近合格相似日超过14天",
+      SIMILAR_DAY_DUPLICATE_HISTORY_DATE: "历史日期重复，需核验来源",
+      SIMILAR_DAY_WEATHER_UNAVAILABLE_PRICE_ONLY: "缺少可用天气预测，仅按价格预测匹配",
+      FORECAST_PUBLICATION_TIMES_NOT_FULLY_AUDITED: "预测精确发布时间尚未完整核验",
+      TAIL_SAMPLE_LIMITED: "尾部样本有限，95% CVaR需谨慎解释",
+    };
+    const scenarioRows = (run?.draft?.records || []).filter(row => row.research_scenario_audit);
+    setHtml("researchScenarioEvidence", scenarioRows.length ? `<h4>策略场景与校准依据</h4><p>所有权重和概率仅用于研究，必须结合样本量与校准状态解读；不可自动提交。</p>${scenarioRows.map(row => {
+      const audit = row.research_scenario_audit, opt = row.research_optimization || {};
+      const similarAudit = audit.similar_day_audit || audit;
+      const calibration = row.research_quantile_calibration || {};
+      const spread = row.research_spread_prediction || {};
+      const blockers = (audit.blockers || []).map(code => scenarioLabels[code] || code).join("；");
+      const warnings = (similarAudit.warnings || []).map(code => scenarioLabels[code] || code).join("；");
+      const probability = opt.scenario_probability_rt_gt_da;
+      const near = opt.near_optimal_ratio_range;
+      const sceneCount = audit.scenario_count ?? audit.selected_count ?? (audit.scenarios || []).length;
+      const rawRatio = finiteNumber(row.research_raw_lock_ratio);
+      const finalRatio = finiteNumber(row.research_lock_ratio);
+      const confidence = finiteNumber(row.research_confidence);
+      const spreadP = spread.spread_forecast_yuan_per_mwh || {};
+      return `<details><summary>时段 ${escapeText(row.period)} · ${audit.status === "READY" ? "可研究" : "样本阻断"} · 场景 ${escapeText(sceneCount)} 个 · 有效样本 ${escapeText(format(audit.effective_sample_size))}</summary>
+      <p>${escapeText(blockers || "样本门槛通过")}${warnings ? `；${escapeText(warnings)}` : ""}</p>
+      ${audit.components ? `<p>混合结构：相似日 ${escapeText(((audit.mixture_weights?.similar_day || 0) * 100).toFixed(0))}%、近期误差 ${escapeText(((audit.mixture_weights?.recent_error || 0) * 100).toFixed(0))}%、极端尾部 ${escapeText(((audit.mixture_weights?.extreme_tail || 0) * 100).toFixed(0))}%；误差仅取 D-2 及更早日期。</p>` : `<p>${similarAudit.weather_source ? "价格预测70%＋天气预测25%＋周末类型5%；天气采用业务确认的申报前可得口径" : "价格预测95%＋周末类型5%"}；误差仅取D-2及更早日期。</p>`}
+      ${probability == null ? "" : `<p>同组场景中实时更贵的加权占比：${escapeText((probability * 100).toFixed(1))}%${Array.isArray(near) ? `；评分距最优不超过1元/MWh的日前比例：${escapeText(near.map(v => `${(v * 100).toFixed(0)}%`).join("—"))}（候选范围，不是置信区间）` : ""}。</p>`}
+      ${calibration.status ? `<p>分位数校准：${escapeText(calibration.status)} · 历史样本 ${escapeText(calibration.sample_count)}；直接价差预测：${escapeText(spread.status || "--")} · RT&gt;DA ${spread.probability_rt_gt_da == null ? "--" : escapeText((spread.probability_rt_gt_da * 100).toFixed(1) + "%")} · P10/P50/P90 ${escapeText([spreadP.p10, spreadP.p50, spreadP.p90].map(format).join(" / "))} 元/MWh。</p>` : ""}
+      ${confidence == null ? "" : `<p>置信度收缩：原始比例 ${escapeText(format(rawRatio * 100))}% → 最终比例 ${escapeText(format(finalRatio * 100))}%，置信度 ${escapeText(format(confidence * 100))}%；允许边界 ${escapeText(format(row.research_lock_ratio_floor * 100))}%—${escapeText(format(row.research_lock_ratio_ceiling * 100))}%。</p>`}
+      ${similarAudit.conditional_error_median_yuan_mwh ? `<p>保留的相似日误差中位数：日前 ${escapeText(format(similarAudit.conditional_error_median_yuan_mwh.da))}、实时 ${escapeText(format(similarAudit.conditional_error_median_yuan_mwh.rt))} 元/MWh；这是历史依据的偏差修正，不强制抹回原预测P50。</p>` : ""}
+      <ul>${(audit.scenarios || []).map(s => { const raw = s.paired_raw_errors || {}; const source = s.source || (String(s.name || "").startsWith("SIMILAR_") ? "similar_day" : "historical_error"); return `<li>${escapeText(s.source_date || "日期待核验")} · ${escapeText(source)} · 距离 ${escapeText(format(s.distance))} · 权重 ${escapeText(format((s.weight || 0) * 100))}% · 原始配对误差 DA/RT：${escapeText(format(raw.da))}/${escapeText(format(raw.rt))} · 场景价 DA/RT：${escapeText(format(s.day_ahead_price))}/${escapeText(format(s.real_time_price))} 元/MWh</li>`; }).join("")}</ul></details>`;
+    }).join("")}` : "");
+    setText("researchReviewScope", run?.input_source === "PLATFORM" ? "仅复核研究材料；批准不解除正式申报门禁，调整策略参数后需重新生成。" : "人工草稿修改后重新送审；不可自动提交。");
+    const modifyOption = byId("draftReviewDecision")?.querySelector('option[value="MODIFY"]');
+    if (modifyOption) {
+      modifyOption.disabled = run?.input_source === "PLATFORM";
+      if (modifyOption.disabled && byId("draftReviewDecision").value === "MODIFY") byId("draftReviewDecision").value = "APPROVE";
+    }
+    document.querySelectorAll("[data-draft-modification]").forEach(element => { element.hidden = byId("draftReviewDecision")?.value !== "MODIFY"; });
+    setHtml("researchReviewHistory", (run?.audit || []).filter(event => ["SUBMIT", "APPROVE", "MODIFY", "REJECT", "EXPORTED"].includes(event.action)).map(event => `<p>${escapeText([event.at, event.action, event.submitted_by || event.reviewed_by || "", event.reason || ""].filter(Boolean).join(" · "))}</p>`).join(""));
+    const busy = agentStore.draftGenerating || (run?.input_source === "PLATFORM" && ["DRAFT", "RUNNING"].includes(run.status));
+    if (byId("createDraftBtn")) { byId("createDraftBtn").disabled = busy; byId("createDraftBtn").textContent = busy ? "正在读取与生成" : "生成研究方案"; }
+  }
+
+  async function restoreTradingDraft() {
+    let runId = agentStore.draftRun?.run_id;
+    if (!runId) {
+      try { runId = localStorage.getItem(`trading-draft-run:${API_BASE}`); } catch (_) { return; }
+    }
+    if (!runId) return;
+    try {
+      const run = await apiRequest(`/trading-draft-runs/${encodeURIComponent(runId)}`);
+      if (agentStore.draftRun && agentStore.draftRun.run_id !== runId) return;
+      agentStore.draftRun = run;
+      agentStore.draftConnectionError = "";
+      agentStore.draftPollFailures = 0;
+      renderTradingDraft();
+      clearTimeout(agentStore.draftPollTimer);
+      if (run.input_source === "PLATFORM" && ["DRAFT", "RUNNING"].includes(run.status)) agentStore.draftPollTimer = setTimeout(restoreTradingDraft, 600);
+    } catch (error) {
+      agentStore.draftPollFailures += 1;
+      const retry = agentStore.draftPollFailures <= 5;
+      agentStore.draftConnectionError = `任务读取失败：${error.message}。${retry ? "正在重新连接。" : "刷新页面可恢复读取；已保存的任务不会丢失。"}`;
+      renderResearchDetails(agentStore.draftRun);
+      if (retry) agentStore.draftPollTimer = setTimeout(restoreTradingDraft, 2000);
+      else toast(agentStore.draftConnectionError);
+    }
   }
 
   async function createTradingDraft() {
@@ -11084,8 +11092,18 @@ function debounce(fn, wait) {
     if (!DRAFT_STRATEGIES[strategyVersion]) return toast("请选择有效的策略版本。");
     if (riskAversion === null || riskAversion < 0 || riskAversion > 1) return toast("风险厌恶系数必须在 0 至 1 之间。");
     const date = byId("agentBusinessDate")?.value || localIsoDate();
+    const fromPlatform = byId("draftInputSource")?.value !== "MANUAL";
+    if (!fromPlatform && ["similar_day_cvar_v04", "advanced_cvar_v05", "joint_cvar_v06"].includes(strategyVersion)) return toast("该策略需要平台历史预测、天气和误差场景来源，请选择“平台已有数据”。");
+    if (!fromPlatform && !byId("draftFile")?.files?.length) return toast("请选择补充 CSV/JSON 文件。");
+    if (agentStore.draftGenerating) return;
+    agentStore.draftGenerating = true;
+    agentStore.draftInputErrors = [];
+    agentStore.draftConnectionError = "";
+    agentStore.draftPollFailures = 0;
+    clearTimeout(agentStore.draftPollTimer);
+    renderResearchDetails(agentStore.draftRun);
     try {
-      agentStore.draftRun = await apiRequest("/trading-draft-runs", {
+      agentStore.draftRun = await apiRequest(fromPlatform ? "/trading-research-runs" : "/trading-draft-runs", {
         method: "POST",
         body: JSON.stringify({
           request_id: newRequestId("draft"),
@@ -11096,19 +11114,37 @@ function debounce(fn, wait) {
         }),
       });
       renderTradingDraft();
-      const snapshot = draftStrategySnapshot(agentStore.draftRun);
-      toast(snapshot?.version
-        ? "日前草稿任务已创建，策略参数已由后端锁定。"
-        : "任务已创建，但后端未返回策略快照，不能视为预选策略已生效。");
+      if (fromPlatform) await restoreTradingDraft();
+      else await uploadTradingDraft();
     } catch(e) {
       toast(`创建失败：${e.message}`);
+    } finally {
+      agentStore.draftGenerating = false;
+      renderTradingDraft();
     }
   }
-  async function uploadTradingDraft() { const file = byId("draftFile")?.files?.[0]; if (!file || !agentStore.draftRun) return toast("请选择 CSV/JSON 文件。"); try { const payload = await file.text(); const result = await apiRequest(`/trading-draft-runs/${agentStore.draftRun.run_id}/inputs`, {method:"POST", headers:{"Content-Type": file.name.endsWith(".json") ? "application/json" : "text/csv"}, body:payload}); agentStore.draftRun = {...agentStore.draftRun, ...result, status: result.status || (result.errors?.length ? "BLOCKED" : "READY_FOR_REVIEW")}; renderTradingDraft(); toast(result.status === "BLOCKED" ? "已导入，但存在阻断项。" : "24点草稿已生成。"); } catch(e) { toast(`导入失败：${e.message}`); } }
+  async function uploadTradingDraft() {
+    const file = byId("draftFile")?.files?.[0];
+    if (!file || !agentStore.draftRun) return toast("请选择 CSV/JSON 文件。");
+    try {
+      const payload = await file.text();
+      await apiRequest(`/trading-draft-runs/${agentStore.draftRun.run_id}/inputs`, {
+        method: "POST", headers: { "Content-Type": file.name.toLowerCase().endsWith(".json") ? "application/json" : "text/csv" }, body: payload,
+      });
+      agentStore.draftRun = await apiRequest(`/trading-draft-runs/${agentStore.draftRun.run_id}`);
+      renderTradingDraft();
+      toast(agentStore.draftRun.status === "BLOCKED" ? "已导入，但存在阻断项。更换输入需创建新任务。" : "24点草稿已生成，输入快照已冻结。");
+    } catch (error) {
+      const details = error.payload?.detail?.details?.errors;
+      agentStore.draftInputErrors = Array.isArray(details) ? details : [error.message];
+      renderResearchDetails(agentStore.draftRun);
+      toast(`导入失败：${error.message}`);
+    }
+  }
 
   async function submitTradingDraftReview() {
     const run = agentStore.draftRun, submittedBy = byId("draftSubmitter")?.value.trim();
-    if (!run || run.status !== "READY_FOR_REVIEW") return;
+    if (!run || !["READY_FOR_REVIEW", "RESEARCH_READY", "MODIFIED"].includes(run.status)) return;
     if (!submittedBy) return toast("请输入送审人姓名。");
     try { agentStore.draftRun = await apiRequest(`/trading-draft-runs/${encodeURIComponent(run.run_id)}/submit-review`, {method:"POST", body: JSON.stringify({submitted_by: submittedBy, reason: "提交人工复核"})}); renderTradingDraft(); toast("草稿已提交复核。"); }
     catch (e) { toast(`送审失败：${e.message}`); }
@@ -11119,8 +11155,15 @@ function debounce(fn, wait) {
     if (!run || run.status !== "PENDING_REVIEW") return;
     if (!reviewer) return toast("请输入审核人姓名。");
     if (["MODIFY", "REJECT"].includes(decision) && !reason) return toast("修改或拒绝时必须填写原因。");
-    try { agentStore.draftRun = await apiRequest(`/trading-draft-runs/${encodeURIComponent(run.run_id)}/review`, {method:"POST", body: JSON.stringify({decision, reviewed_by: reviewer, reason})}); renderTradingDraft(); toast(`草稿审核状态：${decision}`); }
-    catch (e) { toast(`审核失败：${e.message}`); }
+    let modifications;
+    if (decision === "MODIFY") {
+      const period = Number(byId("draftModifyPeriod")?.value);
+      const value = finiteNumber(byId("draftModifyValue")?.value);
+      if (!Number.isInteger(period) || period < 1 || period > 24 || value === null) return toast("请输入 1 至 24 的时段和有效修改数值。");
+      modifications = [{period, field: byId("draftModifyField")?.value, value}];
+    }
+    try { await apiRequest(`/trading-draft-runs/${encodeURIComponent(run.run_id)}/review`, {method:"POST", body: JSON.stringify({decision, reviewed_by: reviewer, reason, modifications, expected_revision: run.revision})}); agentStore.draftRun = await apiRequest(`/trading-draft-runs/${encodeURIComponent(run.run_id)}`); renderTradingDraft(); toast(decision === "MODIFY" ? "修改已保存并重算，需重新送审后由其他人员批准。" : `草稿审核状态：${decision}`); }
+    catch (e) { toast(`审核失败：${e.message}`); await restoreTradingDraft(); }
   }
 
   const byId = (id) => document.getElementById(id);
@@ -11586,13 +11629,26 @@ function debounce(fn, wait) {
     byId("draftStrategyVersion")?.addEventListener("change", () => renderDraftStrategyBand(agentStore.draftRun));
     byId("draftRiskAversion")?.addEventListener("change", () => renderDraftStrategyBand(agentStore.draftRun));
     byId("createDraftBtn")?.addEventListener("click", createTradingDraft);
+    byId("draftInputSource")?.addEventListener("change", () => { byId("draftFileField").hidden = byId("draftInputSource").value !== "MANUAL"; });
     byId("uploadDraftBtn")?.addEventListener("click", uploadTradingDraft);
     byId("submitDraftReviewBtn")?.addEventListener("click", submitTradingDraftReview);
     byId("reviewDraftBtn")?.addEventListener("click", reviewTradingDraft);
+    byId("draftReviewDecision")?.addEventListener("change", () => {
+      document.querySelectorAll("[data-draft-modification]").forEach(element => {
+        element.hidden = byId("draftReviewDecision").value !== "MODIFY";
+      });
+    });
     byId("exportDraftBtn")?.addEventListener("click", () => {
       const id = agentStore.draftRun?.run_id; if (id) window.open(`${API_BASE}/trading-draft-runs/${encodeURIComponent(id)}/export?format=csv`, "_blank");
     });
+    byId("exportDraftJsonBtn")?.addEventListener("click", async () => {
+      const id = agentStore.draftRun?.run_id;
+      if (!id) return;
+      try { const result = await apiRequest(`/trading-draft-runs/${encodeURIComponent(id)}/export?format=json`); downloadContent(`research-${id}.json`, JSON.stringify(result, null, 2), "application/json"); await restoreTradingDraft(); }
+      catch(error) { toast(error.message); }
+    });
     renderTradingDraft();
+    restoreTradingDraft();
   });
 
   function renderReportSummary(run) {

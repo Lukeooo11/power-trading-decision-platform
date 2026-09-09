@@ -53,13 +53,14 @@ class PlatformClient:
         params: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
         timeout: float | None = None,
+        legacy_api: bool = False,
     ) -> dict[str, Any]:
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient()
         try:
             response = await client.request(
                 method,
-                f"{self.api_base}/{path.lstrip('/')}",
+                f"{self.api_base.removesuffix('/v1') if legacy_api else self.api_base}/{path.lstrip('/')}",
                 params=params,
                 json=json,
                 headers=self.headers,
@@ -111,6 +112,12 @@ class PlatformClient:
 
     async def models(self) -> dict[str, Any]:
         return await self._request("GET", "/models")
+
+    async def research_plan(self, business_date: str, strategy_version: str, risk_aversion: float) -> dict[str, Any]:
+        return await self._request("GET", "/strategy/research", legacy_api=True, params={
+            "date": business_date, "market_code": "SD", "strategy_version": strategy_version,
+            "risk_aversion": risk_aversion,
+        })
 
     async def data_assets(self, market_code: str) -> dict[str, Any]:
         return await self._request(

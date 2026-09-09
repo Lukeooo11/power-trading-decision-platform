@@ -12,7 +12,7 @@ import math
 
 
 def _num(value: Any) -> float | None:
-    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) else None
 
 
 def _normal_cdf(value: float) -> float:
@@ -126,7 +126,7 @@ def optimize_lock_ratio(da: dict[str, Any], rt: dict[str, Any], *,
     This is the first scenario-based implementation inspired by the paper.
     It is intentionally deterministic and does not use realised prices.
     """
-    scenarios = list(historical_scenarios or []) or _scenario_grid(da, rt)
+    scenarios = [dict(item) for item in (historical_scenarios or _scenario_grid(da, rt))]
     if not scenarios:
         return {"ratio": None, "expected_cost": None, "cvar_cost": None,
                 "objective": None, "scenario_count": 0, "confidence": confidence,
@@ -142,9 +142,10 @@ def optimize_lock_ratio(da: dict[str, Any], rt: dict[str, Any], *,
                   for x in scenarios]
         expected = sum(loss * weight for loss, weight in losses)
         cvar = _weighted_cvar(losses, confidence)
-        objective = (1.0 - risk_aversion) * expected + risk_aversion * (cvar or expected)
+        tail_cost = expected if cvar is None else cvar
+        objective = (1.0 - risk_aversion) * expected + risk_aversion * tail_cost
         candidates.append({"ratio": ratio, "expected_cost": round(expected, 6),
-                           "cvar_cost": round(cvar or expected, 6), "objective": round(objective, 6)})
+                           "cvar_cost": round(tail_cost, 6), "objective": round(objective, 6)})
     selected = min(candidates, key=lambda item: (item["objective"], abs(item["ratio"] - 0.5)))
     return {"ratio": selected["ratio"], "expected_cost": selected["expected_cost"],
             "cvar_cost": selected["cvar_cost"], "objective": selected["objective"],
@@ -212,7 +213,7 @@ def generate_strategy(*, load_mwh: float | None, medium_position_mwh: float | No
                         ("real_time_p50", rt50), ("real_time_quantiles", p10 if p10 is not None and p90 is not None else None)):
         if value is None:
             missing.append(name)
-    gross = load_mwh - medium_position_mwh - cleared_energy_mwh if not missing[:3] else None
+    gross = load_mwh - medium_position_mwh - cleared_energy_mwh if all(_num(v) is not None for v in (load_mwh, medium_position_mwh, cleared_energy_mwh)) else None
     remaining = max(0.0, gross) if gross is not None else None
     over_covered = gross is not None and gross < 0
     if da50 is None or rt50 is None or p10 is None or p90 is None or remaining is None or over_covered:

@@ -54,6 +54,10 @@ class AgentRunCreate(TrimmedTextModel):
 
 
 class TradingDraftRunCreate(TrimmedTextModel):
+    market_code: Literal["SD"] = "SD"
+    trading_subject: Literal["retail"] = "retail"
+    granularity: Literal["HOUR_24"] = "HOUR_24"
+    run_type: Literal["DAY_AHEAD_DRAFT"] = "DAY_AHEAD_DRAFT"
     request_id: str = Field(min_length=1, max_length=128)
     business_date: date
     initiated_by: str = Field(min_length=1, max_length=128)
@@ -66,8 +70,28 @@ class TradingDraftRunCreate(TrimmedTextModel):
     scenario_source: str | None = Field(default=None, max_length=255)
     scenario_version: str | None = Field(default=None, max_length=128)
 
+    @field_validator("risk_aversion", mode="before")
+    @classmethod
+    def risk_is_not_boolean(cls, value: Any) -> Any:
+        if isinstance(value, bool):
+            raise ValueError("risk_aversion 必须是数字而非布尔值")
+        return value
+
+
+class TradingResearchRunCreate(TradingDraftRunCreate):
+    run_type: Literal["TRADING_RESEARCH"] = "TRADING_RESEARCH"
+    strategy_version: Literal[
+        "historical_cvar_v02", "regime_cvar_v03", "similar_day_cvar_v04",
+        "advanced_cvar_v05", "joint_cvar_v06",
+    ] = "historical_cvar_v02"
+    forecast_version: None = None
+    rule_version: None = None
+    scenario_source: None = None
+    scenario_version: None = None
+
 
 class TradingDraftReview(TrimmedTextModel):
+    expected_revision: int = Field(ge=0, strict=True)
     decision: Literal["APPROVE", "MODIFY", "REJECT"]
     reviewed_by: str = Field(min_length=1, max_length=128)
     reason: str = Field(default="", max_length=1000)

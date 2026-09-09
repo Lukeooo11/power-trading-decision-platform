@@ -23,6 +23,8 @@ from .price_forecast_model import run_price_forecast
 from .bidding_strategy import build_historical_price_scenarios, generate_strategy
 from .strategy_backtest import run_strategy_backtest
 from .strategy_comparison import compare_strategy_versions
+from .advanced_strategies import ADVANCED_KEY, JOINT_KEY
+from .research_plan import build_research_plan
 
 
 # Local runs place this file under ``<repo>/backend/app`` while the Docker
@@ -445,10 +447,13 @@ def load_private_json(name: str) -> Any:
 
 _PUBLIC_STRATEGY_ASSETS = {
     "price_forecast_history_colleague_2026h1.json": "price-forecast-history.json",
+    "price_forecast_result_colleague_2026-07-01.json": "price-forecast-result.json",
+    "price_forecast_result_2026-07-01.json": "price-forecast-result-secondary.json",
     "spot_prices_2026h1.json": "spot-prices.json",
     "portfolio_load_hourly_2026h1.json": "portfolio-load-hourly.json",
     "medium_long_term_positions_2026h1.json": "medium-positions.json",
     "market_supply_hourly_2026h1.json": "market-supply-hourly.json",
+    "weather_hourly_gfs_20260501_20260701.json": "weather-hourly.json",
 }
 
 
@@ -2283,9 +2288,59 @@ def research_bidding_strategy(
     date: str = Query(...),
     market_code: str = "SD",
     risk_aversion: float = Query(default=0.3, ge=0.0, le=1.0),
+    strategy_version: Literal[
+        "historical_cvar_v02", "regime_cvar_v03", "similar_day_cvar_v04",
+        "advanced_cvar_v05", "joint_cvar_v06",
+    ] = "historical_cvar_v02",
+) -> dict[str, Any]:
+    """Resolve public platform assets for historical or target-day research."""
+    normalized_market = market_code.upper()
+    require_sample_market(normalized_market)
+    validate_business_date(date)
+
+    def read_asset(name: str) -> Any:
+        if name == "medium_long_term_positions_2026h1.json":
+            return strategy_position_document()
+        try:
+            return load_strategy_json(name)
+        except HTTPException as error:
+            if error.status_code == 404:
+                return None
+            raise
+
+    with closing(connect()) as connection:
+        cached = connection.execute(
+            "SELECT result_json FROM model_runs_v1 WHERE market_code = ? AND market_date = ? "
+            "AND model_id = 'price-forecast' AND status = 'SUCCEEDED' ORDER BY created_at DESC",
+            (normalized_market, date),
+        ).fetchall()
+        batches = connection.execute(
+            "SELECT domain, data_version, source_system, updated_at, payload_json "
+            "FROM data_asset_batches WHERE market_code = ? AND domain IN "
+            "('load_forecast', 'medium_long_term_positions', 'clearing_results') "
+            "ORDER BY created_at DESC",
+            (normalized_market,),
+        ).fetchall()
+    return build_research_plan(
+        date,
+        read_asset,
+        risk_aversion=risk_aversion,
+        strategy_version=strategy_version,
+        cached_forecasts=[json.loads(row["result_json"]) for row in cached if row["result_json"]],
+        input_batches=[
+            {**dict(row), "payload": json.loads(row["payload_json"])}
+            for row in batches
+        ],
+    )
+
+
+def _legacy_research_bidding_strategy(
+    date: str,
+    market_code: str = "SD",
+    risk_aversion: float = 0.3,
     strategy_version: Literal["historical_cvar_v02", "regime_cvar_v03"] = "historical_cvar_v02",
 ) -> dict[str, Any]:
-    """Return the latest deterministic DA/RT split strategy for one historical day."""
+    """Retained temporarily for parity checks against the previous online strategy."""
     normalized_market = market_code.upper()
     require_sample_market(normalized_market)
     forecast_doc, load_rows, position_doc, price_rows, supply_doc = _strategy_assets()
@@ -2391,7 +2446,9 @@ def strategy_backtest(
     end: str | None = Query(default=None),
     market_code: str = "SD",
     risk_aversion: float = Query(default=0.3, ge=0.0, le=1.0),
-    strategy_version: Literal["historical_cvar_v02", "regime_cvar_v03"] = "historical_cvar_v02",
+    strategy_version: Literal[
+        "historical_cvar_v02", "regime_cvar_v03", "advanced_cvar_v05",
+    ] = "historical_cvar_v02",
 ) -> dict[str, Any]:
     normalized_market = market_code.upper()
     require_sample_market(normalized_market)
@@ -2429,6 +2486,7 @@ def strategy_compare(
         position_doc=position_doc,
         price_rows=price_rows,
         supply_rows=supply_doc.get("rows", []),
+        weather_doc=load_strategy_json("weather_hourly_gfs_20260501_20260701.json"),
         start=start,
         end=end,
         risk_aversion=risk_aversion,
