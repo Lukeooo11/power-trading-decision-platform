@@ -443,24 +443,35 @@ def validate_forecast_result(result: ForecastStrategyResultV1, expected: sqlite3
 
 
 def shandong_data_available() -> bool:
-    return all((PRIVATE_DATA / name).exists() for name in [
+    return all(_public_or_private_asset_exists(name) for name in [
         "spot_prices_2026h1.json",
         "portfolio_load_hourly_2026h1.json",
         "data_quality_2026h1.json",
     ])
 
 
+def _public_or_private_asset_exists(name: str) -> bool:
+    public_name = _PUBLIC_STRATEGY_ASSETS.get(name, name)
+    return (PUBLIC_DATA / public_name).exists() or (PRIVATE_DATA / name).exists()
+
+
 def load_private_json(name: str) -> Any:
-    path = PRIVATE_DATA / name
+    public_name = _PUBLIC_STRATEGY_ASSETS.get(name, name)
+    public_path = PUBLIC_DATA / public_name
+    path = public_path if public_path.exists() else PRIVATE_DATA / name
     if not path.exists():
-        raise HTTPException(status_code=404, detail=f"Private data product not found: {name}. Run scripts/process-shandong-data.cjs first.")
+        raise HTTPException(status_code=404, detail=f"Data product not found: {name}")
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 _PUBLIC_STRATEGY_ASSETS = {
+    "data_quality_2026h1.json": "data-quality.json",
+    "market_feature_summary_2026h1.json": "market-features.json",
+    "portfolio_load_daily_2026h1.json": "portfolio-load-daily.json",
     "price_forecast_history_colleague_2026h1.json": "price-forecast-history.json",
     "price_forecast_result_colleague_2026-07-01.json": "price-forecast-result.json",
     "price_forecast_result_2026-07-01.json": "price-forecast-result-secondary.json",
+    "retail_contract_packages_2026h1.json": "retail-contracts.json",
     "spot_prices_2026h1.json": "spot-prices.json",
     "portfolio_load_hourly_2026h1.json": "portfolio-load-hourly.json",
     "medium_long_term_positions_2026h1.json": "medium-positions.json",
