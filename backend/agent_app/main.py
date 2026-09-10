@@ -419,6 +419,8 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
             initiated_by=request.initiated_by.strip(),
             model_id=settings.model_id,
             model_version=settings.model_version,
+            strategy_version=request.strategy_version,
+            risk_aversion=request.risk_aversion,
         )
         if not replay:
             workflow.initialize_steps(run["run_id"])
@@ -553,6 +555,8 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
             initiated_by=request.actor,
             model_id=original["model_id"],
             model_version=original["model_version"],
+            strategy_version=original.get("strategy_version") or "historical_cvar_v02",
+            risk_aversion=float(original.get("risk_aversion", 0.3)),
             parent_run_id=run_id,
             data_version=original.get("data_version"),
             input_snapshot={
@@ -632,7 +636,7 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
         )
         database.upsert_step(
             run_id,
-            8,
+            9,
             "dual_review",
             "SUCCEEDED",
             {"submitted_by": request.submitted_by, "submitted_at": submitted_at},
@@ -739,13 +743,13 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
             formal_strategy_json=formal_strategy,
             completed_at=reviewed_at,
         )
-        database.upsert_step(run_id, 9, "final_report", "RUNNING")
+        database.upsert_step(run_id, 10, "final_report", "RUNNING")
         report = await workflow.build_report_version(
             run_id, phase="FINAL", review=review
         )
         database.upsert_step(
             run_id,
-            9,
+            10,
             "final_report",
             "SUCCEEDED",
             {"version": report["version"], "decision": request.decision.value},
@@ -833,7 +837,7 @@ def create_app(custom_settings: Settings | None = None) -> FastAPI:
         except Exception as error:
             answer = {
                 "kind": "answer",
-                "content": "当前无法调用文字解释模块。请以运行门禁、证据和正式 HOLD 建议为准。",
+                "content": "当前无法调用文字解释模块。请以运行门禁、证据和 HOLD 执行安全占位为准。",
                 "citation_ids": [item.get("citation_id") for item in citations if item.get("citation_id")],
                 "citations": citations,
                 "fallback_used": True,

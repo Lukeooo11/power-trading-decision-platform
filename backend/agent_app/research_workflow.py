@@ -31,6 +31,9 @@ def validate_plan(plan: dict[str, Any], run: dict[str, Any]) -> None:
         raise ValueError("平台策略版本或风险参数与任务不一致")
     if plan.get("research_status") not in {"READY", "BLOCKED"}:
         raise ValueError("平台研究状态无效")
+    expected_forecast_run_id = run.get("platform_run_id")
+    if expected_forecast_run_id and plan.get("forecast_run_id") != expected_forecast_run_id:
+        raise ValueError("交易申报策略未绑定本次价格预测运行")
     records = plan.get("records")
     if not isinstance(records, list) or len(records) != 24 or any(not isinstance(row, dict) or type(row.get("period")) is not int for row in records) or {row["period"] for row in records} != set(range(1, 25)):
         raise ValueError("平台研究结果必须包含完整24个时段")

@@ -11,6 +11,7 @@ from typing import Any, Callable
 from .config import Settings
 from .db import Database, utc_now
 from .platform_client import PlatformClient, PlatformError
+from .research_workflow import validate_plan as validate_research_plan
 
 
 WORKFLOW_STEPS: tuple[tuple[int, str], ...] = (
@@ -18,11 +19,12 @@ WORKFLOW_STEPS: tuple[tuple[int, str], ...] = (
     (2, "data_quality"),
     (3, "policy_rules"),
     (4, "price_forecast"),
-    (5, "risk_signals"),
-    (6, "strategy_gate"),
-    (7, "report_draft"),
-    (8, "dual_review"),
-    (9, "final_report"),
+    (5, "declaration_strategy"),
+    (6, "risk_signals"),
+    (7, "strategy_gate"),
+    (8, "report_draft"),
+    (9, "dual_review"),
+    (10, "final_report"),
 )
 
 
@@ -127,7 +129,7 @@ class AgentWorkflow:
                     data=gap,
                 )
                 self.db.upsert_step(run_id, 1, current_name, "SUCCEEDED", gap)
-                for sequence, name in WORKFLOW_STEPS[1:6]:
+                for sequence, name in WORKFLOW_STEPS[1:7]:
                     self.db.upsert_step(
                         run_id,
                         sequence,
@@ -137,23 +139,28 @@ class AgentWorkflow:
                     )
                 self.db.update_run(
                     run_id,
-                    status="NEEDS_ONBOARDING",
                     missing_data_json=gap["required"],
                     strategy_ready=False,
-                    completed_at=utc_now(),
                 )
                 await self.build_report_version(run_id, phase="ONBOARDING")
                 self.db.upsert_step(
-                    run_id, 7, "report_draft", "SUCCEEDED", {"phase": "ONBOARDING"}
+                    run_id, 8, "report_draft", "SUCCEEDED", {"phase": "ONBOARDING"}
                 )
                 self.db.upsert_step(
-                    run_id, 8, "dual_review", "SKIPPED", {"reason": "MARKET_NOT_ONBOARDED"}
+                    run_id, 9, "dual_review", "SKIPPED", {"reason": "MARKET_NOT_ONBOARDED"}
                 )
                 self.db.upsert_step(
-                    run_id, 9, "final_report", "SKIPPED", {"reason": "MARKET_NOT_ONBOARDED"}
+                    run_id, 10, "final_report", "SKIPPED", {"reason": "MARKET_NOT_ONBOARDED"}
                 )
                 self.db.add_audit(
                     run_id, "RUN_NEEDS_ONBOARDING", "agent-workflow", gap
+                )
+                # Publish the terminal state only after its report and steps are
+                # durable, so GET/SSE clients cannot observe a partial result.
+                self.db.update_run(
+                    run_id,
+                    status="NEEDS_ONBOARDING",
+                    completed_at=utc_now(),
                 )
                 return
             self.db.upsert_step(
@@ -323,8 +330,99 @@ class AgentWorkflow:
                 },
             )
 
-            current_sequence, current_name = 5, "risk_signals"
+            current_sequence, current_name = 5, "declaration_strategy"
             self.db.upsert_step(run_id, 5, current_name, "RUNNING")
+            self._check_cancel(run_id)
+            declaration_ready = False
+            strategy_run = {**run, "platform_run_id": platform_run_id}
+            try:
+                plan = await self.platform.research_plan(
+                    run["business_date"],
+                    run["strategy_version"],
+                    run["risk_aversion"],
+                    platform_run_id,
+                )
+                try:
+                    validate_research_plan(plan, strategy_run)
+                except (KeyError, TypeError, ValueError) as error:
+                    raise WorkflowValidationError(
+                        "INVALID_DECLARATION_STRATEGY",
+                        "交易申报策略返回结果未通过只读安全校验",
+                        str(error),
+                    ) from error
+                declaration_strategy = self._declaration_strategy_reference(
+                    plan, strategy_run
+                )
+                declaration_ready = plan.get("research_status") == "READY"
+                declaration_missing = [
+                    str(item) for item in plan.get("missing_data", []) if item
+                ]
+                if declaration_missing:
+                    missing_data = sorted(set([*missing_data, *declaration_missing]))
+                self.db.update_run(
+                    run_id,
+                    declaration_strategy_ready=declaration_ready,
+                    declaration_strategy_json=declaration_strategy,
+                    missing_data_json=missing_data,
+                )
+                self.db.add_evidence(
+                    run_id,
+                    kind="declaration_strategy_reference",
+                    source="platform:/api/strategy/research",
+                    title="交易申报策略只读引用",
+                    citation=(
+                        f"strategy:{run['strategy_version']};"
+                        f"source-sha256:{plan.get('source_sha256') or 'unknown'}"
+                    ),
+                    data=declaration_strategy,
+                )
+                self.db.upsert_step(
+                    run_id,
+                    5,
+                    current_name,
+                    "SUCCEEDED" if declaration_ready else "BLOCKED",
+                    {
+                        "research_status": plan.get("research_status"),
+                        "strategy_version": run["strategy_version"],
+                        "risk_aversion": run["risk_aversion"],
+                        "source_sha256": plan.get("source_sha256"),
+                        "execution_allowed": False,
+                    },
+                )
+            except PlatformError as error:
+                missing_data = sorted(
+                    set([*missing_data, "DECLARATION_STRATEGY_UNAVAILABLE"])
+                )
+                declaration_strategy = self._blocked_declaration_strategy_reference(
+                    strategy_run, error
+                )
+                self.db.update_run(
+                    run_id,
+                    declaration_strategy_ready=False,
+                    declaration_strategy_json=declaration_strategy,
+                    missing_data_json=missing_data,
+                )
+                self.db.add_evidence(
+                    run_id,
+                    kind="declaration_strategy_gap",
+                    source="platform:/api/strategy/research",
+                    title="交易申报策略调用未完成",
+                    data=declaration_strategy,
+                )
+                self.db.upsert_step(
+                    run_id,
+                    5,
+                    current_name,
+                    "BLOCKED",
+                    {
+                        "code": error.code,
+                        "message": error.message,
+                        "execution_allowed": False,
+                    },
+                )
+
+            current_sequence, current_name = 6, "risk_signals"
+            self.db.upsert_step(run_id, 6, current_name, "RUNNING")
             self._check_cancel(run_id)
             signals = self._build_signals(forecast)
             self.db.update_run(run_id, signals_json=signals)
@@ -344,21 +442,27 @@ class AgentWorkflow:
             )
             self.db.upsert_step(
                 run_id,
-                5,
+                6,
                 current_name,
                 "SUCCEEDED",
                 {"point_count": len(signals), "attention_count": attention_count},
             )
 
-            current_sequence, current_name = 6, "strategy_gate"
-            self.db.upsert_step(run_id, 6, current_name, "RUNNING")
+            current_sequence, current_name = 7, "strategy_gate"
+            self.db.upsert_step(run_id, 7, current_name, "RUNNING")
             self._check_cancel(run_id)
-            strategy_ready = bool(platform_strategy_ready and data_ready and policy_ready)
+            strategy_ready = bool(
+                platform_strategy_ready
+                and declaration_ready
+                and data_ready
+                and policy_ready
+            )
             formal_strategy = self._build_formal_strategy(
                 forecast,
                 data_ready=data_ready,
                 policy_ready=policy_ready,
                 platform_strategy_ready=platform_strategy_ready,
+                declaration_strategy_ready=declaration_ready,
             )
             self.db.update_run(
                 run_id,
@@ -367,24 +471,25 @@ class AgentWorkflow:
             )
             self.db.upsert_step(
                 run_id,
-                6,
+                7,
                 current_name,
                 "SUCCEEDED",
                 {
                     "strategy_ready": strategy_ready,
+                    "declaration_strategy_ready": declaration_ready,
                     "formal_action": "HOLD",
                     "point_count": len(formal_strategy),
                     "execution_allowed": False,
                 },
             )
 
-            current_sequence, current_name = 7, "report_draft"
-            self.db.upsert_step(run_id, 7, current_name, "RUNNING")
+            current_sequence, current_name = 8, "report_draft"
+            self.db.upsert_step(run_id, 8, current_name, "RUNNING")
             self._check_cancel(run_id)
             report = await self.build_report_version(run_id, phase="DRAFT")
             self.db.upsert_step(
                 run_id,
-                7,
+                8,
                 current_name,
                 "SUCCEEDED",
                 {"version": report["version"], "phase": report["phase"]},
@@ -585,6 +690,69 @@ class AgentWorkflow:
                 "INCOMPLETE_FORECAST", "预测结果必须且只能包含时段 1 至 24"
             )
 
+    @staticmethod
+    def _declaration_strategy_reference(
+        plan: dict[str, Any], run: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Persist only the strategy module's immutable research reference."""
+
+        return {
+            "strategy_version": run["strategy_version"],
+            "resolved_strategy_version": plan.get("strategy_version"),
+            "risk_aversion": run["risk_aversion"],
+            "research_status": plan.get("research_status"),
+            "summary": plan.get("summary") or {},
+            "method": plan.get("method") or {},
+            "top_attention_periods": plan.get("top_attention_periods") or [],
+            "missing_data": plan.get("missing_data") or [],
+            "assumptions": plan.get("assumptions") or [],
+            "source": {
+                "endpoint": "/api/strategy/research",
+                "market_code": "SD",
+                "business_date": run["business_date"],
+                "source_sha256": plan.get("source_sha256"),
+                "forecast_version": plan.get("forecast_version"),
+                "forecast_run_id": plan.get("forecast_run_id"),
+                "position_data_version": plan.get("position_data_version"),
+                "captured_at": utc_now(),
+            },
+            "run_reference": {
+                "agent_run_id": run["run_id"],
+                "preceding_forecast_run_id": run.get("platform_run_id"),
+                "bound_forecast_run_id": plan.get("forecast_run_id"),
+            },
+            "formal_gate": "BLOCKED",
+            "read_only": True,
+            "execution_allowed": False,
+        }
+
+    @staticmethod
+    def _blocked_declaration_strategy_reference(
+        run: dict[str, Any], error: PlatformError
+    ) -> dict[str, Any]:
+        return {
+            "strategy_version": run["strategy_version"],
+            "resolved_strategy_version": None,
+            "risk_aversion": run["risk_aversion"],
+            "research_status": "BLOCKED",
+            "summary": {},
+            "missing_data": ["DECLARATION_STRATEGY_UNAVAILABLE"],
+            "source": {
+                "endpoint": "/api/strategy/research",
+                "market_code": "SD",
+                "business_date": run["business_date"],
+                "captured_at": utc_now(),
+            },
+            "run_reference": {
+                "agent_run_id": run["run_id"],
+                "preceding_forecast_run_id": run.get("platform_run_id"),
+            },
+            "error": error.as_dict(),
+            "formal_gate": "BLOCKED",
+            "read_only": True,
+            "execution_allowed": False,
+        }
+
     def _build_signals(self, forecast: dict[str, Any]) -> list[dict[str, Any]]:
         signals: list[dict[str, Any]] = []
         for point in sorted(forecast["periods"], key=lambda item: item["period"]):
@@ -663,6 +831,7 @@ class AgentWorkflow:
         data_ready: bool,
         policy_ready: bool,
         platform_strategy_ready: bool,
+        declaration_strategy_ready: bool,
     ) -> list[dict[str, Any]]:
         reason_codes: list[str] = []
         if not data_ready:
@@ -671,6 +840,8 @@ class AgentWorkflow:
             reason_codes.append("POLICY_GATE_NOT_READY")
         if not platform_strategy_ready:
             reason_codes.append("PLATFORM_STRATEGY_NOT_READY")
+        if not declaration_strategy_ready:
+            reason_codes.append("DECLARATION_STRATEGY_NOT_READY")
         if not reason_codes:
             reason_codes.append("MANUAL_REVIEW_ONLY")
         strategy = []
@@ -810,7 +981,7 @@ class AgentWorkflow:
     ) -> tuple[dict[str, Any], str, str]:
         attention = [item["period"] for item in signals if item.get("attention_required")]
         payload = {
-            "title": f"{run['market_code']} {run['business_date']} 电力交易 Agent 陪跑报告",
+            "title": f"{run['market_code']} {run['business_date']} 交易决策编排报告",
             "phase": phase,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "run": {
@@ -828,13 +999,14 @@ class AgentWorkflow:
             "backtest": forecast.get("backtest", {}),
             "risk_attention_periods": attention,
             "signals": signals,
+            "declaration_strategy": run.get("declaration_strategy", {}),
             "formal_strategy": run.get("formal_strategy", []),
             "gates": run.get("gates", {}),
             "missing_data": run.get("missing_data", []),
             "evidence": evidence,
             "review": review or run.get("review", {}),
             "execution_allowed": False,
-            "disclaimer": "本报告仅用于历史陪跑和人工复核，不连接交易终端，不构成自动下单指令。",
+            "disclaimer": "本报告仅用于目标日研究、历史复盘和人工复核，不连接交易终端，不构成自动下单指令。",
         }
         lines = [
             f"# {payload['title']}",
@@ -842,8 +1014,10 @@ class AgentWorkflow:
             f"- 报告阶段：{phase}",
             f"- 模型版本：{run['model_version']}",
             f"- 数据版本：{run.get('data_version') or '未取得'}",
+            f"- 申报策略版本：{run.get('strategy_version') or '未取得'}",
+            f"- 申报策略研究状态：{(run.get('declaration_strategy') or {}).get('research_status') or '未取得'}",
             f"- 策略门禁：{'通过' if run.get('strategy_ready') else '未通过'}",
-            "- 正式建议：24 时段 HOLD，电量 0 MWh",
+            "- 执行安全占位：24 时段 HOLD，电量 0 MWh",
             "- 自动执行：关闭",
             "",
             "## 研究性风险时段",

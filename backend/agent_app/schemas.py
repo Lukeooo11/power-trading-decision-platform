@@ -51,6 +51,18 @@ class AgentRunCreate(TrimmedTextModel):
     trading_subject: str = Field(min_length=1, max_length=64)
     business_date: date
     initiated_by: str = Field(min_length=1, max_length=128)
+    strategy_version: Literal[
+        "historical_cvar_v02", "regime_cvar_v03", "similar_day_cvar_v04",
+        "advanced_cvar_v05", "joint_cvar_v06",
+    ] = "historical_cvar_v02"
+    risk_aversion: float = Field(default=0.3, ge=0.0, le=1.0)
+
+    @field_validator("risk_aversion", mode="before")
+    @classmethod
+    def risk_is_not_boolean(cls, value: Any) -> Any:
+        if isinstance(value, bool):
+            raise ValueError("risk_aversion 必须是数字而非布尔值")
+        return value
 
 
 class TradingDraftRunCreate(TrimmedTextModel):

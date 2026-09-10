@@ -1,0 +1,9 @@
+# Local-only customer and runtime artifacts
+private-data/
+backend/data/
+backend/**/__pycache__/
+*.py[cod]
+*.sqlite3
+*.db
+*.log
+.pytest_cache/

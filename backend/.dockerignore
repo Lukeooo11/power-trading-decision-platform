@@ -3,3 +3,6 @@ data/platform.db
 *.log
 __pycache__
 tests
+private-data
+*.sqlite3
+*.db

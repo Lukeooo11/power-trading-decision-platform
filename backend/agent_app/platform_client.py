@@ -113,11 +113,20 @@ class PlatformClient:
     async def models(self) -> dict[str, Any]:
         return await self._request("GET", "/models")
 
-    async def research_plan(self, business_date: str, strategy_version: str, risk_aversion: float) -> dict[str, Any]:
-        return await self._request("GET", "/strategy/research", legacy_api=True, params={
+    async def research_plan(
+        self,
+        business_date: str,
+        strategy_version: str,
+        risk_aversion: float,
+        forecast_run_id: str | None = None,
+    ) -> dict[str, Any]:
+        params = {
             "date": business_date, "market_code": "SD", "strategy_version": strategy_version,
             "risk_aversion": risk_aversion,
-        })
+        }
+        if forecast_run_id:
+            params["forecast_run_id"] = forecast_run_id
+        return await self._request("GET", "/strategy/research", legacy_api=True, params=params)
 
     async def data_assets(self, market_code: str) -> dict[str, Any]:
         return await self._request(

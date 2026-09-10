@@ -17,7 +17,7 @@ POWER_TRADING_CORS_ORIGINS=https://lukeooo11.github.io
 
 ## 数据边界
 
-生产环境不得提交客户原始文件、真实名称映射、SQLite 数据库、API 密钥或日志。当前 Dockerfile 仅复制脱敏 `private-data` 和后端代码；正式客户环境应改为对象存储或数据库注入。
+生产环境不得提交客户原始文件、真实名称映射、SQLite 数据库、API 密钥或日志。公开 Docker 镜像仅复制脱敏 `data` 资产、后端代码和 Agent 服务；客户原始数据应改为受控对象存储或数据库注入。
 
 ## 长任务
 

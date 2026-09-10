@@ -88,7 +88,7 @@ def build_report(
         payload=payload,
         json_text=json_text,
         markdown=markdown,
-        html=render_report_html(markdown, title="电力交易 AI Agent 陪跑报告"),
+        html=render_report_html(markdown, title="电力交易 Agent 决策编排报告"),
         sha256=digest,
     )
 
@@ -124,6 +124,9 @@ def build_report_payload(
     )
     forecast = copy.deepcopy(run_snapshot.get("forecast") or run_snapshot.get("model_result") or {})
     formal_periods = _formal_hold_periods(run_snapshot, forecast)
+    declaration_strategy = _safe_declaration_strategy(
+        run_snapshot.get("declaration_strategy")
+    )
 
     data_quality_details = copy.deepcopy(
         run_snapshot.get("data_quality")
@@ -177,16 +180,17 @@ def build_report_payload(
         },
         "model": model_section,
         "research_signals": copy.deepcopy(research_signals),
+        "declaration_strategy": declaration_strategy,
         "formal_strategy": {
             "strategy_ready": strategy_ready,
             "action": "HOLD",
             "periods": formal_periods,
-            "note": "正式策略不包含可执行买卖量价",
+            "note": "执行安全占位不包含可执行买卖量价",
         },
         "review": copy.deepcopy(run_snapshot.get("review") or {}),
         "gaps": _report_gaps(run_snapshot, data_ready=data_ready, policy_ready=policy_ready),
         "execution_allowed": False,
-        "disclaimer": "本报告为历史数据陪跑分析，不构成交易申报或下单指令。",
+        "disclaimer": "本报告用于目标日研究或历史复盘，不构成交易申报或下单指令。",
     }
     if narrative:
         payload["narrative"] = {
@@ -210,9 +214,10 @@ def render_report_markdown(report: Mapping[str, Any]) -> str:
     policy = _mapping(report.get("policy_basis"))
     model = _mapping(report.get("model"))
     formal = _mapping(report.get("formal_strategy"))
+    declaration = _mapping(report.get("declaration_strategy"))
     review = _mapping(report.get("review"))
     lines = [
-        "# 电力交易 AI Agent 陪跑报告",
+        "# 电力交易 Agent 决策编排报告",
         "",
         f"- 报告版本：{_md(report.get('report_version'))}",
         f"- 报告阶段：{_md(report.get('phase'))}",
@@ -224,7 +229,7 @@ def render_report_markdown(report: Mapping[str, Any]) -> str:
         "## 核心结论",
         "",
         "- `execution_allowed=false`；本服务不接入交易终端。",
-        "- 正式策略为 `HOLD`，所有时段电量为 `0 MWh`。",
+        "- 执行安全占位为 `HOLD`，所有时段电量为 `0 MWh`；申报研究量来自独立策略模块。",
         f"- 数据质量门禁：{_ready_label(data_quality.get('ready'))}。",
         f"- 政策门禁：{_ready_label(policy.get('ready'))}（{_md(policy.get('status'))}）。",
         "",
@@ -270,6 +275,25 @@ def render_report_markdown(report: Mapping[str, Any]) -> str:
         lines.extend(["```json", _pretty_json(model["backtest"]), "```", ""])
     else:
         lines.extend(["未提供回测指标。", ""])
+
+    lines.extend(
+        [
+            "## 交易申报策略（只读引用）",
+            "",
+            f"- 请求版本：{_md(declaration.get('strategy_version'))}",
+            f"- 引擎版本：{_md(declaration.get('resolved_strategy_version'))}",
+            f"- 风险厌恶系数：{_md(declaration.get('risk_aversion'))}",
+            f"- 研究状态：{_md(declaration.get('research_status'))}",
+            "- 策略数值仅供研究和人工复核，Agent 不重新计算或改写。",
+            "",
+        ]
+    )
+    if declaration.get("summary"):
+        lines.extend(
+            ["```json", _pretty_json(declaration["summary"]), "```", ""]
+        )
+    else:
+        lines.extend(["未取得交易申报策略摘要。", ""])
 
     lines.extend(["## 研究性风险信号", ""])
     signals = _as_list(report.get("research_signals"))
@@ -323,7 +347,7 @@ def render_report_markdown(report: Mapping[str, Any]) -> str:
 
     lines.extend(
         [
-            "## 正式策略（HOLD）",
+            "## 执行安全占位（HOLD）",
             "",
             "| 时段 | 动作 | 电量 (MWh) |",
             "| --- | --- | ---: |",
@@ -478,6 +502,34 @@ def _safe_research_signals(signals: Sequence[Any]) -> list[dict[str, Any]]:
         ):
             item.pop(key, None)
         safe.append(item)
+    return safe
+
+
+def _safe_declaration_strategy(value: Any) -> dict[str, Any]:
+    """Expose the strategy module result as evidence, never as an order payload."""
+
+    source = _mapping(value)
+    safe = {
+        key: copy.deepcopy(source.get(key))
+        for key in (
+            "strategy_version",
+            "resolved_strategy_version",
+            "risk_aversion",
+            "research_status",
+            "summary",
+            "method",
+            "top_attention_periods",
+            "missing_data",
+            "assumptions",
+            "source",
+            "run_reference",
+            "error",
+        )
+        if source.get(key) is not None
+    }
+    safe["formal_gate"] = "BLOCKED"
+    safe["read_only"] = True
+    safe["execution_allowed"] = False
     return safe
 
 

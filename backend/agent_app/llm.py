@@ -157,7 +157,7 @@ class LLMAdapter:
             {
                 "role": "user",
                 "content": (
-                    "请仅根据下列确定性事实生成陪跑报告解读。"
+                    "请仅根据下列确定性事实生成交易决策编排报告解读。"
                     "严禁新增数字、改变门禁、改变 HOLD 动作或声称可下单。"
                     "只输出 JSON，结构为："
                     f"{json.dumps(schema, ensure_ascii=False)}\n"
@@ -299,7 +299,7 @@ def answer_question(
 
 
 _SYSTEM_PROMPT = (
-    "你是电力交易陪跑分析的文字解释器，不是数值模型或交易决策器。"
+    "你是电力交易决策编排结果的文字解释器，不是数值模型或交易决策器。"
     "所有数字、数据/政策门禁、正式动作和 execution_allowed 由输入确定，"
     "不得补齐、重算、修改或推测。不得调用审核、交易或下单接口。"
 )
@@ -398,6 +398,7 @@ def _authoritative_context(snapshot: Mapping[str, Any]) -> dict[str, Any]:
         "model": ("model", "forecast", "model_result"),
         "backtest": ("backtest", "backtest_metrics"),
         "research_signals": ("research_signals", "signals"),
+        "declaration_strategy": ("declaration_strategy",),
         "formal_strategy": ("formal_strategy", "strategy"),
         "review": ("review",),
         "gaps": ("gaps", "missing_data"),
@@ -534,10 +535,10 @@ def _fallback_narrative(
     signals = context.get("research_signals")
     signal_count = len(signals) if isinstance(signals, list) else 0
     content = (
-        f"本次陪跑对象为 {market}/{subject}，业务日期为 {business_date}。"
+        f"本次交易决策编排对象为 {market}/{subject}，业务日期为 {business_date}。"
         f"数据质量门禁为{data_gate}，政策门禁为{policy_gate}。\n\n"
         f"共记录 {signal_count} 条研究性风险信号，仅用于分析。"
-        "正式策略维持 HOLD，execution_allowed=false，不构成申报或交易指令。\n\n"
+        "执行安全占位维持 HOLD，execution_allowed=false，不构成申报或交易指令。\n\n"
         + _fallback_policy_sentence(citations)
     )
     return _fallback_result("narrative", content, citations, reason)
@@ -555,7 +556,7 @@ def _fallback_answer(
     policy_gate = _gate_label(gates, "policy_ready", context.get("policy"))
     content = (
         f"针对“{question}”，当前可确认的结果是：数据质量门禁为{data_gate}，"
-        f"政策门禁为{policy_gate}。正式策略维持 HOLD，"
+        f"政策门禁为{policy_gate}。执行安全占位维持 HOLD，"
         "execution_allowed=false。大模型输出未通过可验证性检查，因此使用确定性回答。"
         + _fallback_policy_sentence(citations)
     )

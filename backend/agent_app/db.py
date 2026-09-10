@@ -16,6 +16,7 @@ RUN_JSON_COLUMNS = {
     "forecast_json": "forecast",
     "signals_json": "signals",
     "formal_strategy_json": "formal_strategy",
+    "declaration_strategy_json": "declaration_strategy",
     "policies_json": "policies",
     "review_json": "review",
     "missing_data_json": "missing_data",
@@ -27,6 +28,7 @@ RUN_MUTABLE_COLUMNS = {
     "data_version",
     "platform_run_id",
     "platform_strategy_ready",
+    "declaration_strategy_ready",
     "data_ready",
     "policy_ready",
     "strategy_ready",
@@ -34,6 +36,7 @@ RUN_MUTABLE_COLUMNS = {
     "forecast_json",
     "signals_json",
     "formal_strategy_json",
+    "declaration_strategy_json",
     "policies_json",
     "review_json",
     "missing_data_json",
@@ -111,6 +114,7 @@ class Database:
                         data_version TEXT,
                         platform_run_id TEXT,
                         platform_strategy_ready INTEGER NOT NULL DEFAULT 0,
+                        declaration_strategy_ready INTEGER NOT NULL DEFAULT 0,
                         data_ready INTEGER NOT NULL DEFAULT 0,
                         policy_ready INTEGER NOT NULL DEFAULT 0,
                         strategy_ready INTEGER NOT NULL DEFAULT 0,
@@ -119,6 +123,7 @@ class Database:
                         forecast_json TEXT NOT NULL DEFAULT '{}',
                         signals_json TEXT NOT NULL DEFAULT '[]',
                         formal_strategy_json TEXT NOT NULL DEFAULT '[]',
+                        declaration_strategy_json TEXT NOT NULL DEFAULT '{}',
                         policies_json TEXT NOT NULL DEFAULT '{}',
                         review_json TEXT NOT NULL DEFAULT '{}',
                         missing_data_json TEXT NOT NULL DEFAULT '[]',
@@ -129,6 +134,8 @@ class Database:
                         started_at TEXT,
                         completed_at TEXT,
                         updated_at TEXT NOT NULL,
+                        strategy_version TEXT NOT NULL DEFAULT 'historical_cvar_v02',
+                        risk_aversion REAL NOT NULL DEFAULT 0.3,
                         FOREIGN KEY(parent_run_id) REFERENCES agent_runs(run_id),
                         UNIQUE(request_id, market_code, trading_subject, business_date)
                     );
@@ -247,6 +254,35 @@ class Database:
                     CREATE INDEX IF NOT EXISTS idx_trading_drafts_date
                         ON trading_draft_runs(business_date, updated_at DESC);
                     """
+                )
+                # Existing deployments predate the read-only declaration strategy
+                # reference. Keep their Agent runs queryable with additive defaults.
+                existing_agent_columns = {
+                    row["name"]
+                    for row in connection.execute("PRAGMA table_info(agent_runs)")
+                }
+                agent_migrations = {
+                    "strategy_version": (
+                        "TEXT NOT NULL DEFAULT 'historical_cvar_v02'"
+                    ),
+                    "risk_aversion": "REAL NOT NULL DEFAULT 0.3",
+                    "declaration_strategy_ready": "INTEGER NOT NULL DEFAULT 0",
+                    "declaration_strategy_json": "TEXT NOT NULL DEFAULT '{}'",
+                }
+                for column, definition in agent_migrations.items():
+                    if column not in existing_agent_columns:
+                        connection.execute(
+                            f"ALTER TABLE agent_runs ADD COLUMN {column} {definition}"
+                        )
+                connection.execute(
+                    """UPDATE agent_runs
+                    SET strategy_version = 'historical_cvar_v02'
+                    WHERE strategy_version IS NULL OR TRIM(strategy_version) = ''"""
+                )
+                connection.execute(
+                    """UPDATE agent_runs
+                    SET risk_aversion = 0.3
+                    WHERE risk_aversion IS NULL"""
                 )
                 # SQLite's CREATE TABLE IF NOT EXISTS does not add columns to an
                 # existing installation, so keep this migration additive.
@@ -452,6 +488,8 @@ class Database:
         initiated_by: str,
         model_id: str,
         model_version: str,
+        strategy_version: str = "historical_cvar_v02",
+        risk_aversion: float = 0.3,
         parent_run_id: str | None = None,
         data_version: str | None = None,
         input_snapshot: dict[str, Any] | None = None,
@@ -460,6 +498,12 @@ class Database:
         self.prune_expired_runs()
         market_code = market_code.upper()
         trading_subject = trading_subject.lower()
+        strategy_version = str(strategy_version or "").strip()
+        if not strategy_version:
+            raise ValueError("strategy_version must not be empty")
+        risk_aversion = float(risk_aversion)
+        if not 0.0 <= risk_aversion <= 1.0:
+            raise ValueError("risk_aversion must be between 0 and 1")
         with closing(self.connect()) as connection, connection:
             existing = connection.execute(
                 """
@@ -478,8 +522,9 @@ class Database:
                 INSERT INTO agent_runs (
                     run_id, request_id, parent_run_id, market_code, trading_subject,
                     business_date, initiated_by, status, review_status, model_id,
-                    model_version, data_version, input_snapshot_json, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'QUEUED', 'DRAFT', ?, ?, ?, ?, ?, ?)
+                    model_version, data_version, input_snapshot_json, created_at, updated_at,
+                    strategy_version, risk_aversion
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'QUEUED', 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     run_id,
@@ -495,6 +540,8 @@ class Database:
                     json_dumps(input_snapshot or {}),
                     now,
                     now,
+                    strategy_version,
+                    risk_aversion,
                 ),
             )
         self.add_audit(
@@ -516,6 +563,7 @@ class Database:
             run[public_name] = json_loads(run.pop(column, None), default)
         for name in (
             "platform_strategy_ready",
+            "declaration_strategy_ready",
             "data_ready",
             "policy_ready",
             "strategy_ready",
@@ -536,6 +584,7 @@ class Database:
             "data_ready": run["data_ready"],
             "policy_ready": run["policy_ready"],
             "platform_strategy_ready": run["platform_strategy_ready"],
+            "declaration_strategy_ready": run["declaration_strategy_ready"],
             "strategy_ready": run["strategy_ready"],
         }
         run["urls"] = {
@@ -588,6 +637,7 @@ class Database:
                 normalized[key] = json_dumps(value)
             elif key in {
                 "platform_strategy_ready",
+                "declaration_strategy_ready",
                 "data_ready",
                 "policy_ready",
                 "strategy_ready",
@@ -628,7 +678,9 @@ class Database:
         self.initialize()
         now = utc_now()
         started_at = now if status == "RUNNING" else None
-        completed_at = now if status in {"SUCCEEDED", "FAILED", "SKIPPED", "CANCELLED"} else None
+        completed_at = now if status in {
+            "SUCCEEDED", "FAILED", "BLOCKED", "SKIPPED", "CANCELLED"
+        } else None
         with closing(self.connect()) as connection, connection:
             connection.execute(
                 """

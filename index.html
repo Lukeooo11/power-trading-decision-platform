@@ -3890,9 +3890,258 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
 #researchScenarioEvidence details p { margin: 8px 0; }
 #researchScenarioEvidence ul { margin: 8px 0; padding-left: 22px; }
 #researchScenarioEvidence li { padding: 5px 0; font-variant-numeric: tabular-nums; }
+
+/* Trading Agent: Swiss audit workspace with one blue orchestration line. */
+#agentView {
+  --agent-blue: #002fa7;
+  --agent-blue-soft: #edf2ff;
+  --agent-ink: #17191d;
+  --agent-muted: #666c78;
+  --agent-line: #d9dee8;
+  color: var(--agent-ink);
+  font-family: "Helvetica Neue", "Microsoft YaHei", Arial, sans-serif;
+}
+
+#agentView .panel {
+  border-color: var(--agent-line);
+  border-radius: 4px !important;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+#agentView .agent-workspace-brief {
+  border-color: var(--agent-line);
+}
+
+#agentView .agent-kicker,
+#agentView .agent-readiness-details summary {
+  color: var(--agent-blue);
+}
+
+#agentView .agent-quick-steps li {
+  border-color: var(--agent-line);
+}
+
+#agentView .agent-quick-steps li > span,
+#agentView .agent-step-index {
+  border-radius: 3px;
+  background: var(--agent-blue);
+  color: #ffffff;
+}
+
+.agent-orchestration-track {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0 0 18px;
+  padding: 0;
+  border-top: 1px solid #d9dee8;
+  border-bottom: 1px solid #d9dee8;
+  background: #ffffff;
+  list-style: none;
+}
+
+.agent-orchestration-track li {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 9px;
+  align-content: center;
+  min-height: 72px;
+  padding: 10px 12px;
+  border-right: 1px solid #d9dee8;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.agent-orchestration-track li:last-child {
+  border-right: 0;
+}
+
+.agent-orchestration-track li:hover {
+  z-index: 1;
+  background: #f7f7f8;
+  transform: translateY(-2px);
+}
+
+.agent-orchestration-track li > span {
+  grid-row: 1 / 3;
+  align-self: center;
+  color: #002fa7;
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.agent-orchestration-track strong,
+.agent-orchestration-track small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.agent-orchestration-track strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.agent-orchestration-track small {
+  color: #666c78;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+#agentView .agent-run-panel {
+  border-top: 3px solid var(--agent-blue);
+  border-left: 1px solid var(--agent-line);
+}
+
+#agentView .agent-run-panel .agent-context-row {
+  background: #f7f7f8;
+}
+
+#agentView .primary-action {
+  background: var(--agent-blue);
+}
+
+#agentView .secondary-action {
+  border: 1px solid var(--agent-line);
+  background: #ffffff;
+  color: var(--agent-blue);
+}
+
+#agentView input:focus,
+#agentView select:focus,
+#agentView textarea:focus,
+#agentView button:focus-visible,
+#agentView summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 47, 167, 0.16);
+}
+
+#agentView .agent-step,
+#agentView .agent-gate-item,
+#agentView .agent-evidence-item,
+#agentView .agent-review-entry {
+  border-color: var(--agent-line);
+}
+
+#agentView .agent-step[data-status="RUNNING"] .agent-step-index {
+  box-shadow: 0 0 0 4px var(--agent-blue-soft);
+}
+
+#agentView .agent-step[data-status="PENDING"] .agent-step-index,
+#agentView .agent-step[data-status="BLOCKED"] .agent-step-index,
+#agentView .agent-step[data-status="FAILED"] .agent-step-index,
+#agentView .agent-gate-item .agent-step-index {
+  background: #edf0f5;
+  color: #4f5663;
+}
+
+.agent-decision-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid #d9dee8;
+  border-left: 1px solid #d9dee8;
+}
+
+.agent-decision-summary > div {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-height: 96px;
+  padding: 14px;
+  border-right: 1px solid #d9dee8;
+  border-bottom: 1px solid #d9dee8;
+}
+
+.agent-decision-summary span,
+.agent-decision-summary small {
+  color: #666c78;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.agent-decision-summary span {
+  color: #002fa7;
+  font-weight: 700;
+}
+
+.agent-decision-summary strong {
+  min-width: 0;
+  color: #17191d;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+#agentView .agent-run-meta,
+#agentView .agent-inline-note,
+#agentView .agent-step p,
+#agentView .agent-gate-item p,
+#agentView .agent-evidence-meta,
+#agentView .agent-review-history p {
+  color: var(--agent-muted);
+}
+
+@media (max-width: 980px) {
+  .agent-orchestration-track {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .agent-orchestration-track li:nth-child(3) {
+    border-right: 0;
+  }
+
+  .agent-orchestration-track li:nth-child(-n + 3) {
+    border-bottom: 1px solid #d9dee8;
+  }
+
+  .agent-decision-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 720px) {
   .research-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .research-provenance, #draftWorkflowSteps { grid-template-columns: minmax(0, 1fr); }
+
+  .agent-orchestration-track {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .agent-orchestration-track li,
+  .agent-orchestration-track li:nth-child(3) {
+    border-right: 1px solid #d9dee8;
+    border-bottom: 1px solid #d9dee8;
+  }
+
+  .agent-orchestration-track li:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .agent-orchestration-track li:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .agent-decision-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-decision-summary > div {
+    min-height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-orchestration-track li {
+    transition: none;
+  }
+
+  .agent-orchestration-track li:hover {
+    transform: none;
+  }
 }
 
     </style>
@@ -3918,17 +4167,18 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
 
         <nav class="nav" aria-label="交易辅助平台模块">
           <button class="nav-item active" data-view="company"><span>01</span>公司运营</button>
-          <button class="nav-item" data-view="agent"><span>02</span>交易 Agent</button>
-          <button class="nav-item" data-view="desk"><span>03</span>盘前工作台</button>
-          <button class="nav-item" data-view="forecast"><span>04</span>预测评估</button>
+          <button class="nav-item" data-view="desk"><span>02</span>盘前工作台</button>
+          <button class="nav-item" data-view="forecast"><span>03</span>预测评估</button>
+          <button class="nav-item" data-view="declaration"><span>04</span>交易申报策略</button>
           <button class="nav-item" data-view="spot"><span>05</span>现货市场</button>
           <button class="nav-item" data-view="medium"><span>06</span>中长期</button>
           <button class="nav-item" data-view="policy"><span>07</span>政策 AI</button>
-          <button class="nav-item" data-view="grid"><span>08</span>拓扑阻塞</button>
-          <button class="nav-item" data-view="report"><span>09</span>报告复盘</button>
-          <button class="nav-item" data-view="loss"><span>10</span>盈亏分析</button>
-          <button class="nav-item" data-view="data"><span>11</span>数据导入</button>
-          <button class="nav-item" data-view="interfaces"><span>12</span>接口清单</button>
+          <button class="nav-item" data-view="agent"><span>08</span>交易 Agent</button>
+          <button class="nav-item" data-view="grid"><span>09</span>拓扑阻塞</button>
+          <button class="nav-item" data-view="report"><span>10</span>报告复盘</button>
+          <button class="nav-item" data-view="loss"><span>11</span>盈亏分析</button>
+          <button class="nav-item" data-view="data"><span>12</span>数据导入</button>
+          <button class="nav-item" data-view="interfaces"><span>13</span>接口清单</button>
         </nav>
 
       </aside>
@@ -4015,14 +4265,14 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
           </section>
         </section>
 
-        <section class="view" id="agentView">
+        <section class="view" id="declarationView">
           <section class="panel agent-draft-panel">
             <div class="panel-head">
-              <div><h3>交易研究任务</h3><p>山东售电侧 · 日前 / 实时分配研究 · 24点 · 不可自动提交</p></div>
-              <div class="inline-actions"><span class="pill wait" id="agentHealthStatus">服务检查中</span><span class="pill wait" id="draftStatus">尚未创建</span></div>
+              <div><h3>交易申报策略</h3><p>山东售电侧 · 日前 / 实时分配研究 · 24点 · 不可自动提交</p></div>
+              <div class="inline-actions"><span class="pill wait" id="strategyHealthStatus">服务检查中</span><span class="pill wait" id="draftStatus">尚未创建</span></div>
             </div>
             <div class="agent-action-row research-task-controls">
-              <label class="field"><span>交易日期</span><input id="agentBusinessDate" type="date" aria-label="交易日期" /></label>
+              <label class="field"><span>交易日期</span><input id="strategyBusinessDate" type="date" aria-label="交易申报策略日期" /></label>
               <label class="field"><span>发起人</span><input id="draftInitiator" maxlength="128" placeholder="请输入姓名" /></label>
               <label class="field"><span>策略版本</span><select id="draftStrategyVersion"><option value="historical_cvar_v02">历史误差 CVaR（默认）</option><option value="regime_cvar_v03">分时状态 CVaR（挑战者）</option><option value="similar_day_cvar_v04">预测与相似日 CVaR（挑战者）</option><option value="advanced_cvar_v05">混合场景 + 校准 + Newsvendor CVaR（挑战者）</option><option value="joint_cvar_v06">24小时联合混合 CVaR（挑战者）</option></select></label>
               <label class="field"><span>风险厌恶系数</span><input id="draftRiskAversion" type="number" min="0" max="1" step="0.05" value="0.30" /></label>
@@ -4544,6 +4794,148 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
               </div>
             </section>
           </div>
+        </section>
+
+        <section class="view" id="agentView">
+          <section class="agent-workspace-brief" aria-labelledby="agentWorkspaceTitle">
+            <div class="agent-workspace-copy">
+              <span class="agent-kicker">跨模块决策编排 · 人工审核</span>
+              <h3 id="agentWorkspaceTitle">把分散结果组织成一项可追溯的交易决策任务</h3>
+              <p>Agent 读取数据、预测、政策和交易申报策略的既有结果，核对版本、门禁与风险后生成审核材料；它不自行改写预测、价格或申报量，也不连接交易终端。</p>
+            </div>
+            <ol class="agent-quick-steps" aria-label="交易 Agent 使用步骤">
+              <li><span>1</span><div><strong>选择任务</strong><p>确定市场、主体、日期和发起人</p></div></li>
+              <li><span>2</span><div><strong>自动编排</strong><p>依次调用已接入的业务模块</p></div></li>
+              <li><span>3</span><div><strong>复核留痕</strong><p>核对证据并由不同人员审核</p></div></li>
+            </ol>
+          </section>
+
+          <ol class="agent-orchestration-track" aria-label="交易 Agent 编排链路">
+            <li><span>01</span><strong>数据</strong><small>版本与质量</small></li>
+            <li><span>02</span><strong>预测</strong><small>价格与区间</small></li>
+            <li><span>03</span><strong>政策</strong><small>规则与引用</small></li>
+            <li><span>04</span><strong>策略</strong><small>只读调用结果</small></li>
+            <li><span>05</span><strong>风险</strong><small>门禁与冲突</small></li>
+            <li><span>06</span><strong>审核</strong><small>报告与留痕</small></li>
+          </ol>
+
+          <section class="panel agent-run-panel agent-orchestrator-run">
+            <div class="panel-head">
+              <div>
+                <h3>创建交易决策任务</h3>
+                <p>运行范围继承左侧省份和交易主体；目标日期可用于历史复盘或具备输入条件的盘前研究。</p>
+              </div>
+              <div class="inline-actions">
+                <span class="pill wait" id="agentHealthStatus">服务检查中</span>
+                <span class="pill wait" id="agentRunStatus">尚未开始</span>
+              </div>
+            </div>
+            <div class="agent-context-row" aria-label="当前 Agent 任务范围">
+              <div><span>省份（左侧选择）</span><strong id="agentContextMarket">全国</strong></div>
+              <div><span>交易主体（左侧选择）</span><strong id="agentContextSubject">售电侧</strong></div>
+              <div><span>目标日期</span><input id="agentBusinessDate" type="date" aria-label="Agent 目标日期" /></div>
+              <div><span>执行边界</span><strong>人工复核 · 不自动提交</strong></div>
+            </div>
+            <div class="agent-national-notice" id="agentNationalNotice">
+              <strong>先选择具体省份</strong>
+              <p>全国视图仅用于查看接入情况；未接入市场只显示缺口，不读取或复用山东数据。</p>
+            </div>
+            <div class="agent-action-row">
+              <label class="field">
+                <span>发起人（必填）</span>
+                <input id="agentInitiatorInput" type="text" maxlength="128" autocomplete="name" placeholder="请输入姓名" />
+              </label>
+              <button class="primary-action" id="agentStartRunBtn" type="button" aria-describedby="agentRunHint">启动决策编排</button>
+              <button class="secondary-action" id="agentCancelRunBtn" type="button" disabled>取消本次运行</button>
+              <button class="secondary-action" id="agentRerunBtn" type="button" disabled>按原参数重新运行</button>
+              <span class="agent-inline-note" id="agentRunHint" aria-live="polite">请选择具体省份后运行</span>
+            </div>
+            <div class="agent-run-meta" id="agentRunMeta" aria-live="polite"></div>
+          </section>
+
+          <section class="panel agent-decision-package">
+            <div class="panel-head">
+              <div><h3>本次模块结果</h3><p>展示各模块返回的版本、状态和汇总；量价明细仍由对应业务模块负责。</p></div>
+              <button class="secondary-action" id="agentOpenDeclarationBtn" type="button">打开策略明细</button>
+            </div>
+            <div class="agent-decision-summary" id="agentDecisionSummary"></div>
+          </section>
+
+          <section class="panel agent-readiness-panel">
+            <div class="panel-head">
+              <div>
+                <h3>模块接入准备度</h3>
+                <p id="agentReadinessSubtitle">检查当前市场的数据、预测模型和政策证据是否可以被 Agent 调用。</p>
+              </div>
+              <button class="secondary-action" id="agentRefreshReadinessBtn" type="button">刷新检查</button>
+            </div>
+            <details class="agent-readiness-details">
+              <summary id="agentReadinessSummary">查看当前市场接入矩阵</summary>
+              <div class="table-wrap agent-readiness-table-wrap">
+                <table class="agent-readiness-table">
+                  <thead><tr><th>市场</th><th>交易主体</th><th>数据</th><th>模型</th><th>政策</th><th>可运行</th><th>缺口</th></tr></thead>
+                  <tbody id="agentReadinessTable"></tbody>
+                </table>
+              </div>
+            </details>
+          </section>
+
+          <div class="grid agent-two-column">
+            <section class="panel">
+              <div class="panel-head"><div><h3>编排进度</h3><p>每一步只调用或校验对应模块，步骤完成不等于业务门禁通过。</p></div></div>
+              <div class="agent-step-list" id="agentStepList"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head"><div><h3>决策门禁</h3><p>任一关键条件不具备时，Agent 只报告缺口，不把研究结果标记为可执行。</p></div></div>
+              <div class="agent-gate-list" id="agentGateList"></div>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div><h3>依据与模块输出</h3><p>集中核对数据快照、预测版本、政策原文引用、策略版本及风险说明。</p></div>
+              <span class="pill wait" id="agentEvidenceCount">0 条证据</span>
+            </div>
+            <div class="agent-evidence-list" id="agentEvidenceList"></div>
+          </section>
+
+          <div class="grid agent-two-column">
+            <section class="panel">
+              <div class="panel-head"><div><h3>结果问答</h3><p>围绕本次任务的门禁、冲突和证据提问；回答不能改变模块数值或审核状态。</p></div></div>
+              <div class="agent-message-list" id="agentMessageList" aria-live="polite"></div>
+              <div class="agent-message-form">
+                <label class="field"><span>提问人</span><input id="agentMessageAuthor" type="text" maxlength="128" placeholder="请输入姓名" /></label>
+                <label class="field agent-message-content"><span>问题</span><textarea id="agentMessageInput" maxlength="8000" rows="3" placeholder="询问本次任务的门禁、风险或依据"></textarea></label>
+                <button class="primary-action" id="agentSendMessageBtn" type="button" disabled>发送</button>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head"><div><h3>报告送审</h3><p>发起人与审核人应由不同人员填写；当前姓名录入不等同于生产身份认证。</p></div></div>
+              <div class="agent-review-form">
+                <label class="field"><span>送审人</span><input id="agentSubmitterInput" type="text" maxlength="128" placeholder="请输入送审人姓名" /></label>
+                <button class="secondary-action" id="agentSubmitReviewBtn" type="button" disabled>提交复核</button>
+                <label class="field"><span>审核人</span><input id="agentReviewerInput" type="text" maxlength="128" placeholder="须与发起人、送审人不同" /></label>
+                <label class="field"><span>审核结论</span><select id="agentReviewDecision"><option value="APPROVED">批准报告</option><option value="REJECTED">退回补充</option></select></label>
+                <label class="field agent-review-reason"><span>审核说明</span><textarea id="agentReviewReason" maxlength="1000" rows="3" placeholder="退回时必填"></textarea></label>
+                <button class="primary-action" id="agentReviewBtn" type="button" disabled>提交审核结论</button>
+              </div>
+              <div class="agent-review-history" id="agentReviewHistory"></div>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div><h3>决策编排报告</h3><p>汇总各模块结果、版本、门禁、风险与审核记录；报告不包含自动交易指令。</p></div>
+              <div class="inline-actions">
+                <button class="secondary-action" id="agentViewReportBtn" type="button" disabled>查看网页报告</button>
+                <button class="secondary-action" id="agentDownloadMarkdownBtn" type="button" disabled>下载 Markdown</button>
+                <button class="secondary-action" id="agentDownloadJsonBtn" type="button" disabled>下载 JSON</button>
+              </div>
+            </div>
+            <div class="agent-report-preview" id="agentReportPreview">完成一次决策编排后，可在这里查看或下载报告。</div>
+            <iframe class="agent-report-frame" id="agentReportFrame" title="交易 Agent 决策编排报告" sandbox hidden></iframe>
+          </section>
         </section>
 
         <section class="view" id="gridView">
@@ -5517,7 +5909,7 @@ const ORG_ROLES = {
   },
 };
 
-const MARKET_DEPENDENT_VIEWS = new Set(["desk", "spot", "forecast", "medium", "grid", "report", "loss"]);
+const MARKET_DEPENDENT_VIEWS = new Set(["desk", "forecast", "declaration", "spot", "medium", "grid", "report", "loss"]);
 const DAILY_STRATEGY_CONTROL_VIEWS = new Set(["desk", "spot", "medium"]);
 
 const DATA_SOURCES = {
@@ -5546,12 +5938,13 @@ const DATA_SOURCES = {
 };
 
 const MODULES = [
-  { name: "交易 Agent", status: "partial", text: "按日期读取平台已有数据与策略，生成24点交易研究方案，保存数据快照、缺口与独立人工复核记录。" },
   { name: "盘前工作台", status: "ok", text: "集中展示关键指标、风险提示、执行窗口和市场状态。" },
   { name: "预测评估", status: "partial", text: "接入价格预测模型，展示24点P10/P50/P90、价差风险、回测指标和人工复核边界。" },
+  { name: "交易申报策略", status: "partial", text: "按日期调用确定性策略，生成24点日前与实时分配研究方案，并保存策略版本、风险参数、场景依据和审核记录。" },
   { name: "现货市场", status: "partial", text: "读取预测结果并结合山东小时日前/实时价格，形成出清分析、复盘和价差判断。" },
   { name: "中长期", status: "partial", text: "已接入山东零售套餐和2026年1至6月日级持仓，展示覆盖、成本、品种贡献与历史敞口情景。" },
   { name: "政策 AI", status: "partial", text: "已接入严格引用的政策问答适配层；政策导入、审核和发布由独立治理后台负责。" },
+  { name: "交易 Agent", status: "partial", text: "跨模块调用数据、预测、政策和交易申报策略，完成版本锁定、门禁检查、证据汇总、报告生成与独立人工审核。" },
   { name: "拓扑阻塞", status: "wait", text: "预留网架拓扑、节点价格、线路约束和阻塞诊断接口。" },
   { name: "数据导入", status: "partial", text: "管理 Excel、PDF、CSV、模型结果和客户案例数据的导入版本。" },
   { name: "报告复盘", status: "partial", text: "当前生成浏览器报告草稿；真实运行、审核、成交和结算记录接入后再落库复盘。" },
@@ -5691,7 +6084,9 @@ const DATA_REQUIREMENTS = [
 const INTERFACES = [
   { path: "http://127.0.0.1:8010/api/v1/health", use: "交易 Agent 健康检查", method: "GET", input: "无", output: "Agent、平台、模型与降级状态", status: "Agent 服务" },
   { path: "http://127.0.0.1:8010/api/v1/readiness", use: "全国市场接入矩阵", method: "GET", input: "market_code,trading_subject（可选）", output: "31个市场数据、模型、政策门禁与缺口", status: "Agent 服务" },
-  { path: "http://127.0.0.1:8010/api/v1/trading-research-runs", use: "生成交易研究方案", method: "POST", input: "request_id,business_date,initiated_by,strategy_version,risk_aversion", output: "自动读取平台数据、24点研究分配、来源快照、步骤与门禁；execution_allowed=false", status: "Agent 服务" },
+  { path: "http://127.0.0.1:8010/api/v1/agent-runs", use: "创建交易决策编排任务", method: "POST", input: "request_id,market_code,trading_subject,business_date,initiated_by", output: "数据、预测、政策、申报策略、风险、证据和报告状态；execution_allowed=false", status: "Agent 服务" },
+  { path: "http://127.0.0.1:8010/api/v1/agent-runs/{run_id}", use: "查询交易决策任务", method: "GET", input: "run_id", output: "步骤、模块门禁、版本快照、证据、审核与报告", status: "Agent 服务" },
+  { path: "http://127.0.0.1:8010/api/v1/trading-research-runs", use: "生成交易申报策略", method: "POST", input: "request_id,business_date,initiated_by,strategy_version,risk_aversion", output: "自动读取平台数据、24点日前/实时研究分配、来源快照、步骤与门禁；execution_allowed=false", status: "策略服务" },
   { path: "http://127.0.0.1:8010/api/v1/trading-draft-runs/{run_id}/review", use: "独立人工复核", method: "POST", input: "decision,reviewed_by,reason,expected_revision", output: "研究材料审核状态、批准后CSV/JSON导出；不解除正式申报门禁", status: "Agent 服务" },
   { path: "/api/policy-agent/query", use: "正式政策规则问答", method: "POST", input: "question,marketCode,marketHint,conversationHistory", output: "回答、正式引用、覆盖边界、拒答原因、质量门禁与发布版本", status: "只读适配已接入" },
   { path: "/api/v1/health", use: "算法测试环境健康检查", method: "GET", input: "无", output: "API版本、环境、鉴权、上传/超时/留存限制", status: "真实后端已接入" },
@@ -6572,12 +6967,13 @@ function hydrateImportMarkets() {
 function switchView(view) {
   const titles = {
     company: "公司运营",
-    agent: "交易 Agent",
     desk: "盘前工作台",
-    spot: "现货市场",
     forecast: "预测评估",
+    declaration: "交易申报策略",
+    spot: "现货市场",
     medium: "中长期",
     policy: "政策 AI",
+    agent: "交易 Agent",
     grid: "拓扑阻塞",
     data: "数据中心",
     report: "报告复盘",
@@ -6612,7 +7008,7 @@ function selectMarket(code) {
   hydrateWeatherControls();
   hydrateLossControls();
   renderDataNotes();
-  if (["agent", "policy"].includes(state.activeView)) {
+  if (["agent", "policy", "declaration"].includes(state.activeView)) {
     switchView(state.activeView);
   } else if (code === "national") {
     switchView("company");
@@ -6637,7 +7033,7 @@ function selectSubject(subject) {
   hydrateWeatherControls();
   hydrateLossControls();
   renderDataNotes();
-  if (["agent", "policy"].includes(state.activeView)) switchView(state.activeView);
+  if (["agent", "policy", "declaration"].includes(state.activeView)) switchView(state.activeView);
   else if (state.selectedMarket === "national") switchView("company");
   else switchView("desk");
   renderAll();
@@ -10769,14 +11165,15 @@ function debounce(fn, wait) {
     SKIPPED: ["已跳过", "wait"],
   };
   const DEFAULT_STEPS = [
-    ["市场校验", "确认当前省份和交易主体是否具备独立运行条件"],
-    ["数据质量", "检查 24 点输入、版本和缺失项"],
-    ["政策规则", "核对当前业务日期可用的授权规则与原文引用"],
-    ["价格预测", "基于已接入模型生成 24 点预测"],
-    ["风险信号", "识别高价、负价与价差关注时段"],
-    ["正式建议门禁", "门禁未通过时，24 点建议保持 HOLD、0 MWh"],
-    ["报告草稿", "汇总证据、版本、缺口与送审前报告"],
-    ["送审与复核", "由不同人员完成送审和复核"],
+    ["市场与主体校验", "确认当前省份和交易主体是否具备独立运行条件"],
+    ["数据与版本检查", "检查输入完整性、数据版本和缺失项"],
+    ["政策边界核对", "检索当前日期有效且带原文引用的规则证据"],
+    ["价格预测调用", "调用预测模块并锁定模型及结果版本"],
+    ["交易申报策略调用", "读取策略模块生成的确定性研究结果，不在 Agent 内重算"],
+    ["风险与一致性检查", "识别风险时段并核对跨模块输入与输出是否一致"],
+    ["决策门禁", "关键条件不足时只报告缺口，不标记为可执行"],
+    ["报告草稿", "汇总模块结果、证据、版本和缺口"],
+    ["双人审核", "由不同人员完成送审和独立复核"],
     ["审核后报告", "复核后生成最终报告版本"],
   ];
   const STEP_LABELS = {
@@ -10784,18 +11181,20 @@ function debounce(fn, wait) {
     data_quality: DEFAULT_STEPS[1],
     policy_rules: DEFAULT_STEPS[2],
     price_forecast: DEFAULT_STEPS[3],
-    risk_signals: DEFAULT_STEPS[4],
-    strategy_gate: DEFAULT_STEPS[5],
-    report_draft: DEFAULT_STEPS[6],
-    dual_review: DEFAULT_STEPS[7],
-    final_report: DEFAULT_STEPS[8],
+    declaration_strategy: DEFAULT_STEPS[4],
+    risk_signals: DEFAULT_STEPS[5],
+    strategy_gate: DEFAULT_STEPS[6],
+    report_draft: DEFAULT_STEPS[7],
+    dual_review: DEFAULT_STEPS[8],
+    final_report: DEFAULT_STEPS[9],
   };
   const GATE_LABELS = {
     market_supported: "市场与主体",
     data_ready: "数据质量",
-    policy_ready: "政策规则",
-    platform_strategy_ready: "平台条件",
-    strategy_ready: "正式建议总门禁",
+    policy_ready: "政策证据",
+    platform_strategy_ready: "预测结果条件",
+    declaration_strategy_ready: "交易申报策略结果",
+    strategy_ready: "决策材料总门禁",
   };
   const REQUIREMENT_LABELS = {
     platform_connection: "平台连接",
@@ -10956,6 +11355,10 @@ function debounce(fn, wait) {
 
   function renderTradingDraft() {
     const run = agentStore.draftRun, draft = run?.draft || {};
+    const strategyDate = byId("strategyBusinessDate");
+    if (strategyDate && run?.business_date && strategyDate.value !== run.business_date) {
+      strategyDate.value = run.business_date;
+    }
     if (run?.run_id) {
       try { localStorage.setItem(`trading-draft-run:${API_BASE}`, run.run_id); } catch (_) { /* Storage may be unavailable. */ }
     }
@@ -11091,7 +11494,7 @@ function debounce(fn, wait) {
     const riskAversion = finiteNumber(byId("draftRiskAversion")?.value);
     if (!DRAFT_STRATEGIES[strategyVersion]) return toast("请选择有效的策略版本。");
     if (riskAversion === null || riskAversion < 0 || riskAversion > 1) return toast("风险厌恶系数必须在 0 至 1 之间。");
-    const date = byId("agentBusinessDate")?.value || localIsoDate();
+    const date = byId("strategyBusinessDate")?.value || localIsoDate();
     const fromPlatform = byId("draftInputSource")?.value !== "MANUAL";
     if (!fromPlatform && ["similar_day_cvar_v04", "advanced_cvar_v05", "joint_cvar_v06"].includes(strategyVersion)) return toast("该策略需要平台历史预测、天气和误差场景来源，请选择“平台已有数据”。");
     if (!fromPlatform && !byId("draftFile")?.files?.length) return toast("请选择补充 CSV/JSON 文件。");
@@ -11297,9 +11700,13 @@ function debounce(fn, wait) {
     if (detail.reason) parts.push(requirementText(detail.reason));
     if (Number.isFinite(Number(detail.point_count))) parts.push(`${Number(detail.point_count)} 个时段`);
     if (Number.isFinite(Number(detail.citation_count))) parts.push(`${Number(detail.citation_count)} 条政策引用`);
+    if (detail.research_status) parts.push(`策略研究 ${detail.research_status}`);
+    if (detail.strategy_version) parts.push(`策略 ${detail.strategy_version}`);
+    if (Number.isFinite(Number(detail.risk_aversion))) parts.push(`风险参数 ${Number(detail.risk_aversion).toFixed(2)}`);
+    if (detail.source_sha256) parts.push(`来源 ${String(detail.source_sha256).slice(0, 12)}`);
     if (detail.version !== undefined) parts.push(`报告版本 ${detail.version}`);
-    if (detail.strategy_ready === false) parts.push("正式建议门禁未通过");
-    if (detail.strategy_ready === true) parts.push("正式建议门禁已通过");
+    if (detail.strategy_ready === false) parts.push("决策材料门禁未通过");
+    if (detail.strategy_ready === true) parts.push("决策材料门禁已通过");
     return parts.filter(Boolean).join(" · ") || fallback;
   }
 
@@ -11321,6 +11728,9 @@ function debounce(fn, wait) {
     byId("agentSendMessageBtn")?.addEventListener("click", sendMessage);
     byId("agentSubmitReviewBtn")?.addEventListener("click", submitReview);
     byId("agentReviewBtn")?.addEventListener("click", reviewRun);
+    byId("agentOpenDeclarationBtn")?.addEventListener("click", () => {
+      if (typeof switchView === "function") switchView("declaration");
+    });
     byId("agentViewReportBtn")?.addEventListener("click", viewHtmlReport);
     byId("agentDownloadMarkdownBtn")?.addEventListener("click", () => downloadReport("markdown"));
     byId("agentDownloadJsonBtn")?.addEventListener("click", () => downloadReport("json"));
@@ -11355,7 +11765,7 @@ function debounce(fn, wait) {
     const preview = byId("agentReportPreview");
     if (preview) {
       preview.hidden = false;
-      preview.textContent = "完成一次历史陪跑后，可在这里查看或下载报告。";
+      preview.textContent = "完成一次决策编排后，可在这里查看或下载报告。";
     }
   }
 
@@ -11399,11 +11809,13 @@ function debounce(fn, wait) {
     const rawStatus = String(health?.status || health?.agent?.status || "").toLowerCase();
     const healthy = !unavailable && ["ok", "healthy", "ready", "degraded"].includes(rawStatus || "ok");
     const agentStatus = byId("agentHealthStatus");
+    const strategyStatus = byId("strategyHealthStatus");
     const policyStatus = byId("policyServiceStatus");
-    for (const element of [agentStatus, policyStatus]) {
+    for (const element of [agentStatus, strategyStatus, policyStatus]) {
       if (!element) continue;
       element.className = `pill ${healthy ? (rawStatus === "degraded" ? "partial" : "ok") : "missing"}`;
-      element.textContent = healthy ? (rawStatus === "degraded" ? "服务降级" : "Agent 已连接") : "Agent 未连接";
+      const serviceName = element === strategyStatus ? "策略服务" : "Agent";
+      element.textContent = healthy ? (rawStatus === "degraded" ? `${serviceName}降级` : `${serviceName}已连接`) : `${serviceName}未连接`;
     }
     const llmMode = health?.llm?.mode || health?.llm?.status;
     const platformStatus = health?.platform?.status || (health?.platform?.reachable ? "online" : "");
@@ -11514,7 +11926,7 @@ function debounce(fn, wait) {
       agentStore.messages = [];
       renderRun();
       beginPolling();
-      toast(payload?.idempotent_replay ? "已返回相同请求的运行记录。" : "历史陪跑已启动，完成后请查看风险和依据并送审。");
+      toast(payload?.idempotent_replay ? "已返回相同请求的运行记录。" : "交易决策编排已启动，完成后请核对模块结果、门禁与依据并送审。");
     } catch (error) {
       toast(`启动失败：${error.message}`);
     } finally {
@@ -11579,13 +11991,13 @@ function debounce(fn, wait) {
         body: JSON.stringify({
           request_id: newRequestId("rerun"),
           actor,
-          reason: "从交易 Agent 工作区按原快照重跑",
+          reason: "从交易 Agent 工作区按原参数重新运行",
         }),
       }));
       agentStore.messages = [];
       renderRun();
       beginPolling();
-      toast("已基于原运行快照创建重跑任务。");
+      toast("已按原日期、模型和策略参数创建新任务。");
     } catch (error) {
       toast(`重跑失败：${error.message}`);
     } finally {
@@ -11596,6 +12008,9 @@ function debounce(fn, wait) {
 
   function renderRun() {
     const run = agentStore.currentRun;
+    if (run?.run_id) {
+      try { localStorage.setItem(`agent-run:${API_BASE}`, run.run_id); } catch (_) { /* Storage may be unavailable. */ }
+    }
     const statusElement = byId("agentRunStatus");
     if (statusElement) {
       const [label, tone] = RUN_STATUSES[run?.status] || [run?.status || "尚未开始", "wait"];
@@ -11603,13 +12018,15 @@ function debounce(fn, wait) {
       statusElement.textContent = label;
     }
     if (!run) {
-      setText("agentRunMeta", "尚未开始。设定范围并填写发起人后，即可启动；本工具不会下单。");
+      setText("agentRunMeta", "尚未开始。设定任务范围并填写发起人后即可启动；Agent 不会自动提交交易。");
     } else {
       const parts = [
         `运行 ${run.run_id}`,
         run.parent_run_id ? `来源 ${run.parent_run_id}` : "",
         run.model_version ? `模型 ${run.model_version}` : "",
         run.data_version ? `数据 ${run.data_version}` : "",
+        run.strategy_version ? `策略 ${run.strategy_version}` : "",
+        Number.isFinite(Number(run.risk_aversion)) ? `风险参数 ${Number(run.risk_aversion).toFixed(2)}` : "",
         `下单权限 ${run.execution_allowed === true ? "异常开启" : "关闭"}`,
         run.error?.message ? `错误 ${run.error.message}` : "",
       ].filter(Boolean);
@@ -11617,6 +12034,7 @@ function debounce(fn, wait) {
     }
     renderSteps(run);
     renderGates(run);
+    renderDecisionSummary(run);
     renderSignals(run);
     renderEvidence(run);
     renderMessages();
@@ -11625,7 +12043,60 @@ function debounce(fn, wait) {
     renderRunControls();
   }
 
+  function renderDecisionSummary(run) {
+    const declaration = run?.declaration_strategy || {};
+    const declarationSummary = declaration.summary || {};
+    const policies = run?.policies || {};
+    const policyCitations = firstArray(policies, ["citations", "items"]);
+    const signals = firstArray(run?.signals, ["items", "signals"]);
+    const attentionCount = signals.filter(item => item?.attention_required).length;
+    const statusLabel = value => value === true ? "已具备" : value === false ? "条件不足" : "待运行";
+    const metric = value => value === null || value === undefined || !Number.isFinite(Number(value))
+      ? "--"
+      : Number(value).toLocaleString("zh-CN", { maximumFractionDigits: 3 });
+    const rows = [
+      ["数据快照", run?.data_version || "--", statusLabel(run?.gates?.data_ready)],
+      ["价格预测", run?.model_version || "--", run?.platform_run_id ? `运行 ${run.platform_run_id}` : statusLabel(run?.gates?.platform_strategy_ready)],
+      ["政策证据", policyCitations.length ? `${policyCitations.length} 条引用` : "--", statusLabel(run?.gates?.policy_ready)],
+      ["申报策略", declaration.resolved_strategy_version || declaration.strategy_version || run?.strategy_version || "--", declaration.research_status === "READY" ? `日前 ${metric(declarationSummary.day_ahead_quantity_mwh)} MWh · 实时 ${metric(declarationSummary.reserved_realtime_mwh)} MWh · 预测运行 ${declaration.source?.forecast_run_id || "待核验"}` : statusLabel(run?.gates?.declaration_strategy_ready)],
+      ["风险检查", run ? `${attentionCount} 个关注时段` : "--", signals.length ? `${signals.length} 个时段已检查` : "待运行"],
+      ["审核状态", run?.review_status || "--", run?.execution_allowed === true ? "执行权限异常开启" : "不可自动提交"],
+    ];
+    setHtml("agentDecisionSummary", rows.map(([label, value, detail], index) => `<div>
+      <span>${String(index + 1).padStart(2, "0")} · ${escapeText(label)}</span>
+      <strong>${escapeText(value)}</strong>
+      <small>${escapeText(detail)}</small>
+    </div>`).join(""));
+  }
+
+  async function restoreAgentRun() {
+    let runId = "";
+    try { runId = localStorage.getItem(`agent-run:${API_BASE}`) || ""; } catch (_) { return; }
+    if (!runId || agentStore.currentRun) return;
+    try {
+      const restored = unwrapRun(await apiRequest(`/agent-runs/${encodeURIComponent(runId)}`));
+      const context = currentContext();
+      if (restored.market_code !== context.marketCode || restored.trading_subject !== context.subjectKey) return;
+      agentStore.currentRun = restored;
+      agentStore.businessDate = restored.business_date;
+      agentStore.contextKey = `${context.marketCode}|${context.subjectKey}|${restored.business_date}`;
+      const dateInput = byId("agentBusinessDate");
+      if (dateInput) dateInput.value = restored.business_date;
+      renderRun();
+      if (ACTIVE_STATUSES.has(agentStore.currentRun?.status)) beginPolling();
+      else await loadMessages();
+    } catch (error) {
+      if (error.status === 404) {
+        try { localStorage.removeItem(`agent-run:${API_BASE}`); } catch (_) { /* Storage may be unavailable. */ }
+      }
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
+    const strategyDate = byId("strategyBusinessDate");
+    if (strategyDate && !strategyDate.value) {
+      strategyDate.value = (typeof state !== "undefined" && state.selectedDate) || localIsoDate();
+    }
     byId("draftStrategyVersion")?.addEventListener("change", () => renderDraftStrategyBand(agentStore.draftRun));
     byId("draftRiskAversion")?.addEventListener("change", () => renderDraftStrategyBand(agentStore.draftRun));
     byId("createDraftBtn")?.addEventListener("click", createTradingDraft);
@@ -11655,7 +12126,7 @@ function debounce(fn, wait) {
     const target = byId("agentReportPreview");
     if (!target) return;
     if (!run) {
-      target.textContent = "完成一次历史陪跑后，可在这里查看或下载报告。";
+      target.textContent = "完成一次决策编排后，可在这里查看或下载报告。";
       return;
     }
     const reports = Array.isArray(run.reports) ? run.reports : [];
@@ -11664,7 +12135,7 @@ function debounce(fn, wait) {
     target.textContent = latest
       ? `报告版本 ${latest.version} · ${phase} · 生成于 ${latest.created_at || "--"}。点击上方按钮查看或下载。`
       : run.status === "NEEDS_ONBOARDING"
-        ? "当前市场尚未接入，不生成策略报告。"
+        ? "当前市场尚未接入，不生成决策编排报告。"
         : "报告尚未生成，请等待工作流完成。";
   }
 
@@ -11674,14 +12145,17 @@ function debounce(fn, wait) {
     const initiator = byId("agentInitiatorInput")?.value.trim() || "";
     const start = byId("agentStartRunBtn");
     if (start) {
-      start.disabled = agentStore.loadingRun || context.marketCode === "national" || !context.businessDate || !initiator;
-      start.title = context.marketCode === "national"
+      const runIsActive = ACTIVE_STATUSES.has(run?.status);
+      start.disabled = agentStore.loadingRun || runIsActive || context.marketCode === "national" || !context.businessDate || !initiator;
+      start.title = runIsActive
+        ? "当前任务仍在运行"
+        : context.marketCode === "national"
         ? "请先在左侧选择具体省份"
         : !context.businessDate
           ? "请选择业务日期"
             : !initiator
             ? "请先在左侧输入发起人姓名"
-            : "使用当前范围启动历史数据陪跑";
+            : "使用当前范围启动交易决策编排";
     }
     const cancel = byId("agentCancelRunBtn");
     if (cancel) cancel.disabled = !run || !ACTIVE_STATUSES.has(run.status) || agentStore.loadingRun;
@@ -11690,8 +12164,8 @@ function debounce(fn, wait) {
     const hint = context.marketCode === "national"
       ? "第 1 步：请在左侧选择具体省份；全国视图只能查看接入情况"
       : context.marketCode === "SD" && context.subjectKey === "retail"
-        ? "第 2 步：可启动历史陪跑；正式建议仍固定为 HOLD，不下单"
-        : "第 2 步：可运行接入检查；不会读取山东数据、模型或证据";
+        ? "可以启动编排；Agent 将调用数据、预测、政策和交易申报策略，并保持不可自动提交"
+        : "可以运行接入检查；未接入市场只返回缺口，不复用山东数据、模型或策略";
     setText("agentRunHint", hint);
 
     const stable = run && !ACTIVE_STATUSES.has(run.status) && run.status !== "FAILED";
@@ -11730,9 +12204,9 @@ function debounce(fn, wait) {
     const missingData = Array.isArray(run?.missing_data) ? run.missing_data.map(requirementText).join("；") : requirementText(run?.missing_data);
     const rows = Object.entries(GATE_LABELS).map(([key, label], index) => {
       const value = gates[key];
-      let detail = value === true ? "门禁已通过" : value === false ? "门禁未通过，正式建议保持 HOLD" : "等待工作流检查";
+      let detail = value === true ? "门禁已通过" : value === false ? "门禁未通过，只保留研究材料" : "等待工作流检查";
       if (key === "data_ready" && missingData) detail = missingData;
-      if (key === "strategy_ready" && value === true) detail = "平台与政策条件均已通过；仍不开放自动执行";
+      if (key === "strategy_ready" && value === true) detail = "关键模块结果与政策证据均已具备；仍不开放自动执行";
       return `<div class="agent-gate-item">
         <span class="agent-step-index">${String(index + 1).padStart(2, "0")}</span>
         <div><strong>${escapeText(label)}</strong><p>${escapeText(detail)}</p></div>
@@ -11781,7 +12255,7 @@ function debounce(fn, wait) {
     const target = byId("agentSignalTable");
     if (!target) return;
     if (!run) {
-      target.innerHTML = '<tr><td colspan="8">完成历史陪跑后，在这里核对 24 点风险与 HOLD 建议。</td></tr>';
+      target.innerHTML = '<tr><td colspan="8">完成决策编排后，在这里核对风险信号。</td></tr>';
       return;
     }
     const signals = firstArray(run?.signals, ["items", "signals"]);
@@ -11866,7 +12340,7 @@ function debounce(fn, wait) {
     }
     setText("agentEvidenceCount", `${evidence.length} 条证据`);
     if (!evidence.length) {
-      setHtml("agentEvidenceList", `<p class="agent-empty">${run ? "本次运行没有可展示的依据。" : "完成历史陪跑后，这里会列出数据、模型和政策依据。"}</p>`);
+      setHtml("agentEvidenceList", `<p class="agent-empty">${run ? "本次运行没有可展示的依据。" : "完成决策编排后，这里会列出数据、预测、政策、策略和风险依据。"}</p>`);
       return;
     }
     setHtml("agentEvidenceList", evidence.map((item) => {
@@ -11903,7 +12377,7 @@ function debounce(fn, wait) {
     const target = byId("agentMessageList");
     if (!target) return;
     if (!agentStore.currentRun) {
-      target.innerHTML = '<p class="agent-empty">完成历史陪跑后，可围绕风险、门禁或依据提问。</p>';
+      target.innerHTML = '<p class="agent-empty">完成决策编排后，可围绕模块结果、风险、门禁或依据提问。</p>';
       return;
     }
     if (!agentStore.messages.length) {
@@ -11927,7 +12401,7 @@ function debounce(fn, wait) {
     const runId = agentStore.currentRun?.run_id;
     const content = byId("agentMessageInput")?.value.trim() || "";
     const createdBy = byId("agentMessageAuthor")?.value.trim() || "";
-    if (!runId) return toast("请先完成一次历史陪跑。");
+    if (!runId) return toast("请先完成一次交易决策编排。");
     if (!createdBy) return toast("请输入提问人姓名。");
     if (!content) return toast("请输入问题。");
     const button = byId("agentSendMessageBtn");
@@ -11977,14 +12451,12 @@ function debounce(fn, wait) {
     if ([run.initiated_by, submittedBy].filter(Boolean).includes(reviewedBy)) {
       return toast("审批人必须与发起人和提交人不同。");
     }
-    if (["MODIFIED", "REJECTED"].includes(decision) && !reason) return toast("修改或拒绝时必须填写审核原因。");
-    const modifiedSuggestions = decision === "MODIFIED"
-      ? Array.from({ length: 24 }, (_, index) => ({ period: index + 1, action: "HOLD", reason }))
-      : undefined;
+    if (!["APPROVED", "REJECTED"].includes(decision)) return toast("请选择批准报告或退回补充。");
+    if (decision === "REJECTED" && !reason) return toast("退回补充时必须填写审核说明。");
     try {
       agentStore.currentRun = unwrapRun(await apiRequest(`/agent-runs/${encodeURIComponent(run.run_id)}/review`, {
         method: "POST",
-        body: JSON.stringify({ decision, reviewed_by: reviewedBy, reason, modified_suggestions: modifiedSuggestions }),
+        body: JSON.stringify({ decision, reviewed_by: reviewedBy, reason }),
       }));
       renderRun();
       toast(`审核状态已更新为 ${decision}。`);
@@ -12292,10 +12764,20 @@ function debounce(fn, wait) {
 
   function activate(view) {
     document.body.classList.toggle("agent-view-active", view === "agent");
+    document.body.classList.toggle("declaration-view-active", view === "declaration");
     if (view === "agent") {
       syncContext();
       loadHealth();
       loadReadiness();
+      restoreAgentRun();
+    }
+    if (view === "declaration") {
+      const strategyDate = byId("strategyBusinessDate");
+      if (strategyDate && !strategyDate.value) {
+        strategyDate.value = (typeof state !== "undefined" && state.selectedDate) || localIsoDate();
+      }
+      loadHealth();
+      renderTradingDraft();
     }
     if (view === "policy") {
       loadPolicyAgentStatus();
@@ -12311,6 +12793,7 @@ function debounce(fn, wait) {
   function boot() {
     bindEvents();
     syncContext();
+    renderDecisionSummary(null);
     loadPolicyAgentStatus();
   }
 

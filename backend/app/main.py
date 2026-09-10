@@ -30,7 +30,19 @@ from .research_plan import build_research_plan
 # Local runs place this file under ``<repo>/backend/app`` while the Docker
 # image copies the package to ``/app/app``. Resolve the data root for both.
 _FILE_ROOT = Path(__file__).resolve()
-ROOT = _FILE_ROOT.parents[1] if (_FILE_ROOT.parents[1] / "private-data").exists() else _FILE_ROOT.parents[2]
+_LOCAL_ROOT = _FILE_ROOT.parents[1]
+_REPOSITORY_ROOT = _FILE_ROOT.parents[2]
+if (_LOCAL_ROOT / "private-data").exists() or (_LOCAL_ROOT / "customer-data").exists():
+    ROOT = _LOCAL_ROOT
+elif (
+    (_REPOSITORY_ROOT / "private-data").exists()
+    or (_REPOSITORY_ROOT / "customer-data").exists()
+    or (_REPOSITORY_ROOT / "data").exists()
+):
+    ROOT = _REPOSITORY_ROOT
+else:
+    # Render's image layout is /app/app and /app/data.
+    ROOT = _LOCAL_ROOT
 CUSTOMER_DATA = ROOT / "customer-data" / "weifang-caixin"
 PRIVATE_DATA = ROOT / "private-data" / "shandong-2026h1"
 PUBLIC_DATA = ROOT / "data"
