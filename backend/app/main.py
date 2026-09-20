@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, R
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictFloat
 
 from .policy_agent_client import PolicyAgentClient, PolicyAgentError
 from .price_forecast_model import run_price_forecast
@@ -26,6 +26,9 @@ from .strategy_comparison import compare_strategy_versions
 from .advanced_strategies import ADVANCED_KEY, JOINT_KEY
 from .research_plan import build_research_plan
 from .strategy_forecast import CONDITIONAL_VERSION, resolve_strategy_forecast
+from .independent_scenarios import audit_premarket_snapshot, build_independent_inputs
+from .multisegment_bidding import OFFICIAL_RULE_EVIDENCE, RULE_READINESS, optimize_multisegment_bids
+from . import multisegment_runs
 
 
 # Local runs place this file under ``<repo>/backend/app`` while the Docker
@@ -105,6 +108,36 @@ class ForecastRunRequest(BaseModel):
     date: str
     model_version: str = "lag-baseline-v0.3"
     market_code: str = "SD"
+
+
+class MultisegmentBidRequest(BaseModel):
+    model_config = {"extra": "forbid", "allow_inf_nan": False}
+    market_code: Literal["SD"] = "SD"
+    business_date: str
+    initiator: str = Field(min_length=1, max_length=128)
+    forecast_profile: Literal["target_supply_conditional", "online_challenger"] = "target_supply_conditional"
+    exposure_by_period: dict[int, StrictFloat] | None = None
+    risk_aversion: float = Field(default=0.3, ge=0, le=1, strict=True)
+    risk_budget_tightening: float | None = Field(default=0.5, ge=0, le=1, strict=True)
+    absolute_cost_budget_yuan: StrictFloat | None = None
+    fixed_procurement_cost_yuan: StrictFloat | None = None
+    rule_profile: dict[str, Any] | None = None
+    quantity_basis: Literal["RESIDUAL_RESEARCH", "TOTAL_DEMAND_CURVE"] = "RESIDUAL_RESEARCH"
+    demand_by_period_mw: dict[int, StrictFloat] | None = None
+    registered_capacity_mw: StrictFloat | None = None
+    load_forecast_by_period_mwh: dict[int, StrictFloat] | None = None
+    data_source: str | None = None
+    data_version: str | None = None
+    contract_settlement: dict[str, Any] | None = None
+    budget_scope: Literal["SPOT_COMPONENTS", "ENERGY_WITH_CONTRACT_DIFFERENCE"] = "SPOT_COMPONENTS"
+    clearing_context: dict[str, Any] | None = None
+
+
+class MultisegmentReviewRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    reviewer: str = Field(min_length=1, max_length=128)
+    decision: Literal["APPROVED", "REJECTED"]
+    reason: str = Field(min_length=1, max_length=2000)
 
 
 class ForecastResultPoint(BaseModel):
@@ -2461,6 +2494,139 @@ def forecast_results(date: str, model_version: str = "lag-baseline-v0.3", market
         "point_count": row["point_count"],
         "results": json.loads(row["result_json"]),
     }
+
+
+def multisegment_forecast_document(profile: str) -> dict[str, Any]:
+    if profile == "target_supply_conditional":
+        return resolve_strategy_forecast(load_private_json)
+    if profile == "online_challenger":
+        return load_private_json("price_forecast_history_online_challenger.json")
+    raise ValueError("The public deployment only serves verified conditional and online-challenger snapshots")
+
+
+@app.get("/api/strategy/shandong-rule-profile")
+def get_shandong_rule_profile() -> dict[str, Any]:
+    return {
+        "market_code": "SD",
+        "trading_subject": "retail",
+        "execution_allowed": False,
+        "evidence": OFFICIAL_RULE_EVIDENCE,
+        "readiness": RULE_READINESS,
+        "recommended_research_profile": {
+            "rule_version": "sd-market-rule-2026-04-30-shape-research-params-v1",
+            "effective_from": OFFICIAL_RULE_EVIDENCE["effective_from"],
+            "max_segments": OFFICIAL_RULE_EVIDENCE["max_segments"],
+            "min_segment_mw": OFFICIAL_RULE_EVIDENCE["min_segment_mw"],
+            "policy_citation": (
+                f"{OFFICIAL_RULE_EVIDENCE['title']} 第7.2.12-7.2.13条；"
+                f"{OFFICIAL_RULE_EVIDENCE['url']}"
+            ),
+            "price_tick": None,
+            "power_tick_mw": None,
+            "price_floor": None,
+            "price_ceiling": None,
+        },
+        "warning": "结构规则已核对；限价、步长、节点参数和终端格式未确认，仍只能生成研究草稿。",
+    }
+
+
+@app.post("/api/strategy/multisegment-runs")
+def create_multisegment_run(request: MultisegmentBidRequest) -> dict[str, Any]:
+    validate_business_date(request.business_date)
+    try:
+        multisegment_runs.identity(request.initiator)
+        if request.quantity_basis == "TOTAL_DEMAND_CURVE":
+            if request.exposure_by_period is not None or request.demand_by_period_mw is None:
+                raise ValueError("Total-demand mode requires demand_by_period_mw, not residual exposure")
+            if request.load_forecast_by_period_mwh is None or set(request.load_forecast_by_period_mwh) != set(range(1, 25)):
+                raise ValueError("Provide separate complete 24-point load forecasts for costing")
+            if not request.data_source or not request.data_source.strip() or not request.data_version or not request.data_version.strip():
+                raise ValueError("Demand/load source and version required")
+            volumes = request.demand_by_period_mw
+        else:
+            if request.demand_by_period_mw is not None or request.registered_capacity_mw is not None or request.load_forecast_by_period_mwh is not None:
+                raise ValueError("Demand/capacity inputs require TOTAL_DEMAND_CURVE mode")
+            volumes = request.exposure_by_period
+
+        doc = multisegment_forecast_document(request.forecast_profile)
+        inputs = build_independent_inputs(doc["results"], request.business_date, volumes)
+        if request.quantity_basis == "TOTAL_DEMAND_CURVE":
+            for row in inputs["records"]:
+                row["load_forecast_mwh"] = request.load_forecast_by_period_mwh[row["period"]]
+        tightening = request.risk_budget_tightening
+        if request.absolute_cost_budget_yuan is not None and "risk_budget_tightening" not in request.model_fields_set:
+            tightening = None
+        result = optimize_multisegment_bids(
+            business_date=request.business_date,
+            **inputs,
+            rule_profile=request.rule_profile,
+            risk_aversion=request.risk_aversion,
+            risk_budget_tightening=tightening,
+            absolute_cost_budget_yuan=request.absolute_cost_budget_yuan,
+            fixed_procurement_cost_yuan=request.fixed_procurement_cost_yuan,
+            quantity_basis=request.quantity_basis,
+            registered_capacity_mw=request.registered_capacity_mw,
+            contract_settlement=request.contract_settlement,
+            budget_scope=request.budget_scope,
+            clearing_context=request.clearing_context,
+        )
+        result.update(
+            forecast_profile=request.forecast_profile,
+            forecast_version=doc.get("model", {}).get("version"),
+            forecast_snapshot_generated_at=doc.get("generated_at"),
+            data_source=request.data_source,
+            data_version=request.data_version,
+        )
+        target_snapshot = next(day for day in doc["results"] if day["market_date"] == request.business_date)
+        result["forecast_rule_audit"] = audit_premarket_snapshot(target_snapshot)
+        result["forecast_selection"] = target_snapshot.get("audit", {}).get("forecast_selection")
+        return multisegment_runs.create_run(
+            DB_PATH,
+            request.initiator,
+            {"request": request.model_dump(), "resolved_inputs": inputs},
+            result,
+        )
+    except (ValueError, TypeError, KeyError, StopIteration) as exc:
+        raise api_error(422, "MULTISEGMENT_INPUT_INVALID", str(exc)) from exc
+
+
+@app.get("/api/strategy/multisegment-runs/{run_id}")
+def get_multisegment_run(run_id: str) -> dict[str, Any]:
+    try:
+        return multisegment_runs.get_run(DB_PATH, run_id)
+    except KeyError as exc:
+        raise api_error(404, "MULTISEGMENT_RUN_NOT_FOUND", "未找到多段报价运行") from exc
+    except ValueError as exc:
+        raise api_error(409, "MULTISEGMENT_SNAPSHOT_INVALID", str(exc)) from exc
+
+
+@app.post("/api/strategy/multisegment-runs/{run_id}/review")
+def review_multisegment_run(run_id: str, request: MultisegmentReviewRequest) -> dict[str, Any]:
+    try:
+        return multisegment_runs.review_run(DB_PATH, run_id, request.reviewer, request.decision, request.reason)
+    except KeyError as exc:
+        raise api_error(404, "MULTISEGMENT_RUN_NOT_FOUND", "未找到多段报价运行") from exc
+    except ValueError as exc:
+        raise api_error(409, "MULTISEGMENT_REVIEW_INVALID", str(exc)) from exc
+
+
+@app.get("/api/strategy/multisegment-runs/{run_id}/export")
+def export_multisegment_run(run_id: str, format: Literal["csv", "json", "xlsx"] = "csv"):
+    from fastapi.responses import Response
+    from urllib.parse import quote
+    try:
+        content, media, name = multisegment_runs.export_run(DB_PATH, run_id, format)
+        return Response(content, media_type=media, headers={
+            "Content-Disposition": "attachment; filename*=UTF-8''" + quote(name),
+            "X-Research-Only": "true",
+            "X-Execution-Allowed": "false",
+        })
+    except KeyError as exc:
+        raise api_error(404, "MULTISEGMENT_RUN_NOT_FOUND", "未找到多段报价运行") from exc
+    except ValueError as exc:
+        raise api_error(409, "MULTISEGMENT_EXPORT_INVALID", str(exc)) from exc
+    except RuntimeError as exc:
+        raise api_error(503, "MULTISEGMENT_EXCEL_UNAVAILABLE", str(exc)) from exc
 
 
 def _strategy_assets() -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any], list[dict[str, Any]], dict[str, Any]]:

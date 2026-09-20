@@ -4305,7 +4305,7 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
               <div class="multi-curve-controls">
                 <label class="field"><span>交易日期</span><input id="multiCurveDate" type="date" required /></label>
                 <label class="field"><span>发起人</span><input id="multiCurveInitiator" required maxlength="128" placeholder="请输入姓名" /></label>
-                <label class="field"><span>预测版本</span><select id="multiCurveForecast"><option value="target_supply_conditional">目标日供需增强（缺失自动回退）</option><option value="online_challenger">现有预测对照</option><option value="baseline">旧预测对照</option><option value="negative_quantile_research">负价概率＋分位数（研究候选）</option></select></label>
+                <label class="field"><span>预测版本</span><select id="multiCurveForecast"><option value="target_supply_conditional">目标日供需增强（缺失自动回退）</option><option value="online_challenger">六天气特征回退模型（对照）</option></select></label>
                 <label class="field"><span>电量口径</span><select id="multiCurveBasis"><option value="TOTAL_DEMAND_CURVE">总需求申报曲线（需客户输入）</option><option value="RESIDUAL_RESEARCH">剩余敞口方法研究（非正式口径）</option></select></label>
                 <label class="field"><span>预算收紧程度</span><select id="multiCurveBudget"><option value="0.5">50%（研究参数）</option><option value="0.75">75%（强保护候选）</option><option value="0.25">25%</option></select></label>
                 <label class="field"><span>24点业务输入 JSON</span><input id="multiCurveExposure" type="file" accept=".json" /></label>
@@ -13020,6 +13020,126 @@ function debounce(fn, wait) {
 })();
 
     </script>
-    <script src="./multisegment.js?v=20260920-rule-profile2"></script>
+    <script>
+(() => {
+  'use strict';
+  const el = id => document.getElementById(id);
+  if (!el('multiCurveForm')) return;
+  const origin=String(window.__PLATFORM_API_BASE__ || 'http://127.0.0.1:8002').replace(/\/$/,'');
+  const root=origin.endsWith('/api') ? origin : `${origin}/api`;
+  const storageKey=`multisegment-run:${root}`;
+  const fmt=n => typeof n==='number' && Number.isFinite(n) ? n.toLocaleString('zh-CN',{maximumFractionDigits:6}) : '待确认';
+  const optional=id => el(id).value.trim() ? Number(el(id).value) : null;
+  let run=null, busy=false;
+  function node(tag,text,className) {const n=document.createElement(tag);n.textContent=text;if(className)n.className=className;return n;}
+  function status(message) {el('multiCurveStatus').textContent=message;}
+  async function request(path,options={}) {
+    const response=await fetch(root+path,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});
+    if (!response.ok) {
+      const body=await response.json().catch(()=>({}));
+      const message=body.error?.message || body.detail?.message || body.message || (typeof body.detail==='string'?body.detail:JSON.stringify(body.detail||body));
+      throw new Error(message || `请求失败 ${response.status}`);
+    }
+    return response;
+  }
+  async function loadRuleProfile() {
+    const profile=await (await request('/strategy/shandong-rule-profile')).json();
+    const recommended=profile.recommended_research_profile;
+    el('multiCurveRuleVersion').value=recommended.rule_version;
+    el('multiCurveEffectiveFrom').value=recommended.effective_from;
+    el('multiCurveSegments').value=String(recommended.max_segments);
+    el('multiCurveMinWidth').value=String(recommended.min_segment_mw);
+    el('multiCurveCitation').value=recommended.policy_citation;
+    const verified=profile.readiness.verified_constraints.length;
+    const pending=profile.readiness.pending_parameters.length;
+    el('multiCurveRuleStatus').textContent=`规则档案：${profile.evidence.title}，结构约束已核对${verified}项；仍有${pending}项运行参数待确认。当前输入为24小时；缺少申报前96点数据时不伪造15分钟策略。`;
+  }
+  function download(blob,name) {const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  function render(value) {
+    run=value;const r=run.result;
+    el('multiCurveSummary').replaceChildren();el('multiCurveRows').replaceChildren();
+    const reviewLabel={PENDING_REVIEW:'待独立复核',APPROVED:'研究复核通过',REJECTED:'已驳回'}[run.review_status];
+    status(`${r.business_date} · ${r.status==='BLOCKED'?'优化阻断：'+r.reason:'曲线已生成'} · ${reviewLabel} · 不可自动提交`);
+    const summary=el('multiCurveSummary');
+    summary.append(node('p',`运行 ${run.run_id} · 发起人 ${run.initiator} · 预测 ${r.forecast_version} · 规则 ${r.rule_profile.rule_version}`));
+    if(r.forecast_selection)summary.append(node('p',r.forecast_selection.fallback_used?`目标日供需预测不完整，已自动回退现有模型（${r.forecast_selection.fallback_reason}）。`:'已使用完整24点目标日负荷、风光及联络线预测增强模型。','multi-curve-notice'));
+    if(r.forecast_profile==='negative_quantile_research')summary.append(node('p','负价研究候选：负价概率与价格中位数是不同输出；预警不等于预测价格为负，也不直接指定日前比例。5—7月属于已观察的研究样本，尚无新增月份独立验证。','multi-curve-notice'));
+    summary.append(node('p',r.exposure_basis==='UNIT_RESEARCH'?'单位研究：每小时1 MWh；不代表客户实际申报量。':r.quantity_basis==='TOTAL_DEMAND_CURVE'?'已提供最大需求、负荷预测及报装容量；申报曲线终点不扣除中长期持仓。':'已使用提供的24点敞口；尚须核验来源与客户实际申报口径。','multi-curve-notice'));
+    const settlement=r.settlement_audit;
+    if(settlement){
+      summary.append(node('p',settlement.budget_scope==='ENERGY_WITH_CONTRACT_DIFFERENCE'?'预算范围：实时全电量＋日前差价＋中长期合约差价。仍不含月末调整、费用及月度收益回收。':'预算范围：部分现货成本，不是全部采购成本。中长期差价未纳入本次预算。','multi-curve-notice'));
+      summary.append(node('p',`合约数据：${{UNKNOWN:'未提供，不能按无合约处理',CONFIRMED_NONE:'已明确确认无合约',PROVIDED:'已提供24点合约及结算参考'}[settlement.contract_status]}。预算采用固定负荷预测，尚未模拟负荷误差。`));
+    }
+    if(r.forecast_rule_audit)summary.append(node('p',`申报截止：${r.forecast_rule_audit.declaration_deadline}；${r.forecast_rule_audit.forecast_issued_at?'已记录声明的预测发布时间，尚需核验来源':'缺少预测原始发布时间，当前属于历史重跑研究'}。`));
+    if(r.clearing_audit)summary.append(node('p',r.clearing_audit.note,'multi-curve-notice'));
+    if(r.market_shape_checks?.min_one_mw_segment==='FAIL_RESEARCH_ONLY')summary.append(node('p','本研究曲线有小于1 MW的段，不符合已核对的正式最小段宽，不能用于实际申报。','multi-curve-notice'));
+    if(r.rule_readiness)summary.append(node('p',`山东规则状态：已核对${r.rule_readiness.verified_constraints.length}项结构与结算约束；${r.rule_readiness.pending_parameters.length}项参数仍待补。当前策略输入时基为24小时，96点升级处于数据阻断状态。`,'multi-curve-notice'));
+    summary.append(node('p',r.quantity_interpretation || '剩余敞口方法研究，并非总需求申报口径。'));
+    if(r.risk_budget?.enabled)summary.append(node('p',`整日场景预算 ${fmt(r.risk_budget.limit_yuan)} 元；场景 CVaR 占用 ${fmt(r.risk_budget.used_cvar95_yuan)} 元。现实成本仍可能超预算。`));
+    summary.append(node('p','已核对总需求、最多5段、最小段宽1 MW及结算公式；限价、步长等有效参数仍待核验。用户侧中长期偏差收益回收按月计算，未作为小时罚金计入。'));
+    for(const row of r.records || []) {
+      const group=document.createElement('details');group.className='multi-curve-hour';
+      group.append(node('summary',`${String(row.period).padStart(2,'0')}:00　${row.segment_count}段 · 曲线电量 ${fmt(row.max_bid_quantity_mwh)} MWh · ${r.quantity_basis==='TOTAL_DEMAND_CURVE'?'负荷预测 '+fmt(row.load_forecast_mwh):'敞口 '+fmt(row.exposure_mwh)} MWh`));
+      if(!row.segments.length)group.append(node('p','本时段未选择日前报价段，敞口保留实时；导出预留段保持空白。'));
+      else {
+        const table=document.createElement('table');table.className='multi-curve-table';const head=document.createElement('thead');const tr=document.createElement('tr');
+        ['段号','起始 MW','结束 MW','电价 元/MWh'].forEach(x=>tr.append(node('th',x)));head.append(tr);table.append(head);
+        const body=document.createElement('tbody');
+        row.segments.forEach(s=>{const line=document.createElement('tr');[s.sequence,s.start_power_mw,s.end_power_mw,s.bid_price_yuan_per_mwh].forEach(x=>line.append(node('td',fmt(x))));body.append(line);});table.append(body);group.append(table);
+      }
+      group.append(node('p',`日前/实时预测 ${fmt(row.forecast_da)} / ${fmt(row.forecast_rt)} 元/MWh。各场景库预计成交：${Object.entries(row.expected_accepted_by_bank||{}).map(([name,value])=>`${name} ${fmt(value)} MWh`).join('；')}。申报量不等于成交量。`));
+      if(typeof row.real_time_negative_probability==='number'){
+        const risk=row.negative_price_risk||{},q=row.realtime_forecast_interval||{};
+        group.append(node('p',`实时负价概率估计 ${fmt(100*row.real_time_negative_probability)}%；预警阈值 ${fmt(100*risk.threshold)}% · ${risk.flagged?'触发负价预警':'未触发负价预警'}。P10 / P50 / P90：${fmt(q.p10)} / ${fmt(q.p50)} / ${fmt(q.p90)} 元/MWh。`));
+      }
+      for(const flag of row.risk_flags||[])group.append(node('p',({LIMIT_PRICE_JUSTIFICATION_REVIEW:'触及配置限价：请复核报价依据和有效限价文件。',SCENARIO_DA_ABOVE_LOAD_REVIEW:'部分场景的日前成交超过负荷预测：请复核总需求依据及负实时结算余额。'})[flag]||flag,'multi-curve-notice'));
+      el('multiCurveRows').append(group);
+    }
+    el('multiCurveReviewForm').hidden=r.status!=='RESEARCH_ONLY' || run.review_status!=='PENDING_REVIEW';
+    el('multiCurveExports').hidden=run.review_status!=='APPROVED';
+    if(run.review)summary.append(node('p',`复核人 ${run.review.reviewer}：${run.review.reason}`));
+    try {localStorage.setItem(storageKey,run.run_id);}catch{}
+  }
+  el('multiCurveBasis').addEventListener('change',()=>{const total=el('multiCurveBasis').value==='TOTAL_DEMAND_CURVE';el('multiCurveMinWidth').min=total?'1':'0.000001';el('multiCurveMinWidth').value=total?'1':'0.01';});
+  el('multiCurveInputTemplate').addEventListener('click',()=>{
+    const blank=()=>Object.fromEntries(Array.from({length:24},(_,i)=>[i+1,null]));
+    const total=el('multiCurveBasis').value==='TOTAL_DEMAND_CURVE';
+    const content={business_date:el('multiCurveDate').value,...(total?{demand_by_period_mw:blank(),load_forecast_by_period_mwh:blank(),registered_capacity_mw:null,data_source:'',data_version:'',budget_scope:'SPOT_COMPONENTS',contract_settlement:null}:{exposure_by_period:blank()})};
+    download(new Blob([JSON.stringify(content,null,2)],{type:'application/json'}),`${total?'24点总需求与负荷预测':'24点剩余敞口'}模板_未知值保留null.json`);
+  });
+  el('multiCurveForm').addEventListener('submit',async event=>{
+    event.preventDefault();if(busy)return;busy=true;el('multiCurveGenerate').disabled=true;
+    el('multiCurveExports').hidden=true;el('multiCurveReviewForm').hidden=true;
+    status('正在锁定预测、构造历史路径并联合优化24小时曲线…');
+    try {
+      let exposure=null,data={};const file=el('multiCurveExposure').files[0];const total=el('multiCurveBasis').value==='TOTAL_DEMAND_CURVE';
+      if(total&&!file)throw new Error('总需求申报模式必须提供24点最大需求、负荷预测、报装容量及来源版本；可先下载输入模板');
+      const complete=values=>values&&Object.keys(values).length===24&&Array.from({length:24},(_,i)=>i+1).every(h=>typeof values[h]==='number'&&Number.isFinite(values[h])&&values[h]>=0);
+      if(file){if(file.size>1024*1024)throw new Error('业务输入文件不能超过1MB');data=JSON.parse(await file.text());if(data.business_date!==el('multiCurveDate').value)throw new Error('输入文件日期须与交易日期一致');
+        if(total){if(!complete(data.demand_by_period_mw)||!complete(data.load_forecast_by_period_mwh)||typeof data.registered_capacity_mw!=='number'||data.registered_capacity_mw<=0||!data.data_source?.trim()||!data.data_version?.trim())throw new Error('总需求、负荷预测、报装容量与来源版本必须完整，未知值不得按0处理');}
+        else{exposure=data.exposure_by_period;if(!complete(exposure))throw new Error('需要完整24点非负敞口；未知值不能按0处理');}}
+      const body={business_date:el('multiCurveDate').value,initiator:el('multiCurveInitiator').value.trim(),forecast_profile:el('multiCurveForecast').value,risk_budget_tightening:Number(el('multiCurveBudget').value),exposure_by_period:exposure,
+        rule_profile:{max_segments:Number(el('multiCurveSegments').value),price_tick:Number(el('multiCurvePriceTick').value),power_tick_mw:Number(el('multiCurvePowerTick').value),min_segment_mw:Number(el('multiCurveMinWidth').value),price_floor:optional('multiCurveFloor'),price_ceiling:optional('multiCurveCeiling'),rule_version:el('multiCurveRuleVersion').value.trim(),effective_from:el('multiCurveEffectiveFrom').value||null,effective_to:el('multiCurveEffectiveTo').value||null,policy_citation:el('multiCurveCitation').value.trim()||null}};
+      body.quantity_basis=el('multiCurveBasis').value;
+      if(total)Object.assign(body,{demand_by_period_mw:data.demand_by_period_mw,load_forecast_by_period_mwh:data.load_forecast_by_period_mwh,registered_capacity_mw:data.registered_capacity_mw,data_source:data.data_source,data_version:data.data_version,budget_scope:data.budget_scope||'SPOT_COMPONENTS',contract_settlement:data.contract_settlement??null,clearing_context:data.clearing_context??null});
+      render(await (await request('/strategy/multisegment-runs',{method:'POST',body:JSON.stringify(body)})).json());
+    }catch(error){status(`未生成新方案：${error.message}。原有运行可刷新恢复。`);}finally{busy=false;el('multiCurveGenerate').disabled=false;}
+  });
+  el('multiCurveReviewForm').addEventListener('submit',async event=>{
+    event.preventDefault();if(!run || busy)return;busy=true;el('multiCurveReview').disabled=true;
+    try{render(await (await request(`/strategy/multisegment-runs/${run.run_id}/review`,{method:'POST',body:JSON.stringify({reviewer:el('multiCurveReviewer').value.trim(),decision:el('multiCurveDecision').value,reason:el('multiCurveReviewReason').value.trim()})})).json());}
+    catch(error){status(`复核未完成：${error.message}`);}finally{busy=false;el('multiCurveReview').disabled=false;}
+  });
+  document.querySelectorAll('[data-curve-export]').forEach(button=>button.addEventListener('click',async()=>{
+    if(!run || busy)return;busy=true;button.disabled=true;
+    try{const format=button.dataset.curveExport;const response=await request(`/strategy/multisegment-runs/${run.run_id}/export?format=${format}`);download(await response.blob(),`${run.result.business_date}_人工复核申报草稿_不可自动提交.${format}`);status('已导出已复核快照；不可自动提交。');}
+    catch(error){status(`导出失败：${error.message}`);}finally{busy=false;button.disabled=false;}
+  }));
+  const oldDate=el('strategyBusinessDate');if(oldDate){el('multiCurveDate').value=oldDate.value;oldDate.addEventListener('change',()=>{el('multiCurveDate').value=oldDate.value;});}
+  (async()=>{try{await loadRuleProfile();}catch(error){el('multiCurveRuleStatus').textContent=`规则档案读取失败：${error.message}。将保留页面内置研究配置。`;}})();
+  (async()=>{try{const id=localStorage.getItem(storageKey);if(id){render(await (await request(`/strategy/multisegment-runs/${encodeURIComponent(id)}`)).json());el('multiCurveDate').value=run.result.business_date;}}catch(error){status(`上次运行未恢复：${error.message}`);}})();
+})();
+
+    </script>
   </body>
 </html>
