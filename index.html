@@ -4143,6 +4143,39 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
     transform: none;
   }
 }
+.july-research {
+  margin: 20px 0;
+  padding: 18px;
+  background: #FFFFFF;
+  border: 1px solid #dce1ea;
+  border-left: 3px solid #002FA7;
+  font-family: "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.july-research p { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.july-research .table-wrap { max-width: 100%; overflow-x: auto; }
+.july-research table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.july-research th, .july-research td { text-align: left; padding: 9px; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+@media (max-width: 600px) {
+  .july-research { padding: 12px; }
+  .july-research .panel-head { flex-wrap: wrap; }
+}
+:root .multi-curve-workspace { background: #FFFFFF; font-family: "Helvetica Neue", "Microsoft YaHei", sans-serif; min-width: 0; }
+.multi-curve-workspace [hidden] { display: none !important; }
+.multi-curve-controls { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 14px; align-items: end; margin: 16px 0; }
+.multi-curve-controls .field, .multi-curve-controls input, .multi-curve-controls select { min-width: 0; max-width: 100%; }
+.multi-curve-workspace p { line-height: 1.65; overflow-wrap: anywhere; }
+.multi-curve-workspace .primary-action { background: #002FA7; color: #FFFFFF; }
+.multi-curve-notice { padding: 12px; background: #F7F7F8; border-left: 3px solid #002FA7; }
+.multi-curve-hours { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,340px),1fr)); gap: 12px; margin: 18px 0; }
+.multi-curve-hour { border: 1px solid #D9D9DE; padding: 12px; min-width: 0; }
+.multi-curve-workspace summary { cursor: pointer; line-height: 1.7; overflow-wrap: anywhere; }
+.multi-curve-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 12px; }
+.multi-curve-table th, .multi-curve-table td { padding: 9px 4px; border-bottom: 1px solid #D9D9DE; text-align: right; overflow-wrap: anywhere; white-space: normal; font-size: 12px; }
+.multi-curve-table th:first-child, .multi-curve-table td:first-child { text-align: left; width: 36px; }
+.multi-curve-workspace .inline-actions { flex-wrap: wrap; }
+@media(max-width: 480px) { .multi-curve-controls { grid-template-columns: minmax(0,1fr); } .multi-curve-workspace .inline-actions button { width: 100%; } }
 
     </style>
   </head>
@@ -4266,6 +4299,55 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
         </section>
 
         <section class="view" id="declarationView">
+          <section class="panel multi-curve-workspace" id="multiCurveWorkspace" aria-labelledby="multiCurveTitle">
+            <div class="panel-head"><div><h3 id="multiCurveTitle">多段申报曲线</h3><p>独立优化每段价格与电量 · 整日采购成本风险预算 · 人工复核申报草稿 · 不可自动提交</p></div></div>
+            <form id="multiCurveForm">
+              <div class="multi-curve-controls">
+                <label class="field"><span>交易日期</span><input id="multiCurveDate" type="date" required /></label>
+                <label class="field"><span>发起人</span><input id="multiCurveInitiator" required maxlength="128" placeholder="请输入姓名" /></label>
+                <label class="field"><span>预测版本</span><select id="multiCurveForecast"><option value="target_supply_conditional">目标日供需增强（缺失自动回退）</option><option value="online_challenger">现有预测对照</option><option value="baseline">旧预测对照</option><option value="negative_quantile_research">负价概率＋分位数（研究候选）</option></select></label>
+                <label class="field"><span>电量口径</span><select id="multiCurveBasis"><option value="TOTAL_DEMAND_CURVE">总需求申报曲线（需客户输入）</option><option value="RESIDUAL_RESEARCH">剩余敞口方法研究（非正式口径）</option></select></label>
+                <label class="field"><span>预算收紧程度</span><select id="multiCurveBudget"><option value="0.5">50%（研究参数）</option><option value="0.75">75%（强保护候选）</option><option value="0.25">25%</option></select></label>
+                <label class="field"><span>24点业务输入 JSON</span><input id="multiCurveExposure" type="file" accept=".json" /></label>
+                <button class="secondary-action" id="multiCurveInputTemplate" type="button">下载当前口径输入模板</button>
+              </div>
+              <p class="multi-curve-notice">已核对2026年4月30日修订规则第7.2.12—7.2.13条：售电公司申报24小时分时量价曲线，每小时最多5段、每段至少1 MW、曲线终点对应最大用电需求且不超过报装容量。系统运行可使用96点数据，但不能把96点研究输入直接当作售电公司申报格式。</p>
+              <p class="multi-curve-notice" id="multiCurveRuleStatus" role="status">正在读取山东规则档案…</p>
+              <details><summary>报价规则与来源（当前为研究设置，待正式核验）</summary>
+                <div class="multi-curve-controls">
+                  <label class="field"><span>最多有效段数</span><input id="multiCurveSegments" type="number" min="1" max="5" step="1" value="5" required /></label>
+                  <label class="field"><span>价格步长（元/MWh）</span><input id="multiCurvePriceTick" type="number" min="0.000001" step="any" value="0.01" required /></label>
+                  <label class="field"><span>功率步长（MW）</span><input id="multiCurvePowerTick" type="number" min="0.000001" step="any" value="0.01" required /></label>
+                  <label class="field"><span>最小段宽（MW）</span><input id="multiCurveMinWidth" type="number" min="1" step="any" value="1" required /></label>
+                  <label class="field"><span>报价下限（待确认可留空）</span><input id="multiCurveFloor" type="number" step="any" /></label>
+                  <label class="field"><span>报价上限（待确认可留空）</span><input id="multiCurveCeiling" type="number" step="any" /></label>
+                  <label class="field"><span>规则版本</span><input id="multiCurveRuleVersion" value="sd-market-rule-2026-04-30-shape-research-params-v1" required /></label>
+                  <label class="field"><span>生效日期</span><input id="multiCurveEffectiveFrom" type="date" value="2026-04-30" /></label>
+                  <label class="field"><span>失效日期</span><input id="multiCurveEffectiveTo" type="date" /></label>
+                  <label class="field"><span>规则出处 / 条款</span><input id="multiCurveCitation" value="山东电力市场规则（试行）（2026年4月修订版）第7.2.12—7.2.13条" /></label>
+                </div>
+                <p>总需求模式固定曲线终点为最大需求；研究敞口模式仅限制申报量不超过敞口。价格、功率步长0.01仍为研究设置；同价暂按不成交模拟。具体限价、步长、同价出清及最新补充通知仍需核验。</p>
+              </details>
+              <button class="primary-action" id="multiCurveGenerate" type="submit">生成多段申报草稿</button>
+            </form>
+            <p id="multiCurveStatus" role="status" aria-live="polite">尚未生成。结果由平台预测和历史场景独立计算，不读取客户当日申报。</p>
+            <div id="multiCurveSummary"></div>
+            <div id="multiCurveRows" class="multi-curve-hours"></div>
+            <form id="multiCurveReviewForm" hidden>
+              <div class="multi-curve-controls">
+                <label class="field"><span>独立审核人</span><input id="multiCurveReviewer" required maxlength="128" placeholder="须与发起人不同" /></label>
+                <label class="field"><span>复核结论</span><select id="multiCurveDecision"><option value="APPROVED">通过研究复核</option><option value="REJECTED">驳回</option></select></label>
+                <label class="field"><span>复核意见</span><input id="multiCurveReviewReason" required maxlength="2000" /></label>
+                <button class="secondary-action" id="multiCurveReview" type="submit">记录复核结论</button>
+              </div>
+            </form>
+            <div class="inline-actions" id="multiCurveExports" hidden>
+              <button class="secondary-action" type="button" data-curve-export="xlsx">导出客户格式 Excel 草稿</button>
+              <button class="secondary-action" type="button" data-curve-export="csv">导出6列 CSV</button>
+              <button class="secondary-action" type="button" data-curve-export="json">导出完整审计 JSON</button>
+            </div>
+            <p>复核通过只允许导出人工草稿，不解除正式申报门禁。修改参数或电量后须重新生成、重新复核。</p>
+          </section>
           <section class="panel agent-draft-panel">
             <div class="panel-head">
               <div><h3>交易申报策略</h3><p>山东售电侧 · 日前 / 实时分配研究 · 24点 · 不可自动提交</p></div>
@@ -4274,14 +4356,22 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
             <div class="agent-action-row research-task-controls">
               <label class="field"><span>交易日期</span><input id="strategyBusinessDate" type="date" aria-label="交易申报策略日期" /></label>
               <label class="field"><span>发起人</span><input id="draftInitiator" maxlength="128" placeholder="请输入姓名" /></label>
-              <label class="field"><span>策略版本</span><select id="draftStrategyVersion"><option value="historical_cvar_v02">历史误差 CVaR（默认）</option><option value="regime_cvar_v03">分时状态 CVaR（挑战者）</option><option value="similar_day_cvar_v04">预测与相似日 CVaR（挑战者）</option><option value="advanced_cvar_v05">混合场景 + 校准 + Newsvendor CVaR（挑战者）</option><option value="joint_cvar_v06">24小时联合混合 CVaR（挑战者）</option></select></label>
+              <label class="field"><span>策略模式 / 版本</span><select id="draftStrategyVersion"><option value="historical_cvar_v02">风险均衡 · 历史误差 CVaR（默认）</option><option value="rt_benchmark_v01">跑赢全实时 · 相对成本 CVaR（研究目标）</option><option value="regime_cvar_v03">分时状态 CVaR（挑战者）</option><option value="similar_day_cvar_v04">预测与相似日 CVaR（挑战者）</option><option value="advanced_cvar_v05">混合场景 + 校准 + Newsvendor CVaR（挑战者）</option><option value="joint_cvar_v06">24小时联合混合 CVaR（挑战者）</option></select></label>
               <label class="field"><span>风险厌恶系数</span><input id="draftRiskAversion" type="number" min="0" max="1" step="0.05" value="0.30" /></label>
               <label class="field"><span>数据来源</span><select id="draftInputSource"><option value="PLATFORM">平台已有数据</option><option value="MANUAL">补充 CSV / JSON</option></select></label>
               <label class="field" id="draftFileField" hidden><span>补充文件</span><input id="draftFile" type="file" accept=".csv,.json" /></label>
               <button class="primary-action" id="createDraftBtn" type="button">生成研究方案</button>
+              <button class="secondary-action" id="compareStrategyModesBtn" type="button">对比两种模式（历史同窗）</button>
             </div>
             <div class="agent-run-meta" id="draftMeta">尚未生成研究方案。</div>
             <div class="research-summary" id="researchSummary"></div>
+            <div id="strategyModeComparison" aria-live="polite"></div>
+            <section class="july-research" aria-labelledby="julyResearchTitle">
+              <div class="panel-head"><div><h3 id="julyResearchTitle">7月价格预测与比例研究</h3><p>使用上方交易日期 · 每小时相同单位敞口 · 固定风险系数0.30 · 不可自动提交</p></div>
+                <button type="button" class="secondary-action" id="loadJulyResearchBtn">查看所选日比例</button></div>
+              <p>7月客户负荷、持仓和成交量待补。下表只比较采购比例，不代表实际申报MWh；真实敞口形状变化后联合比例需重新计算。</p>
+              <div id="julyResearchContent" aria-live="polite">请选择2026年7月的交易日期后查看。</div>
+            </section>
             <div class="research-provenance">
               <div><span>当前方案</span><strong id="draftStrategyLabel">--</strong><small id="draftResearchTag">待生成</small></div>
               <div><span>数据与预测来源</span><strong id="draftScenarioSource">--</strong><small id="draftScenarioVersion">--</small></div>
@@ -4561,7 +4651,7 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
               <label class="field">
                 <span>模型版本（外部服务提供）</span>
                 <select id="forecastModelSelect">
-                  <option value="integrated-price-forecast-v2.0.0">山东一体化价格预测（DA/RT/价差）</option>
+                  <option value="sd-target-supply-conditional-v1">目标日供需条件增强（缺失自动回退）</option>
                 </select>
               </label>
               <label class="upload-card compact-upload">
@@ -5921,8 +6011,8 @@ const DATA_SOURCES = {
   spotPrices: "./data/spot-prices.json",
   portfolioLoadDaily: "./data/portfolio-load-daily.json",
   portfolioLoadHourly: "./data/portfolio-load-hourly.json",
-  priceForecastResult: "./data/price-forecast-result.json?v=weather-power-price-optimized-v1.0.0-realtime",
-  priceForecastHistory: "./data/price-forecast-history.json?v=weather-power-price-optimized-v1.0.0-history",
+  priceForecastResult: "./data/price-forecast-result.json?v=sd-target-supply-conditional-v1",
+  priceForecastHistory: "./data/price-forecast-history.json?v=sd-target-supply-conditional-v1",
   secondaryPriceForecastResult: "./data/price-forecast-result-secondary.json?v=price-forecast-v1.2.0-supply-ensemble",
   dataQuality: "./data/data-quality.json",
   marketFeatures: "./data/market-features.json",
@@ -6038,7 +6128,7 @@ const DATA_REQUIREMENTS = [
     domain: "市场披露与预测特征",
     priority: "P1 深度诊断",
     status: "部分接入",
-    need: "已接入2026-05-01至2026-07-01小时GFS天气，以及Q1实际出力、Q2预测出力；仍需目标日负荷/新能源/联络线预测、发布时间、市场化机组、水电、备用、检修、阻塞和正式竞价空间。",
+    need: "已接入2026-05-01至2026-07-01小时GFS天气，以及Q1实际出力、Q2目标日负荷/风电/光伏/联络线预测；仍需逐行发布时间、市场化机组、水电、备用、检修、阻塞和正式竞价空间。",
     use: "计算或校验竞价空间，解释价格异常并支撑负荷、电价和价差方向预测。",
     frequency: "历史 6-12 个月；陪跑期每日盘前更新。",
     target: "/api/forecast/features",
@@ -6463,6 +6553,37 @@ async function init() {
     state.priceForecastHistory = priceForecastHistory;
     state.secondaryPriceForecastResult = secondaryPriceForecastResult;
     state.metadata = metadata;
+    // July is a separate private batch. H1 files and their result versions stay intact.
+    if (!window.__PUBLIC_DEMO__) {
+      const julyRoot = './data/';
+      const [julyPrices, julyWeather, julyHistory, julyManifest] = await Promise.all([
+        fetchJsonOptional(`${julyRoot}spot_prices_202607.json`, []),
+        fetchJsonOptional(`${julyRoot}weather_hourly_gfs_202607.json`, null),
+        fetchJsonOptional(`${julyRoot}price_forecast_history_july_adapter.json`, null),
+        fetchJsonOptional(`${julyRoot}july_import_manifest.json`, null),
+      ]);
+      if (julyPrices.length) state.spotPrices = [...spotPrices.filter(r => r.date < '2026-07-01'),
+        ...julyPrices.map(r => ({...r, marketCode: 'SD', intervalMinutes: 60, spreadYuanMwh: r.realtimeSpreadYuanMwh}))];
+      state.julyImport = julyManifest;
+      if (julyWeather) state.weatherAsset = {...weatherAsset,
+        availableRange: {start: weatherAsset?.availableRange?.start, end: '2026-07-31'},
+        rows: [...(weatherAsset?.rows || []).filter(r => r.marketDate < '2026-07-01'), ...julyWeather.rows],
+        quality: {...weatherAsset?.quality,
+          acceptedRowCount: (weatherAsset?.rows || []).filter(r => r.marketDate < '2026-07-01').length + julyWeather.rows.length,
+          humidityMissingRows: julyWeather.quality.humidityMissingRows},
+        usageBoundary: '原批次天气按原确认口径保留；7月缺相对湿度，预报发布时间待确认，仅研究重放。'};
+      if (julyHistory) state.priceForecastHistory = {...priceForecastHistory, results: [
+        ...(priceForecastHistory?.results || []).filter(r => r.market_date < '2026-07-01'),
+        ...julyHistory.results.filter(r => r.market_date >= '2026-07-01').map(r => ({...r,
+          backtest: {window_start:r.market_date, window_end:r.market_date, sample_count:24,
+            mae_yuan_per_mwh:r.day_metrics.da.mae, rmse_yuan_per_mwh:r.day_metrics.da.rmse,
+            bias_yuan_per_mwh:r.day_metrics.da.bias, real_time_mae_yuan_per_mwh:r.day_metrics.rt.mae,
+            real_time_rmse_yuan_per_mwh:r.day_metrics.rt.rmse, spread_mae_yuan_per_mwh:r.day_metrics.spread.mae,
+            day_ahead_model_name:'六天气特征与D-2滞后适配版',real_time_model_name:'DA + Spread',
+            weather_known_before_declaration:false, evaluation_method:'研究重放；天气发布时间待确认'},
+        })),
+      ]};
+    }
     hydrateOrganizationControls();
     hydrateImportMarkets();
     hydrateDates();
@@ -6768,18 +6889,19 @@ function hydrateForecastDates() {
   const select = document.querySelector("#forecastDateSelect");
   const marketData = selectedMarketData();
   const priceDates = [...new Set(marketData.spotPrices.map((row) => row.date).filter(Boolean))].sort();
-  const dates = hasConnectedMarketData() && priceDates.length > 2
+  const publishedForecastDates = [...new Set((state.priceForecastHistory?.results || []).map((row) => row.market_date).filter(Boolean))].sort();
+  const dates = hasConnectedMarketData() && publishedForecastDates.length
+    ? publishedForecastDates
+    : hasConnectedMarketData() && priceDates.length > 2
     ? priceDates.slice(2)
     : hasConnectedMarketData()
       ? [...new Set(state.forecast96.map((row) => row.date).filter(Boolean))].sort()
       : [];
   const modelDate = hasConnectedMarketData() ? state.priceForecastResult?.market_date : "";
   if (modelDate && !dates.includes(modelDate)) dates.push(modelDate);
-  const latestObservedDate = priceDates.at(-1);
-  const nextTargetDate = latestObservedDate ? shiftDate(latestObservedDate, 1) : "";
-  if (nextTargetDate && !dates.includes(nextTargetDate)) dates.push(nextTargetDate);
   dates.sort();
-  state.forecastDate = dates.at(-1) || "";
+  const latestSnapshotDate = (state.priceForecastHistory?.results || []).map(r => r.market_date).filter(d => dates.includes(d)).sort().at(-1);
+  state.forecastDate = latestSnapshotDate || dates.at(-1) || "";
   const observedDateSet = new Set(priceDates);
   select.innerHTML = dates.map((date) => `<option value="${date}">${date} · ${observedDateSet.has(date) ? "历史可回测" : "预测目标日"}</option>`).join("");
   select.value = state.forecastDate;
@@ -6803,8 +6925,8 @@ function primaryForecastResultForDate(date = state.forecastDate) {
   if (!historical) return null;
   return {
     ...historical,
-    model: state.priceForecastHistory.model || state.priceForecastResult?.model,
-    backtest: state.priceForecastHistory.backtest || state.priceForecastResult?.backtest,
+    model: historical.model || state.priceForecastHistory.model || state.priceForecastResult?.model,
+    backtest: historical.backtest || state.priceForecastHistory.backtest || state.priceForecastResult?.backtest,
     data_snapshot: {
       ...(state.priceForecastHistory.data_snapshot || {}),
       version: historical.data_version || state.priceForecastHistory.data_snapshot?.version,
@@ -8535,7 +8657,7 @@ async function runForecastEvaluation(options = {}) {
     if (!options.silent) showToast("当前市场没有可用的山东真实数据。");
     return;
   }
-  state.forecastModelVersion = document.querySelector("#forecastModelSelect")?.value || "integrated-price-forecast-v2.0.0";
+  state.forecastModelVersion = document.querySelector("#forecastModelSelect")?.value || "sd-target-supply-conditional-v1";
   const apiBase = PLATFORM_API_BASE;
   try {
     if (!window.__PLATFORM_API_BASE__ && (window.location.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(window.location.hostname))) {
@@ -8561,7 +8683,7 @@ async function runForecastEvaluation(options = {}) {
         model_version: state.forecastModelVersion,
         data_version: "sd-hourly-weather-supply-snapshot-2026h1-v3",
         parameters: { quantiles: [0.1, 0.5, 0.9] },
-        input_summary: { available_domains: ["prices", "load_actual", "weather", "market_supply_history"], hourly_point_count: 24, customer_scope: "portfolio" },
+        input_summary: { available_domains: ["prices", "load_actual", "weather", "market_supply_history", "load_forecast", "renewable_forecast"], hourly_point_count: 24, customer_scope: "portfolio" },
         timeout_seconds: 600,
       }),
     });
@@ -8584,7 +8706,12 @@ async function runForecastEvaluation(options = {}) {
     state.forecastResults = normalizeForecastRows(payload.result?.periods || [], payload.result || {});
     state.forecastProvidedMetrics = payload.result?.backtest || null;
     state.forecastRunMeta = { ...run, review_status: payload.review?.status || run.review_status };
-    state.forecastSource = "wangyifan-111/- 一体化价格预测模型（平台适配）";
+    const conditionalFallback = payload.result?.warnings?.includes('FALLBACK_USED=TRUE');
+    state.forecastSource = payload.result?.model?.version === 'sd-target-supply-conditional-v1'
+      ? (conditionalFallback ? '目标日供需预测缺失或不完整，已自动回退现有模型' : '已使用完整24点目标日供需条件增强模型')
+      : payload.result?.model?.version === 'sd-sixweather-lagged-supply-v1'
+      ? '7月六天气特征与D-2出力滞后研究适配版（天气发布时间待确认）'
+      : "wangyifan-111/- 一体化价格预测模型（平台适配）";
     renderForecast();
     drawForecastChart(chartEls.forecast, state.forecastResults);
     if (!options.silent) showToast(`已生成 ${state.forecastResults.length} 点 DA/RT/价差预测。`);
@@ -8723,23 +8850,25 @@ function renderForecast() {
   const spreadRows = rows.filter((row) => Number.isFinite(row.spread));
   const avgPrice = mean(rows.map((row) => row.predictedPrice));
   const peakSpread = maxBy(spreadRows, (row) => Math.abs(row.spread)) || { time: "--", spread: null };
-  const confidentPoints = rows.filter((row) => row.confidence >= 0.72).length;
+  const confidenceRows = rows.filter((row) => Number.isFinite(row.confidence));
+  const confidentPoints = confidenceRows.filter((row) => row.confidence >= 0.72).length;
   const upCount = rows.filter((row) => row.direction === "实时高于日前").length;
   const downCount = rows.filter((row) => row.direction === "实时低于日前").length;
   const peakPoint = maxBy(rows, (row) => row.predictedPrice);
   const resultModelVersion = rows[0]?.modelVersion || state.forecastModelVersion;
+  const isJulyResearch = resultModelVersion === "sd-sixweather-lagged-supply-v1";
   const negativeRiskCount = rows.filter((row) => ["MEDIUM", "HIGH"].includes(row.negativeRisk?.level)).length;
   const highRiskCount = rows.filter((row) => ["MEDIUM", "HIGH"].includes(row.highRisk?.level)).length;
   document.querySelector("#forecastKpis").innerHTML = [
     ["预测点数", `${rows.length} 点`],
     [`平均预测${targetLabel}`, `${fmt(avgPrice)} 元/MWh`],
     ["最大绝对价差", Number.isFinite(peakSpread.spread) ? `${fmt(Math.abs(peakSpread.spread))} 元/MWh` : "未建模"],
-    ["高置信点覆盖", `${fmt((confidentPoints / rows.length) * 100)}%`],
+    ...(confidenceRows.length === rows.length ? [["高置信点覆盖", `${fmt((confidentPoints / rows.length) * 100)}%`]] : []),
     ["结果模型版本", resultModelVersion],
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
   document.querySelector("#forecastChartSubtitle").textContent = `${state.forecastDate} · ${state.forecastSource} · ${resultModelVersion}`;
   document.querySelector("#forecastPointStatus").textContent = `${rows.length} 点`;
-  document.querySelector("#forecastModeStatus").textContent = state.forecastSource.includes("外部导入")
+  document.querySelector("#forecastModeStatus").textContent = isJulyResearch ? "7月研究模型" : state.forecastSource.includes("外部导入")
     ? "外部文件结果"
     : state.forecastSource.includes("价格预测模型")
       ? "价格预测模型"
@@ -8747,7 +8876,7 @@ function renderForecast() {
       ? "本地后端基线"
       : "浏览器回退基线";
   const insightItems = [
-    { title: "预测目标", body: `当前主模型输出${targetLabel}P10/P50/P90。${isDayAheadTarget ? "实时价格和日前-实时价差由后续实时模型补充。" : "可用于日前申报前的实时价差判断。"}` },
+    { title: "预测目标", body: isJulyResearch ? "分别输出日前、盘前实时、日前出清后实时预测。区间来自历史滚动预测误差；出清后实时结果不参与盘前策略。" : `当前主模型输出${targetLabel}P10/P50/P90。${isDayAheadTarget ? "实时价格和日前-实时价差由后续实时模型补充。" : "可用于日前申报前的实时价差判断。"}` },
     { title: "风险时段", body: `负价中高风险 ${negativeRiskCount} 点，高价中高风险 ${highRiskCount} 点；风险原因码保留在小时结果中供人工复核。` },
     { title: "峰值时段", body: `${peakPoint.time} 预测价格最高，为 ${fmt(peakPoint.predictedPrice)} 元/MWh；驱动因素：${peakPoint.drivers}。` },
   ];
@@ -8756,7 +8885,7 @@ function renderForecast() {
 
   renderDailyForecastAccuracy();
   document.querySelector("#forecastGovernance").innerHTML = [
-    ["数据来源", `${state.forecastSource}；价格、日历滞后、申报前GFS天气与Q2电源预测D-1/D-7滞后；逐户名称未进入模型输入`],
+    ["数据来源", isJulyResearch ? `${state.forecastSource}；六项天气特征（发布时间待核验，不含湿度），价格最短滞后D-2、出力采用D-2/D-7滞后；不使用目标日实际出力。仅作研究回放。` : `${state.forecastSource}；价格、日历滞后、申报前GFS天气与Q2电源预测D-1/D-7滞后；逐户名称未进入模型输入`],
     ["输入批次", rows[0].importBatchId || "外部导入批次"],
     ["运行追踪", state.forecastRunMeta?.run_id ? `${state.forecastRunMeta.run_id} · ${state.forecastRunMeta.data_version || "待补数据版本"}` : "浏览器结果，尚未生成run_id"],
     ["上线门槛", "补齐目标日电源预测发布时间、连续滚动回测、规则校验和交易员确认"],
@@ -8769,7 +8898,7 @@ function renderForecast() {
       <td>${fmt(row.lower)} ~ ${fmt(row.upper)}</td>
       <td>${Number.isFinite(row.spread) ? signed(row.spread) : "未建模"}</td>
       <td><span class="tag ${directionClass(row.direction)}">${escapeHtml(row.direction)}</span></td>
-      <td>${fmt(row.confidence * 100)}%</td>
+      <td>${Number.isFinite(row.confidence) ? `${fmt(row.confidence * 100)}%` : "未提供"}</td>
       <td>${escapeHtml(row.drivers)}</td>
     </tr>
   `).join("");
@@ -8999,6 +9128,7 @@ function normalizeForecastRows(rows, context = {}) {
     const actualDayAhead = actualDayAheadRaw !== null && actualDayAheadRaw !== undefined && actualDayAheadRaw !== "" && Number.isFinite(Number(actualDayAheadRaw)) ? Number(actualDayAheadRaw) : null;
     const actualRealTime = actualRealTimeRaw !== null && actualRealTimeRaw !== undefined && actualRealTimeRaw !== "" && Number.isFinite(Number(actualRealTimeRaw)) ? Number(actualRealTimeRaw) : null;
     const datetimeDate = row.datetime?.slice(0, 10) || row.timestamp?.slice(0, 10) || null;
+    const confidenceRaw = row.confidence ?? row["置信度"];
     return {
       date: row.date ?? row.forecastDate ?? row.forecast_date ?? context.market_date ?? datetimeDate ?? row["预测日期"] ?? state.forecastDate ?? "外部导入",
       time: String(time),
@@ -9013,7 +9143,7 @@ function normalizeForecastRows(rows, context = {}) {
       upper,
       spread,
       direction,
-      confidence: Number(row.confidence ?? row["置信度"] ?? 0.7),
+      confidence: confidenceRaw !== null && confidenceRaw !== undefined && confidenceRaw !== "" && Number.isFinite(Number(confidenceRaw)) ? Number(confidenceRaw) : null,
       drivers: reasonCodes || row.drivers || row["主要驱动"] || "外部模型输出",
       modelVersion: row.modelVersion ?? row.model_version ?? context.model?.version ?? row["模型版本"] ?? "external",
       actualPrice: actualRaw !== null && actualRaw !== undefined && actualRaw !== "" && Number.isFinite(Number(actualRaw)) ? Number(actualRaw) : null,
@@ -9292,9 +9422,10 @@ function renderDataNotes() {
   const hasLoad = marketData.loadHourly.length > 0;
   const hasWeather = Boolean(marketData.weatherAsset?.rows?.length);
   const hasSettlement = Boolean(marketData.settlementSummaryMonthly?.monthly?.length);
-  const hasSupply = Boolean(marketData.marketSupply?.rows?.length || state.priceForecastResult?.backtest?.supply_data_version);
+  const hasSupply = Boolean(marketData.marketSupply?.rows?.length || state.priceForecastResult?.backtest?.supply_data_version || (state.selectedMarket === "SD" && state.julyImport));
   const availableCount = [hasPrices, hasLoad, hasWeather, hasSupply, hasSettlement].filter(Boolean).length;
   const missingRequirements = DATA_REQUIREMENTS.filter((item) => item.status !== "已接入");
+  const julyImport = state.selectedMarket === "SD" ? state.julyImport : null;
   const label = market?.name || "全国公司视图";
 
   setText("#dataNotesSubtitle", `${label} · 集中查看当前数据资产、计算口径和后续接入事项。`);
@@ -9308,9 +9439,15 @@ function renderDataNotes() {
     ["现货价格", hasPrices ? `${marketData.spotPrices.length} 个小时点` : "尚未接入", "/api/spot/prices"],
     ["客户负荷", hasLoad ? `${marketData.customerProfiles.length} 家脱敏客户、${marketData.loadHourly.length} 个小时点` : "尚未接入", "/api/customer/load-profile"],
     ["天气预报", hasWeather ? `${marketData.weatherAsset.rows.length} 个小时点` : "尚未接入", "/api/v1/weather/hourly"],
-    ["电源出力与供需代理", hasSupply ? "Q1实际 / Q2预测已接入" : "尚未接入", "/api/v1/market-supply/hourly"],
+    ["电源出力与供需代理", hasSupply ? `Q1实际 / Q2预测已接入${julyImport ? "；7月实际出力2976点聚合为744小时，仅作滞后特征和事后分析" : ""}` : "尚未接入", "/api/v1/market-supply/hourly"],
     ["月度结算", hasSettlement ? `${marketData.settlementSummaryMonthly.monthly.length} 个月、${marketData.customerSettlementMonthly.length} 条记录` : "尚未接入", "/api/finance/settlement"],
   ];
+  if (julyImport) {
+    available.push(["7月数据批次", `${julyImport.dataVersion}；价格744小时、天气744小时、出力2976个15分钟点；原始文件与上半年资产独立保存。`, "/api/v1/data-assets"]);
+    for (const source of Object.values(julyImport.sources || {})) {
+      available.push([source.file, `原始数据${source.sourceRowCount}行；SHA-256：${source.sha256}`, "本地私有数据资产"]);
+    }
+  }
   document.querySelector("#dataNotesAvailable").innerHTML = available.map(([title, body, target]) => `
     <article class="data-note-item ${body === "尚未接入" ? "missing" : ""}">
       <strong>${escapeHtml(title)}</strong><p>${escapeHtml(body)}</p><small>${escapeHtml(target)}</small>
@@ -9323,7 +9460,7 @@ function renderDataNotes() {
       <p>${escapeHtml(item.need)}</p>
       <small>${escapeHtml(item.target)} · ${escapeHtml(item.frequency)}</small>
     </article>
-  `).join("");
+  `).join("") + (julyImport ? `<article class="data-note-item missing"><strong>7月研究边界</strong><p>缺少相对湿度和天气预报发布时间；尚无7月客户负荷、中长期持仓及已成交量。可查看预测误差和单位敞口分配比例，不输出实际申报电量或组合收益。天气申报前可得性尚未确认。</p><small>人工复核研究材料，不可自动提交</small></article>` : "");
 
   document.querySelector("#dataNotesRules").innerHTML = [
     ["客户标识", "前端、导出和模型输入只使用稳定脱敏客户代号。"],
@@ -9620,6 +9757,8 @@ function buildInventoryRows() {
   const priceQuality = marketData.dataQuality?.datasets?.spotPrices;
   const loadQuality = marketData.dataQuality?.datasets?.portfolioLoad;
   const weather = marketData.weatherAsset;
+  const hasJulyImport = state.selectedMarket === "SD" && Boolean(state.julyImport);
+  const priceDates = [...new Set(marketData.spotPrices.map(row => row.date))].sort();
   const supplyVersion = state.priceForecastResult?.backtest?.supply_data_version;
   const customerCount = loadQuality?.customerCount
     || new Set(marketData.customerProfiles.map((row) => row.customerAlias).filter(Boolean)).size;
@@ -9628,12 +9767,12 @@ function buildInventoryRows() {
     ["结算单", connectedStatus, connected ? `${settlement.company} ${settlement.date} 结算单（附加案例）` : `${marketLabel}暂无结算记录`, "/api/trade/settlement", "继续补连续30日以上结算单和完整财务口径"],
     ["申报成交", "待补数据", "暂无", "/api/trade/execution", "补日前申报、出清、实际用电和人工调整记录"],
     ["客户负荷", customerCount ? "部分接入" : "待补数据", customerCount ? `已聚合${customerCount}家客户、${marketData.loadDaily.length}个有效日` : `${marketLabel}暂无客户负荷`, "/api/customer/load-profile", "补户号、计量点、行业、合同容量和停产检修信息"],
-    ["现货价格（按市场隔离）", marketData.spotPrices.length ? "已接入" : "待补数据", marketData.spotPrices.length ? `${market?.name || "当前市场"}${priceQuality?.dateRange?.join(" 至 ") || "已接入时段"}，${priceQuality?.rowCount || marketData.spotPrices.length}个小时点` : `${marketLabel}暂无现货价格`, "/api/spot/prices", "补15分钟、可靠性出清和统一结算点价格"],
-    ["天气预报（按市场隔离）", weather?.rows?.length ? "部分接入" : "待补数据", weather?.rows?.length ? `${weather.availableRange.start}至${weather.availableRange.end}，${weather.quality.acceptedRowCount}个完整GFS小时点；已进入模型训练` : `${marketLabel}暂无天气数据`, "/api/v1/weather/hourly", weather?.forecastIssueTimeAvailable ? "持续补充每日滚动预报" : "补精确forecast_issue_time，提升审计粒度"],
-    ["电源出力与供需代理", supplyVersion ? "部分接入" : "待补数据", supplyVersion ? `Q1实际/Q2预测已分口径接入，版本${supplyVersion}；模型仅使用Q2的D-1/D-7滞后` : `${marketLabel}暂无电源出力数据`, "/api/v1/market-supply/hourly", "补目标日预测、发布时间、抽蓄/水电、市场化机组与正式竞价空间"],
+    ["现货价格（按市场隔离）", marketData.spotPrices.length ? "已接入" : "待补数据", marketData.spotPrices.length ? `${market?.name || "当前市场"}${priceDates[0]} 至 ${priceDates.at(-1)}，${marketData.spotPrices.length}个小时点` : `${marketLabel}暂无现货价格`, "/api/spot/prices", "补15分钟、可靠性出清和统一结算点价格"],
+    ["天气预报（按市场隔离）", weather?.rows?.length ? "部分接入" : "待补数据", weather?.rows?.length ? `${weather.availableRange.start}至${weather.availableRange.end}，${weather.rows.length}个GFS小时点；${hasJulyImport ? "7月六项天气已用于研究模型，湿度缺失、发布时间待核验" : "已进入模型训练"}` : `${marketLabel}暂无天气数据`, "/api/v1/weather/hourly", weather?.forecastIssueTimeAvailable ? "持续补充每日滚动预报" : "补精确forecast_issue_time，提升审计粒度"],
+    ["电源出力与供需代理", supplyVersion || hasJulyImport ? "部分接入" : "待补数据", hasJulyImport ? "Q1实际/Q2预测按原口径保留；7月实际出力已接入744小时，7月适配模型仅用D-2/D-7滞后出力" : supplyVersion ? `Q1实际/Q2预测已分口径接入，版本${supplyVersion}；模型仅使用Q2的D-1/D-7滞后` : `${marketLabel}暂无电源出力数据`, "/api/v1/market-supply/hourly", "补目标日预测、发布时间、抽蓄/水电、市场化机组与正式竞价空间"],
     ["零售合同", "真实数据部分接入", "128家套餐已脱敏入库；125家匹配负荷、3家仅合同、2家仅负荷", "/api/retail/contracts", "计价公式仍待确认；补合同电量、曲线、偏差责任、保底封顶和服务费"],
     ["中长期持仓", "真实数据部分接入", "2026年1至6月647条日级持仓已入库并完成月度勾稽", "/api/medium-contract/positions", "负持仓、0价和极端价口径仍待确认；补24/96点曲线及成交批次"],
-    ["预测与回测", connected ? "部分接入" : "待补数据", connected ? "主模型v1.0.0已使用申报前天气与电源出力特征，并由实时价差子模型补充实时价格；旧模型保留为对照" : `${marketLabel}暂无模型输入`, "/api/forecast/run", "补目标日边界、竞价空间、新能源预测发布时间和生产计划"],
+    ["预测与回测", connected ? "部分接入" : "待补数据", connected ? (hasJulyImport ? "7月已完成31天研究回放：日前、DA+Spread盘前实时、出清后实时分别评估；原预测版本保留" : "主模型v1.0.0已使用申报前天气与电源出力特征，并由实时价差子模型补充实时价格；旧模型保留为对照") : `${marketLabel}暂无模型输入`, "/api/forecast/run", "补目标日边界、竞价空间、新能源预测发布时间和生产计划"],
     ["策略复盘", "待补数据", "暂无", "/api/strategy/review", "陪跑期每日记录策略建议和执行结果"],
     ["能碳资源", "待补数据", "暂无", "/api/ecosystem/resources", "二期补虚拟电厂、储能、碳资产"],
   ];
@@ -11206,12 +11345,16 @@ function debounce(fn, wait) {
   };
   const DRAFT_STRATEGIES = Object.freeze({
     historical_cvar_v02: {
-      label: "历史误差 CVaR",
+      label: "风险均衡 · 历史误差 CVaR",
       pendingSource: "预期：目标日前历史配对误差",
     },
     regime_cvar_v03: {
       label: "分时状态 CVaR",
       pendingSource: "预期：历史配对误差与分时供需状态",
+    },
+    rt_benchmark_v01: {
+      label: "跑赢全实时 · 相对成本 CVaR（研究目标）",
+      pendingSource: "D-2及更早配对误差；允许0%日前；仅风险调整优势为正才配置日前量",
     },
     similar_day_cvar_v04: {
       label: "预测与相似日 CVaR",
@@ -11317,7 +11460,7 @@ function debounce(fn, wait) {
     setText("draftScenarioVersion", `${scenarioVersionText}${effectiveVersionText}`);
     if (run.input_source === "PLATFORM") {
       const research = run.research || {};
-      const sourceLabels = {price_forecast:"盘前电价预测", load:"组合实际负荷", positions:"日级净持仓", load_forecast:"目标日组合负荷预测", medium_long_term_positions:"分时中长期持仓", clearing_results:"已成交电量"};
+      const sourceLabels = {price_forecast:"盘前电价预测", load:"组合实际负荷", positions:"日级净持仓", load_forecast:"目标日组合负荷预测", medium_long_term_positions:"分时中长期持仓", clearing_results:"已成交电量", benchmark_scenarios:"D-2及更早配对误差"};
       setText("draftResearchTag", research.mode === "historical_research" ? "历史日期研究 · 非严格事前回测" : research.mode === "target_day_research" ? "目标日研究 · 不使用目标日实测负荷" : "平台数据读取中");
       setText("draftScenarioSource", (research.sources || []).map(source => sourceLabels[source.domain] || source.domain).join(" · ") || "目标日期来源待确认");
       setText("draftScenarioVersion", `预测 ${research.forecast_version || "缺失"} · 参数 ${run.risk_aversion} · 正式申报未开放`);
@@ -11383,7 +11526,11 @@ function debounce(fn, wait) {
       const upper = fromPlatform ? r.research_price_upper : r.suggested_price_upper;
       const reasonLabels = {SCENARIO_CVAR_OPTIMIZATION:"场景成本与尾部风险优化", NEWSVENDOR_UNDER_OVERAGE_BALANCE:"兼顾日前多买与少买成本", HIGH_PRICE_RISK:"高价风险关注", HIGH_PRICE_REVIEW_ONLY:"高价标记仅供复核", NEGATIVE_PRICE_RISK:"负价风险关注", DAILY_POSITION_ALLOCATION_RESEARCH_ASSUMPTION:"日级持仓分摊研究假设", NEGATIVE_POSITION_REVIEW:"负持仓待核验", OVER_COVERED_REVIEW:"持仓超覆盖，人工处理"};
       Object.assign(reasonLabels, {SIMILAR_DAY_FORECAST_CONDITIONED:"目标预测与相似日配对误差", FORECAST_PUBLICATION_TIMES_NOT_FULLY_AUDITED:"精确发布时间待核验", TAIL_SAMPLE_LIMITED:"尾部样本有限", SIMILAR_DAY_HISTORY_INSUFFICIENT:"合格相似日不足10个", SIMILAR_DAY_EFFECTIVE_SAMPLE_INSUFFICIENT:"有效样本不足8", SIMILAR_DAY_OUT_OF_DISTRIBUTION:"历史样本与目标预测差异过大", SIMILAR_DAY_HISTORY_STALE:"相似日数据过旧", SIMILAR_DAY_MODEL_VERSION_UNVERIFIED:"模型版本未核验一致", SIMILAR_DAY_TARGET_QUANTILES_MISSING:"目标日预测区间缺失", SIMILAR_DAY_WEATHER_UNAVAILABLE_PRICE_ONLY:"天气缺失，仅按价格匹配", SIMILAR_DAY_DUPLICATE_HISTORY_DATE:"历史日期重复"});
-      const readableEvidence = (evidence + (fromPlatform ? "" : research)).replace(/[A-Z][A-Z0-9_]+/g, code => reasonLabels[code] || code);
+      Object.assign(reasonLabels, {RT_BENCHMARK_POSITIVE_RISK_ADJUSTED_EDGE:"相对全实时的风险调整优势为正", RT_BENCHMARK_NO_POSITIVE_RISK_ADJUSTED_EDGE:"无正的风险调整优势，本时段日前0%，保留实时敞口", RT_BENCHMARK_HISTORY_INSUFFICIENT:"历史误差不足10个或有效样本不足8，已阻断", FEES_AND_DEVIATION_RULES_UNCONFIRMED:"交易费用与偏差规则未确认"});
+      const optimizer = r.research_optimization || {};
+      const edgeEvidence = optimizer.objective_basis === "relative_cost_vs_full_realtime" && optimizer.ratio !== null
+        ? `；风险调整单位优势 ${displayDraftNumber(optimizer.risk_adjusted_edge_yuan_per_mwh, 2)} 元/MWh；历史样本 ${optimizer.scenario_count}` : "";
+      const readableEvidence = (evidence + edgeEvidence + (fromPlatform ? "" : research)).replace(/[A-Z][A-Z0-9_]+/g, code => reasonLabels[code] || code);
       return `<tr><td>${escapeText(r.period)}</td><td>${escapeText(displayDraftNumber(fromPlatform ? r.research_load_mwh : r.load_forecast_mwh))}</td><td>${escapeText(displayDraftNumber(r.medium_position_mwh))}</td><td>${escapeText(displayDraftNumber(r.cleared_energy_mwh))}</td><td>${escapeText(displayDraftNumber(r.remaining_exposure_mwh))}</td><td>${escapeText(priceTriplet(r, "dayAhead"))}</td><td>${escapeText(priceTriplet(r, "realTime"))}</td><td>${escapeText(allocation.ratio === null ? "--" : `${(allocation.ratio * 100).toFixed(1)}%`)}</td><td>${escapeText(displayDraftNumber(allocation.dayAhead))}</td><td>${escapeText(displayDraftNumber(allocation.realtime))}</td><td>${escapeText(lower == null ? "--" : `${displayDraftNumber(lower, 1)} - ${displayDraftNumber(upper, 1)}`)}</td><td>${escapeText(r.gate_status)} / ${escapeText(r.action)} / ${escapeText(r.suggested_quantity_mwh)} MWh</td><td>${escapeText(readableEvidence)}</td></tr>`;
     }).join("");
     const upload = byId("uploadDraftBtn"), exportBtn = byId("exportDraftBtn");
@@ -11396,12 +11543,35 @@ function debounce(fn, wait) {
     renderResearchDetails(run);
   }
 
+  async function compareStrategyModes() {
+    const button = byId("compareStrategyModesBtn");
+    const risk = Number(byId("draftRiskAversion")?.value ?? 0.3);
+    if (!Number.isFinite(risk) || risk < 0 || risk > 1) return toast("风险系数应在0到1之间。");
+    button.disabled = true;
+    setText("strategyModeComparison", "正在读取共同完整日期并比较两种模式……");
+    try {
+      const platformRoot = String(PLATFORM_API_BASE).replace(/\/$/, "").replace(/\/api$/, "");
+      const response = await fetch(`${platformRoot}/api/strategy/modes/compare?market_code=SD&risk_aversion=${risk}`);
+      if (!response.ok) throw new Error(`策略对比服务返回 ${response.status}，请确认后端已更新。`);
+      const result = await response.json();
+      const c = result.coverage || {};
+      const fmt = value => value == null ? "--" : displayDraftNumber(value, 2);
+      const rows = Object.entries(result.strategies || {}).map(([key, value]) => `<tr><td>${escapeText(DRAFT_STRATEGIES[key]?.label || key)}</td><td>${escapeText(fmt(value.saving_vs_full_realtime_yuan))}</td><td>${escapeText(fmt(value.worst_day_vs_full_realtime_yuan))}</td><td>${escapeText(value.win_days_vs_full_realtime)} / ${escapeText(value.loss_days_vs_full_realtime)} / ${escapeText(value.tie_days_vs_full_realtime)}</td><td>${escapeText(value.zero_day_ahead_periods)}</td></tr>`).join("");
+      setHtml("strategyModeComparison", `<p>同窗历史研究：${escapeText(c.date_start || "无完整日期")} 至 ${escapeText(c.date_end || "--")} · ${escapeText(c.day_count || 0)}天 / ${escapeText(c.period_count || 0)}小时 · 风险系数 ${risk} · 排除 ${(result.excluded_dates || []).length}天</p><div class="table-wrap"><table><thead><tr><th>模式</th><th>相对全实时节省（元）</th><th>最差单日（元）</th><th>胜 / 负 / 平天数</th><th>日前0%时段</th></tr></thead><tbody>${rows}</tbody></table></div><p>正值表示比全实时少花钱；未计交易费用与偏差考核，使用历史实际负荷和日持仓分摊。新模式仅用D-2及更早误差，样本不足日期排除；风险均衡保留原口径。研究目标不保证胜出，不可自动提交。</p>`);
+    } catch (error) {
+      setText("strategyModeComparison", `对比未完成：${error.message}`);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   function renderResearchDetails(run) {
     const research = run?.research || {}, summary = research.summary || {};
     const format = value => value === null || value === undefined ? "--" : Number(value).toLocaleString("zh-CN", {maximumFractionDigits: 3});
     setHtml("researchSummary", run?.input_source === "PLATFORM" ? [
       ["日前研究量（MWh）", summary.day_ahead_quantity_mwh], ["实时保留敞口（MWh）", summary.reserved_realtime_mwh],
       ["可研究时段", summary.actionable_periods], ["相对全实时的预期成本优势（元）", summary.expected_cost_advantage_yuan],
+      ["日前0%时段", summary.zero_day_ahead_periods], ["相对全实时的事后成本优势（元）", summary.actual_cost_advantage_yuan],
     ].map(([label, value]) => `<div><span>${escapeText(label)}</span><strong>${escapeText(format(value))}</strong></div>`).join("") : "");
     setHtml("draftWorkflowSteps", (run?.steps || []).map(step => `<div class="agent-step" data-status="${escapeText(step.status)}"><span class="agent-step-index">${step.sequence}</span><div><strong>${escapeText(step.name)}</strong><p>${escapeText(step.detail)}</p></div>${statusTag(step.status)}</div>`).join(""));
     const gapLabels = {load_forecast_mwh:"目标日负荷预测", medium_position_mwh:"目标日分时持仓", cleared_energy_mwh:"已成交电量", day_ahead_p50:"日前价格预测", real_time_p50:"实时价格预测", real_time_quantiles:"实时预测区间", TARGET_DATE_PRE_MARKET_FORECAST_MISSING:"目标日期盘前价格预测"};
@@ -11496,7 +11666,7 @@ function debounce(fn, wait) {
     if (riskAversion === null || riskAversion < 0 || riskAversion > 1) return toast("风险厌恶系数必须在 0 至 1 之间。");
     const date = byId("strategyBusinessDate")?.value || localIsoDate();
     const fromPlatform = byId("draftInputSource")?.value !== "MANUAL";
-    if (!fromPlatform && ["similar_day_cvar_v04", "advanced_cvar_v05", "joint_cvar_v06"].includes(strategyVersion)) return toast("该策略需要平台历史预测、天气和误差场景来源，请选择“平台已有数据”。");
+    if (!fromPlatform && ["similar_day_cvar_v04", "advanced_cvar_v05", "joint_cvar_v06", "rt_benchmark_v01"].includes(strategyVersion)) return toast("该策略需要平台历史预测和误差场景来源，请选择“平台已有数据”。");
     if (!fromPlatform && !byId("draftFile")?.files?.length) return toast("请选择补充 CSV/JSON 文件。");
     if (agentStore.draftGenerating) return;
     agentStore.draftGenerating = true;
@@ -12097,6 +12267,11 @@ function debounce(fn, wait) {
     if (strategyDate && !strategyDate.value) {
       strategyDate.value = (typeof state !== "undefined" && state.selectedDate) || localIsoDate();
     }
+    byId("compareStrategyModesBtn")?.addEventListener("click", compareStrategyModes);
+    byId('loadJulyResearchBtn')?.addEventListener('click', loadJulyResearch);
+    byId('strategyBusinessDate')?.addEventListener('change', () => {
+      setText('julyResearchContent', '日期已改变，请点击“查看所选日比例”重新读取。');
+    });
     byId("draftStrategyVersion")?.addEventListener("change", () => renderDraftStrategyBand(agentStore.draftRun));
     byId("draftRiskAversion")?.addEventListener("change", () => renderDraftStrategyBand(agentStore.draftRun));
     byId("createDraftBtn")?.addEventListener("click", createTradingDraft);
@@ -12121,6 +12296,28 @@ function debounce(fn, wait) {
     renderTradingDraft();
     restoreTradingDraft();
   });
+
+  async function loadJulyResearch() {
+    const date = byId('strategyBusinessDate')?.value;
+    const button = byId('loadJulyResearchBtn');
+    if (currentContext().marketCode !== 'SD') return toast('7月新增数据仅覆盖山东。');
+    if (!date || date < '2026-07-01' || date > '2026-07-31') return toast('请选择2026年7月1日至31日。');
+    button.disabled = true;
+    setText('julyResearchContent', '正在读取逐日预测快照与历史误差路径…');
+    try {
+      const result = await platformRequest(`/strategy/july-allocation?date=${encodeURIComponent(date)}&market_code=SD`);
+      if (byId('strategyBusinessDate')?.value !== date) return;
+      if (!result.periods?.length) throw new Error(result.reason || '该日期暂不可研究');
+      const f = n => typeof n === 'number' && Number.isFinite(n) ? n.toFixed(2) : '--';
+      const pct = n => typeof n === 'number' ? `${(n * 100).toFixed(0)}%` : '--';
+      setHtml('julyResearchContent', `<p><strong>${escapeText(date)}</strong> · 日前MAE ${f(result.day_metrics.da.mae)} · 盘前实时MAE ${f(result.day_metrics.rt.mae)} · 出清后实时MAE ${f(result.day_metrics.post_da.mae)} 元/MWh</p>
+        <p>误差截止 ${escapeText(result.source_cutoff)} · ${escapeText(result.sample_count)}条完整历史日路径 · 天气发布时间待确认，湿度未使用。出清后预测不进入日前策略。</p>
+        <div class="table-wrap"><table><thead><tr><th>时段</th><th>日前预测 / 实际</th><th>盘前实时预测 / 实际</th><th>出清后实时预测</th><th>逐小时日前比例</th><th>整日联合日前比例</th></tr></thead><tbody>
+        ${result.periods.map(p => `<tr><td>${p.period}</td><td>${f(p.da_p50)} / ${f(p.actual_da)}</td><td>${f(p.rt_p50)} / ${f(p.actual_rt)}</td><td>${f(p.rt_post_da_p50)}</td><td>${pct(p.hourly_cvar_ratio)}</td><td>${pct(p.joint_cvar_ratio)}</td></tr>`).join('')}
+        </tbody></table></div><p>价格单位：元/MWh。正式申报门禁仍为HOLD；比例为研究结果，不能直接提交。</p>`);
+    } catch (error) { setText('julyResearchContent', `读取失败：${error.message}`); }
+    finally { button.disabled = false; }
+  }
 
   function renderReportSummary(run) {
     const target = byId("agentReportPreview");
@@ -12802,5 +12999,6 @@ function debounce(fn, wait) {
 })();
 
     </script>
+    <script src="./multisegment.js?v=20260920-rule-profile2"></script>
   </body>
 </html>

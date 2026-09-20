@@ -25,6 +25,7 @@ from .strategy_backtest import run_strategy_backtest
 from .strategy_comparison import compare_strategy_versions
 from .advanced_strategies import ADVANCED_KEY, JOINT_KEY
 from .research_plan import build_research_plan
+from .strategy_forecast import CONDITIONAL_VERSION, resolve_strategy_forecast
 
 
 # Local runs place this file under ``<repo>/backend/app`` while the Docker
@@ -228,7 +229,7 @@ class PriceQuantilesV1(BaseModel):
 
 
 class RiskSignalV1(BaseModel):
-    probability: float = Field(ge=0, le=1)
+    probability: float | None = Field(default=None, ge=0, le=1)
     level: Literal["LOW", "MEDIUM", "HIGH"]
 
 
@@ -477,6 +478,8 @@ _PUBLIC_STRATEGY_ASSETS = {
     "medium_long_term_positions_2026h1.json": "medium-positions.json",
     "market_supply_hourly_2026h1.json": "market-supply-hourly.json",
     "weather_hourly_gfs_20260501_20260701.json": "weather-hourly.json",
+    "price_forecast_history_online_challenger.json": "model/price-forecast-history-online-challenger.json",
+    "price_forecast_history_target_supply.json": "model/price-forecast-history-target-supply.json",
 }
 
 
@@ -1277,6 +1280,134 @@ def build_price_forecast_v1_result(request: ModelRunCreateRequestV1, run_id: str
     return result
 
 
+def build_conditional_forecast_v1_result(request: ModelRunCreateRequestV1, run_id: str) -> ForecastStrategyResultV1:
+    """Serve the audited per-day snapshot selected by target-supply availability."""
+    doc = resolve_strategy_forecast(load_private_json)
+    try:
+        day = next(item for item in doc["results"] if item["market_date"] == request.market_date)
+    except StopIteration as exc:
+        raise ValueError("Conditional forecast snapshot missing for requested date") from exc
+
+    selection = day.get("audit", {}).get("forecast_selection") or {}
+    actual_domains = set(request.input_summary.get("available_domains", [])) | {"prices", "weather"}
+    if not selection.get("fallback_used"):
+        actual_domains |= {"load_forecast", "renewable_forecast", "market_supply_history"}
+    ready, available, missing = strategy_readiness(
+        {**request.input_summary, "available_domains": sorted(actual_domains)}
+    )
+    threshold = float(request.parameters.get("high_price_threshold_yuan_per_mwh", 500))
+    periods = []
+    for row in sorted(day["periods"], key=lambda item: item["period"]):
+        da = row["day_ahead_price_yuan_per_mwh"]
+        rt = row["real_time_price_yuan_per_mwh"]
+        negative = da["p10"] < 0 or rt["p10"] < 0
+        high = da["p90"] > threshold or rt["p90"] > threshold
+        codes = (["NEGATIVE_INTERVAL_CROSSED"] if negative else []) + (["HIGH_PRICE_INTERVAL_CROSSED"] if high else [])
+        width = max(da["p90"] - da["p10"], rt["p90"] - rt["p10"])
+        confidence = float(max(0.5, min(0.82, 0.86 - width / 1600)))
+        periods.append({
+            "period": row["period"],
+            "datetime": row.get("datetime") or period_start_timestamp(request.market_date, row["period"]),
+            "day_ahead_price_yuan_per_mwh": da,
+            "real_time_price_yuan_per_mwh": rt,
+            "spread_day_ahead_minus_real_time_yuan_per_mwh": da["p50"] - rt["p50"],
+            "negative_price_risk": {"probability": None, "level": "HIGH" if negative else "LOW"},
+            "high_price_risk": {"probability": None, "level": "HIGH" if high else "LOW"},
+            "risk_reason_codes": codes or ["NO_THRESHOLD_INTERVAL_CROSSING"],
+            "confidence": confidence,
+            "data_completeness": "PARTIAL" if missing else "COMPLETE",
+            "strategy_suggestion": {
+                "action": "HOLD",
+                "volume_mwh": 0,
+                "price_yuan_per_mwh": None,
+                "confidence": confidence,
+                "reason_codes": ["MANUAL_REVIEW_REQUIRED", "NO_AUTOMATIC_TRADING"],
+            },
+        })
+
+    def metrics(market: str) -> dict[str, Any]:
+        actual_field = f"actual_{market}_price_yuan_per_mwh"
+        pairs = [(row[f"{market}_price_yuan_per_mwh"], row.get(actual_field)) for row in day["periods"]]
+        pairs = [(quantiles, float(actual)) for quantiles, actual in pairs if isinstance(actual, (int, float))]
+        if not pairs:
+            return {}
+        errors = [float(quantiles["p50"]) - actual for quantiles, actual in pairs]
+        actuals = [actual for _, actual in pairs]
+        return {
+            "mae": sum(abs(error) for error in errors) / len(errors),
+            "rmse": math.sqrt(sum(error * error for error in errors) / len(errors)),
+            "bias": sum(errors) / len(errors),
+            "negative_accuracy": sum((quantiles["p50"] < 0) == (actual < 0) for quantiles, actual in pairs) / len(pairs),
+            "high_recall": (
+                sum(quantiles["p90"] >= threshold for quantiles, actual in pairs if actual >= threshold)
+                / sum(actual >= threshold for actual in actuals)
+                if any(actual >= threshold for actual in actuals) else None
+            ),
+            "coverage": sum(quantiles["p10"] <= actual <= quantiles["p90"] for quantiles, actual in pairs) / len(pairs),
+        }
+
+    da_metrics = metrics("day_ahead")
+    rt_metrics = metrics("real_time")
+    result = ForecastStrategyResultV1(
+        request_id=request.request_id,
+        run_id=run_id,
+        market_code=request.market_code.upper(),
+        market_date=request.market_date,
+        model={"id": "price-forecast", "name": "山东目标日供需条件增强预测", "version": CONDITIONAL_VERSION},
+        data_snapshot={
+            "version": "sd-target-supply-conditional-2026q2q3-v1",
+            "created_at": utc_now(),
+            "source_versions": {
+                "prices": "sd-spot-2026h1-202607-v1",
+                "weather": "sd-weather-gfs-hourly-v2",
+                "market_supply": "sd-system-output-hourly-2026h1-v1",
+                "algorithm_package": CONDITIONAL_VERSION,
+                "selected_model": selection.get("selected_model_version", "UNKNOWN"),
+            },
+            "available_domains": available,
+            "missing_domains": missing,
+        },
+        backtest={
+            "window_start": request.market_date if da_metrics else None,
+            "window_end": request.market_date if da_metrics else None,
+            "sample_count": len(day["periods"]) if da_metrics else 0,
+            "mae_yuan_per_mwh": da_metrics.get("mae"),
+            "rmse_yuan_per_mwh": da_metrics.get("rmse"),
+            "bias_yuan_per_mwh": da_metrics.get("bias"),
+            "negative_price_direction_accuracy": da_metrics.get("negative_accuracy"),
+            "extreme_high_price_recall": da_metrics.get("high_recall"),
+            "evaluation_method": "D-2 rolling forecast; selected-day actuals used only for post-event evaluation",
+            "feature_set": "calendar_price_lags_gfs_weather_lagged_supply_plus_conditional_target_supply_forecast",
+            "weather_data_version": "sd-weather-gfs-hourly-v2",
+            "weather_known_before_declaration": True,
+            "weather_used_in_final_model": True,
+            "real_time_mae_yuan_per_mwh": rt_metrics.get("mae"),
+            "real_time_rmse_yuan_per_mwh": rt_metrics.get("rmse"),
+            "day_ahead_model_name": selection.get("selected_model_version"),
+            "real_time_model_name": selection.get("selected_model_version"),
+            "supply_data_version": "sd-system-output-hourly-2026h1-v1",
+            "supply_used_in_final_model": not selection.get("fallback_used"),
+            "supply_issue_time_available": False,
+            "supply_backtest_leakage_safe": True,
+            "supply_usage_boundary": "Complete 24-hour FORECAST rows only; ACTUAL target-day rows excluded",
+            "day_ahead_interval_coverage": da_metrics.get("coverage"),
+            "real_time_interval_coverage": rt_metrics.get("coverage"),
+        },
+        periods=periods,
+        strategy_ready=ready,
+        warnings=[
+            "TARGET_SUPPLY_CONDITIONAL_MODEL",
+            "FALLBACK_USED=" + str(bool(selection.get("fallback_used"))).upper(),
+            "FALLBACK_REASON=" + (selection.get("fallback_reason") or "NONE"),
+            "TARGET_SUPPLY_AVAILABILITY_BUSINESS_CONFIRMED_NO_PER_ROW_TIMESTAMP",
+            "EVENT_SCORES_ARE_NOT_CALIBRATED_PROBABILITIES",
+            "NO_AUTOMATIC_TRADING",
+        ],
+    )
+    validate_forecast_result(result)
+    return result
+
+
 def current_strategy_from_result(result: ForecastStrategyResultV1) -> list[dict[str, Any]]:
     return [
         {"period": point.period, "datetime": point.datetime, **point.strategy_suggestion.model_dump()}
@@ -1395,8 +1526,13 @@ def create_model_run(request: ModelRunCreateRequestV1, parent_run_id: str | None
             write_run_audit(run_id, "RUN_FAILED", "platform-baseline", {"error_code": code, "message": message})
     elif request.model_id == "price-forecast":
         try:
-            raw = run_price_forecast(PRIVATE_DATA, request.market_date)
-            result = build_price_forecast_v1_result(request.model_copy(update={"market_code": market_code}), run_id, raw)
+            if request.model_version == CONDITIONAL_VERSION:
+                result = build_conditional_forecast_v1_result(
+                    request.model_copy(update={"market_code": market_code}), run_id
+                )
+            else:
+                raw = run_price_forecast(PRIVATE_DATA, request.market_date)
+                result = build_price_forecast_v1_result(request.model_copy(update={"market_code": market_code}), run_id, raw)
             complete_model_run(run_id, result, "price-forecast-local")
         except Exception as error:
             now = utc_now()
@@ -2244,7 +2380,37 @@ def customer_profiles(market_code: str = "SD", segment: str | None = None) -> di
 
 @app.post("/api/forecast/run")
 def run_forecast(request: ForecastRunRequest) -> dict[str, Any]:
-    raise api_error(503, "FORECAST_PROVIDER_NOT_CONFIGURED", "本地预测模型已移除；请通过统一模型运行接口提交外部算法服务结果")
+    if request.model_version == CONDITIONAL_VERSION:
+        model_request = ModelRunCreateRequestV1(
+            request_id=f"legacy-{uuid.uuid4().hex}",
+            market_code=request.market_code,
+            market_date=request.date,
+            model_id="price-forecast",
+            model_version=CONDITIONAL_VERSION,
+            data_version="sd-target-supply-conditional-2026q2q3-v1",
+            parameters={"quantiles": [0.1, 0.5, 0.9]},
+            input_summary={
+                "available_domains": ["prices", "weather", "market_supply_history"],
+                "hourly_point_count": 24,
+                "customer_scope": "portfolio",
+            },
+            timeout_seconds=120,
+        )
+        run, _ = create_model_run(model_request, actor="legacy-api")
+        if run["status"] != "SUCCEEDED":
+            run_error = run.get("error") or {}
+            raise api_error(422, run_error.get("code", "RUN_FAILED"), run_error.get("message", "预测运行失败"))
+        stored = get_model_run_row(run["run_id"])
+        result = json.loads(stored["result_json"])
+        return {
+            "run_id": run["run_id"],
+            "market_code": request.market_code.upper(),
+            "created_at": run["created_at"],
+            "point_count": len(result["periods"]),
+            "results": result["periods"],
+            "model": result["model"],
+            "backtest": result["backtest"],
+        }
     market_code = request.market_code.upper()
     results = build_forecast(request.date, request.model_version, market_code)
     created_at = datetime.now(timezone.utc).isoformat()
@@ -2271,7 +2437,8 @@ def run_forecast(request: ForecastRunRequest) -> dict[str, Any]:
 
 @app.get("/api/forecast/results")
 def forecast_results(date: str, model_version: str = "lag-baseline-v0.3", market_code: str = "SD") -> dict[str, Any]:
-    raise api_error(503, "FORECAST_PROVIDER_NOT_CONFIGURED", "本地预测模型已移除；当前接口仅保留外部结果接入能力")
+    if model_version == CONDITIONAL_VERSION:
+        return run_forecast(ForecastRunRequest(date=date, model_version=model_version, market_code=market_code))
     normalized_market = market_code.upper()
     require_sample_market(normalized_market)
     with closing(connect()) as connection, connection:
@@ -3141,15 +3308,15 @@ def models_v1() -> dict[str, Any]:
             },
             {
                 "id": "price-forecast",
-                "name": "山东现货价格概率集成预测",
+                "name": "山东目标日供需条件增强预测",
                 "status": "connected_local",
-                "versions": ["integrated-price-forecast-v2.0.0"],
+                "versions": [CONDITIONAL_VERSION],
                 "run_mode": "synchronous_local",
                 "result_callback": "/api/v1/model-runs/{run_id}/results",
                 "output_contract": "forecast-strategy-contract-v1",
             },
         ],
-        "note": "已接入 wangyifan-111/- 一体化价格预测协议；使用平台现有山东脱敏数据运行，结果仍需人工复核。",
+        "note": "默认使用目标日供需条件增强模型；目标日供需预测不完整时自动回退六天气特征模型，结果仍需人工复核。",
     }
 
 
