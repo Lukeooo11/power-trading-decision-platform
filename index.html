@@ -6953,13 +6953,15 @@ function integratedForecastSource(result) {
 }
 
 function hydrateDefaultForecastResult() {
-  // Local prediction assets and browser fallback baselines are disabled.
-  // Results can only appear after an external provider callback or file import.
-  state.forecastResults = [];
-  state.forecastProvidedMetrics = null;
-  state.forecastRunMeta = { status: "PENDING_PROVIDER" };
-  state.forecastSource = "预测模型接口待接入";
-  state.forecastModelVersion = "external";
+  const select = document.querySelector("#forecastModelSelect");
+  state.forecastModelVersion = select?.value || "sd-target-supply-conditional-v1";
+  const stored = selectedIntegratedForecastResultForDate();
+  state.forecastResults = stored ? normalizeForecastRows(stored.periods || [], stored) : [];
+  state.forecastProvidedMetrics = stored?.backtest || null;
+  state.forecastRunMeta = stored
+    ? { status: "SUCCEEDED", review_status: "DRAFT", run_id: stored.run_id || null, message: "已加载版本化预测结果。" }
+    : { status: "BLOCKED", message: "当前日期没有已发布预测结果。" };
+  state.forecastSource = stored ? "平台版本化预测结果" : "预测结果未发布";
 
 }
 
@@ -8658,6 +8660,25 @@ async function runForecastEvaluation(options = {}) {
     return;
   }
   state.forecastModelVersion = document.querySelector("#forecastModelSelect")?.value || "sd-target-supply-conditional-v1";
+  const storedResult = selectedIntegratedForecastResultForDate();
+  if (storedResult) {
+    state.forecastResults = normalizeForecastRows(storedResult.periods || [], storedResult);
+    state.forecastProvidedMetrics = storedResult.backtest || null;
+    state.forecastRunMeta = {
+      status: "SUCCEEDED",
+      review_status: "DRAFT",
+      run_id: storedResult.run_id || null,
+      message: "已读取平台版本化预测结果。",
+    };
+    const fallbackUsed = storedResult.audit?.forecast_selection?.fallback_used;
+    state.forecastSource = fallbackUsed
+      ? "目标日供需预测不完整，已读取六天气特征回退结果"
+      : "已读取目标日供需条件增强结果";
+    renderForecast();
+    drawForecastChart(chartEls.forecast, state.forecastResults);
+    if (!options.silent) showToast(`已加载 ${state.forecastResults.length} 点平台预测结果。`);
+    return;
+  }
   const apiBase = PLATFORM_API_BASE;
   try {
     if (!window.__PLATFORM_API_BASE__ && (window.location.protocol !== "http:" || !["127.0.0.1", "localhost"].includes(window.location.hostname))) {
