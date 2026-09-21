@@ -29,6 +29,7 @@ from .strategy_forecast import CONDITIONAL_VERSION, resolve_strategy_forecast
 from .independent_scenarios import audit_premarket_snapshot, build_independent_inputs
 from .multisegment_bidding import OFFICIAL_RULE_EVIDENCE, RULE_READINESS, optimize_multisegment_bids
 from . import multisegment_runs
+from .price_allocation import price_allocation
 
 
 # Local runs place this file under ``<repo>/backend/app`` while the Docker
@@ -2688,6 +2689,18 @@ def research_bidding_strategy(
             for row in batches
         ],
     )
+
+
+@app.get("/api/strategy/price-allocation")
+def price_allocation_response(date: str, market_code: str = "SD") -> dict[str, Any]:
+    require_sample_market(market_code)
+    validate_business_date(date)
+    return price_allocation(load_strategy_json("price_forecast_history_colleague_2026h1.json"), date)
+
+
+@app.get("/api/strategy/july-allocation", include_in_schema=False)
+def july_allocation_compatibility_response(date: str, market_code: str = "SD") -> dict[str, Any]:
+    return price_allocation_response(date, market_code)
 
 
 def _legacy_research_bidding_strategy(

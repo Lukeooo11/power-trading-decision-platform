@@ -4176,6 +4176,26 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
 .multi-curve-table th:first-child, .multi-curve-table td:first-child { text-align: left; width: 36px; }
 .multi-curve-workspace .inline-actions { flex-wrap: wrap; }
 @media(max-width: 480px) { .multi-curve-controls { grid-template-columns: minmax(0,1fr); } .multi-curve-workspace .inline-actions button { width: 100%; } }
+.research-blocked {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-left: 3px solid #b7791f;
+  background: #fffaf0;
+  color: #513b16;
+}
+
+.research-blocked p {
+  margin: 0 0 8px;
+}
+
+.research-blocked p:last-child {
+  margin-bottom: 0;
+}
+
+.research-blocked ul {
+  margin: 6px 0 10px;
+  padding-left: 20px;
+}
 
     </style>
   </head>
@@ -4354,7 +4374,7 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
               <div class="inline-actions"><span class="pill wait" id="strategyHealthStatus">服务检查中</span><span class="pill wait" id="draftStatus">尚未创建</span></div>
             </div>
             <div class="agent-action-row research-task-controls">
-              <label class="field"><span>交易日期</span><input id="strategyBusinessDate" type="date" aria-label="交易申报策略日期" /></label>
+              <label class="field"><span>交易日期</span><input id="strategyBusinessDate" type="date" min="2026-01-01" max="2026-12-31" aria-label="交易申报策略日期" /></label>
               <label class="field"><span>发起人</span><input id="draftInitiator" maxlength="128" placeholder="请输入姓名" /></label>
               <label class="field"><span>策略模式 / 版本</span><select id="draftStrategyVersion"><option value="historical_cvar_v02">风险均衡 · 历史误差 CVaR（默认）</option><option value="rt_benchmark_v01">跑赢全实时 · 相对成本 CVaR（研究目标）</option><option value="regime_cvar_v03">分时状态 CVaR（挑战者）</option><option value="similar_day_cvar_v04">预测与相似日 CVaR（挑战者）</option><option value="advanced_cvar_v05">混合场景 + 校准 + Newsvendor CVaR（挑战者）</option><option value="joint_cvar_v06">24小时联合混合 CVaR（挑战者）</option></select></label>
               <label class="field"><span>风险厌恶系数</span><input id="draftRiskAversion" type="number" min="0" max="1" step="0.05" value="0.30" /></label>
@@ -4367,10 +4387,10 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
             <div class="research-summary" id="researchSummary"></div>
             <div id="strategyModeComparison" aria-live="polite"></div>
             <section class="july-research" aria-labelledby="julyResearchTitle">
-              <div class="panel-head"><div><h3 id="julyResearchTitle">7月价格预测与比例研究</h3><p>使用上方交易日期 · 每小时相同单位敞口 · 固定风险系数0.30 · 不可自动提交</p></div>
+              <div class="panel-head"><div><h3 id="julyResearchTitle">价格预测与比例研究</h3><p>使用上方交易日期（2026年全年可选） · 每小时相同单位敞口 · 固定风险系数0.30 · 不可自动提交</p></div>
                 <button type="button" class="secondary-action" id="loadJulyResearchBtn">查看所选日比例</button></div>
-              <p>7月客户负荷、持仓和成交量待补。下表只比较采购比例，不代表实际申报MWh；真实敞口形状变化后联合比例需重新计算。</p>
-              <div id="julyResearchContent" aria-live="polite">请选择2026年7月的交易日期后查看。</div>
+              <p>对应日期客户负荷、持仓和成交量若未接入，下表只比较采购比例，不代表实际申报MWh；真实敞口形状变化后联合比例需重新计算。</p>
+              <div id="julyResearchContent" aria-live="polite">请选择交易日期。已有数据则计算比例，数据不足则列出需要补充的材料。</div>
             </section>
             <div class="research-provenance">
               <div><span>当前方案</span><strong id="draftStrategyLabel">--</strong><small id="draftResearchTag">待生成</small></div>
@@ -12291,7 +12311,7 @@ function debounce(fn, wait) {
     byId("compareStrategyModesBtn")?.addEventListener("click", compareStrategyModes);
     byId('loadJulyResearchBtn')?.addEventListener('click', loadJulyResearch);
     byId('strategyBusinessDate')?.addEventListener('change', () => {
-      setText('julyResearchContent', '日期已改变，请点击“查看所选日比例”重新读取。');
+      setText('julyResearchContent', '日期已改变，请点击“查看所选日比例”重新读取。全年日期均可选择；数据不足时会列出所需材料。');
     });
     byId("draftStrategyVersion")?.addEventListener("change", () => renderDraftStrategyBand(agentStore.draftRun));
     byId("draftRiskAversion")?.addEventListener("change", () => renderDraftStrategyBand(agentStore.draftRun));
@@ -12321,21 +12341,34 @@ function debounce(fn, wait) {
   async function loadJulyResearch() {
     const date = byId('strategyBusinessDate')?.value;
     const button = byId('loadJulyResearchBtn');
-    if (currentContext().marketCode !== 'SD') return toast('7月新增数据仅覆盖山东。');
-    if (!date || date < '2026-07-01' || date > '2026-07-31') return toast('请选择2026年7月1日至31日。');
+    if (currentContext().marketCode !== 'SD') return toast('当前价格比例研究仅覆盖山东。');
+    if (!date || date < '2026-01-01' || date > '2026-12-31') return toast('请选择2026年的交易日期；数据不足时会列出需要补充的材料。');
     button.disabled = true;
     setText('julyResearchContent', '正在读取逐日预测快照与历史误差路径…');
     try {
-      const result = await platformRequest(`/strategy/july-allocation?date=${encodeURIComponent(date)}&market_code=SD`);
+      const result = await platformRequest(`/strategy/price-allocation?date=${encodeURIComponent(date)}&market_code=SD`);
       if (byId('strategyBusinessDate')?.value !== date) return;
-      if (!result.periods?.length) throw new Error(result.reason || '该日期暂不可研究');
+      if (result.status === 'BLOCKED' || !result.periods?.length) {
+        const reasonLabels = {
+          FORECAST_SNAPSHOT_MISSING: '缺少所选日期的价格预测快照',
+          INSUFFICIENT_DAY_PATHS: '目标日前可用的完整历史误差路径不足10天',
+          SOLVER_NOT_OPTIMAL: '优化求解未获得可靠最优解',
+        };
+        const required = (result.required_data || ['对应日期的完整日前/实时预测快照与历史误差路径'])
+          .map(item => `<li>${escapeText(item)}</li>`).join('');
+        const scope = result.research_scope
+          ? `${escapeText(result.research_scope.start)} 至 ${escapeText(result.research_scope.end)}`
+          : '暂无可用预测快照';
+        setHtml('julyResearchContent', `<div class="research-blocked"><p><strong>${escapeText(date)}</strong> 暂不能生成比例研究。</p><p>原因：${escapeText(reasonLabels[result.reason] || result.reason || '关键数据不足')}。</p><p>当前可用预测范围：${scope}；可用完整历史日路径：${escapeText(result.sample_count ?? 0)}条。</p><p>需要补充：</p><ul>${required}</ul><p>数据补齐前保持HOLD，不生成申报量，也不可自动提交。</p></div>`);
+        return;
+      }
       const f = n => typeof n === 'number' && Number.isFinite(n) ? n.toFixed(2) : '--';
       const pct = n => typeof n === 'number' ? `${(n * 100).toFixed(0)}%` : '--';
       setHtml('julyResearchContent', `<p><strong>${escapeText(date)}</strong> · 日前MAE ${f(result.day_metrics.da.mae)} · 盘前实时MAE ${f(result.day_metrics.rt.mae)} · 出清后实时MAE ${f(result.day_metrics.post_da.mae)} 元/MWh</p>
-        <p>误差截止 ${escapeText(result.source_cutoff)} · ${escapeText(result.sample_count)}条完整历史日路径 · 天气发布时间待确认，湿度未使用。出清后预测不进入日前策略。</p>
+        <p>研究范围 ${escapeText(result.research_scope?.start || '可用快照起点')} 至 ${escapeText(result.research_scope?.end || '可用快照终点')} · 误差截止 ${escapeText(result.source_cutoff)} · ${escapeText(result.sample_count)}条完整历史日路径 · 天气发布时间待确认，湿度未使用。出清后预测不进入日前策略。</p>
         <div class="table-wrap"><table><thead><tr><th>时段</th><th>日前预测 / 实际</th><th>盘前实时预测 / 实际</th><th>出清后实时预测</th><th>逐小时日前比例</th><th>整日联合日前比例</th></tr></thead><tbody>
         ${result.periods.map(p => `<tr><td>${p.period}</td><td>${f(p.da_p50)} / ${f(p.actual_da)}</td><td>${f(p.rt_p50)} / ${f(p.actual_rt)}</td><td>${f(p.rt_post_da_p50)}</td><td>${pct(p.hourly_cvar_ratio)}</td><td>${pct(p.joint_cvar_ratio)}</td></tr>`).join('')}
-        </tbody></table></div><p>价格单位：元/MWh。正式申报门禁仍为HOLD；比例为研究结果，不能直接提交。</p>`);
+        </tbody></table></div><p>价格单位：元/MWh。正式申报门禁仍为HOLD；比例为研究结果，不能直接提交。比例基于每小时相同单位敞口，不代表客户实际申报MWh。</p>`);
     } catch (error) { setText('julyResearchContent', `读取失败：${error.message}`); }
     finally { button.disabled = false; }
   }
