@@ -1,0 +1,183 @@
+{
+  "modelVersion": "sd-gfs24-spatial-lgbm-v1",
+  "method": "monthly expanding-window out-of-fold replay",
+  "supportedOofStart": "2026-02-01",
+  "supportedOofEnd": "2026-06-30",
+  "januaryMode": "IN_SAMPLE_DIAGNOSTIC_NO_PRIOR_TRAINING_WINDOW",
+  "julyMode": "FROZEN_HOLDOUT",
+  "januaryInSampleDiagnostic": {
+    "da": {
+      "mae": 20.08492860121285,
+      "rmse": 38.05037025333368,
+      "bias": -1.4582772685144951,
+      "sampleCount": 744
+    },
+    "rt": {
+      "mae": 57.62296552500271,
+      "rmse": 116.99381945658415,
+      "bias": -1.5449719658567405,
+      "sampleCount": 744
+    },
+    "spread": {
+      "mae": 55.98975443448117,
+      "rmse": 110.88591745315368,
+      "bias": 8.314604800916399,
+      "sampleCount": 744
+    }
+  },
+  "monthly": {
+    "2026-02": {
+      "evaluationMode": "EXPANDING_WINDOW_OOF",
+      "trainingEnd": "2026-01-31",
+      "sampleCount": 672,
+      "dayAhead": {
+        "mae": 98.7205356108162,
+        "rmse": 125.79718411800908,
+        "bias": 40.05225596023059,
+        "sampleCount": 672
+      },
+      "realTime": {
+        "mae": 125.86724215553527,
+        "rmse": 159.71399269729037,
+        "bias": 31.74968645704023,
+        "sampleCount": 648
+      },
+      "spread": {
+        "mae": 86.43640998666964,
+        "rmse": 117.83795614900316,
+        "bias": -8.00475343546892,
+        "sampleCount": 648
+      }
+    },
+    "2026-03": {
+      "evaluationMode": "EXPANDING_WINDOW_OOF",
+      "trainingEnd": "2026-02-28",
+      "sampleCount": 744,
+      "dayAhead": {
+        "mae": 73.36337253965655,
+        "rmse": 94.57732558843342,
+        "bias": -22.176282527589784,
+        "sampleCount": 744
+      },
+      "realTime": {
+        "mae": 127.35557150271396,
+        "rmse": 169.09852628728743,
+        "bias": -77.28117492064266,
+        "sampleCount": 744
+      },
+      "spread": {
+        "mae": 93.60380958572048,
+        "rmse": 141.76481662241926,
+        "bias": 37.986526925401925,
+        "sampleCount": 744
+      }
+    },
+    "2026-04": {
+      "evaluationMode": "EXPANDING_WINDOW_OOF",
+      "trainingEnd": "2026-03-31",
+      "sampleCount": 720,
+      "dayAhead": {
+        "mae": 83.4842483462755,
+        "rmse": 109.68438938637405,
+        "bias": -61.96578140191861,
+        "sampleCount": 720
+      },
+      "realTime": {
+        "mae": 113.48371696662859,
+        "rmse": 165.33198733442345,
+        "bias": -39.23531928840859,
+        "sampleCount": 720
+      },
+      "spread": {
+        "mae": 81.39052576965616,
+        "rmse": 136.22277966856387,
+        "bias": -2.504591098540522,
+        "sampleCount": 720
+      }
+    },
+    "2026-05": {
+      "evaluationMode": "EXPANDING_WINDOW_OOF",
+      "trainingEnd": "2026-04-30",
+      "sampleCount": 744,
+      "dayAhead": {
+        "mae": 79.78656011497397,
+        "rmse": 100.07905930557719,
+        "bias": -40.25307394487708,
+        "sampleCount": 744
+      },
+      "realTime": {
+        "mae": 99.06305157151687,
+        "rmse": 137.00307546583525,
+        "bias": -7.595696476613191,
+        "sampleCount": 744
+      },
+      "spread": {
+        "mae": 80.28424461218091,
+        "rmse": 115.15775749260544,
+        "bias": -25.3988776223634,
+        "sampleCount": 744
+      }
+    },
+    "2026-06": {
+      "evaluationMode": "EXPANDING_WINDOW_OOF",
+      "trainingEnd": "2026-05-31",
+      "sampleCount": 720,
+      "dayAhead": {
+        "mae": 72.8457840433918,
+        "rmse": 90.86578913444434,
+        "bias": 12.723715431644754,
+        "sampleCount": 720
+      },
+      "realTime": {
+        "mae": 115.62522196177476,
+        "rmse": 161.68995492656617,
+        "bias": -9.033346961263156,
+        "sampleCount": 720
+      },
+      "spread": {
+        "mae": 93.18681567148555,
+        "rmse": 147.13997031141093,
+        "bias": 29.94394324112618,
+        "sampleCount": 720
+      }
+    }
+  },
+  "julyMetrics": {
+    "dayAhead": {
+      "mae": 50.16887993358531,
+      "rmse": 72.53584500587569,
+      "bias": -19.048499268218187,
+      "negative_accuracy": 1.0,
+      "high_price_recall": 0.0
+    },
+    "realTime": {
+      "mae": 79.89454305147972,
+      "rmse": 129.2270084711569,
+      "bias": -13.554602979730562,
+      "negative_accuracy": 0.9341397849462365,
+      "high_price_recall": 0.0
+    },
+    "spreadMae": 83.22682454974864,
+    "spreadDirectionAccuracy": 0.5618279569892473
+  },
+  "combinedOutOfSampleFebruaryToJuly": {
+    "da": {
+      "mae": 76.00529922114677,
+      "rmse": 99.79542751200044,
+      "bias": -15.920510166756884,
+      "sampleCount": 4344
+    },
+    "rt": {
+      "mae": 109.81819777881343,
+      "rmse": 154.18341224969265,
+      "bias": -20.23634958957298,
+      "sampleCount": 4320
+    },
+    "spread": {
+      "mae": 86.34258085584158,
+      "rmse": 132.45305316050883,
+      "bias": 4.511433457914254,
+      "sampleCount": 4320
+    }
+  }
+}

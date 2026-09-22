@@ -31,6 +31,17 @@
     "spike.pkl": "5a3cb68e1191b3f961e7e91030965ac7b4618cc2eafee1ff4c068128ab2b7389",
     "spread.pkl": "42a615c035a1bea57ccd6027a95a8ac528aad7801f38b0e2e27910caf22147a7",
     "residual_calibration.json": "7f1ded50ed9c4f9ec546ebcb82e6acd7e042f8ed4f00483118f2bfa3593d3e9c",
-    "v5_gfs24_feature_store.csv.gz": "7f08411249d24bec727ac0267b9e50d745a51a590ef21242220867784da17ccf"
+    "v5_gfs24_feature_store.csv.gz": "7f08411249d24bec727ac0267b9e50d745a51a590ef21242220867784da17ccf",
+    "v5_expanding_oof_predictions.csv.gz": "52e2db594de039afc9b0f24ab59e0624183abfe41274013d62bd49cf50fdcb2a",
+    "extended_backtest_metrics.json": "44d8cd30d35ab3d6c912996139c103c67b3fe6262cc5aeef0e8b6bfc075b5a0e"
+  },
+  "controlledReplayRange": {
+    "start": "2026-01-01",
+    "end": "2026-07-31"
+  },
+  "evaluationModes": {
+    "2026-01": "IN_SAMPLE_DIAGNOSTIC",
+    "2026-02_to_2026-06": "EXPANDING_WINDOW_OOF",
+    "2026-07": "FROZEN_HOLDOUT"
   }
 }

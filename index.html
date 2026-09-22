@@ -4760,7 +4760,7 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
               <label class="field">
                 <span>模型版本（外部服务提供）</span>
                 <select id="forecastModelSelect">
-                  <option value="sd-target-supply-conditional-v1">目标日供需条件增强（缺失自动回退）</option>
+                  <option value="sd-target-supply-conditional-v1">山东 V5 GFS24（1—7月研究回放）</option>
                 </select>
               </label>
               <label class="upload-card compact-upload">
@@ -7022,13 +7022,10 @@ function hydrateForecastDates() {
   }
   const priceDates = [...new Set(marketData.spotPrices.map((row) => row.date).filter(Boolean))].sort();
   const publishedForecastDates = [...new Set((state.priceForecastHistory?.results || []).map((row) => row.market_date).filter(Boolean))].sort();
-  const dates = hasConnectedMarketData() && publishedForecastDates.length
-    ? publishedForecastDates
-    : hasConnectedMarketData() && priceDates.length > 2
-    ? priceDates.slice(2)
-    : hasConnectedMarketData()
-      ? [...new Set(state.forecast96.map((row) => row.date).filter(Boolean))].sort()
-      : [];
+  const controlledReplayDates = priceDates.filter((date) => date >= "2026-01-01" && date <= "2026-07-31");
+  const dates = hasConnectedMarketData()
+    ? [...new Set([...controlledReplayDates, ...publishedForecastDates])].sort()
+    : [];
   const modelDate = hasConnectedMarketData() ? state.priceForecastResult?.market_date : "";
   if (modelDate && !dates.includes(modelDate)) dates.push(modelDate);
   dates.sort();
@@ -7058,7 +7055,7 @@ function hydrateForecastModelOptions() {
     select.value = "henan-real-time-pre-da-da-anchor-v3";
     return;
   }
-  select.innerHTML = '<option value="sd-target-supply-conditional-v1">目标日供需条件增强（缺失自动回退）</option>';
+  select.innerHTML = '<option value="sd-target-supply-conditional-v1">山东 V5 GFS24（1—7月研究回放）</option>';
   select.value = "sd-target-supply-conditional-v1";
 }
 
@@ -8884,7 +8881,11 @@ async function runForecastEvaluation(options = {}) {
     return;
   }
   state.forecastModelVersion = document.querySelector("#forecastModelSelect")?.value || "sd-target-supply-conditional-v1";
-  const storedResult = selectedIntegratedForecastResultForDate();
+  const useConnectedV5Replay = state.selectedMarket === "SD"
+    && state.forecastModelVersion === "sd-target-supply-conditional-v1"
+    && state.forecastDate >= "2026-01-01"
+    && state.forecastDate <= "2026-07-31";
+  const storedResult = useConnectedV5Replay ? null : selectedIntegratedForecastResultForDate();
   if (storedResult) {
     state.forecastResults = normalizeForecastRows(storedResult.periods || [], storedResult);
     state.forecastProvidedMetrics = storedResult.backtest || null;
@@ -8952,7 +8953,15 @@ async function runForecastEvaluation(options = {}) {
     state.forecastProvidedMetrics = payload.result?.backtest || null;
     state.forecastRunMeta = { ...run, review_status: payload.review?.status || run.review_status };
     const conditionalFallback = payload.result?.warnings?.includes('FALLBACK_USED=TRUE');
-    state.forecastSource = payload.result?.model?.version === 'sd-target-supply-conditional-v1'
+    const v5Warnings = payload.result?.warnings || [];
+    const v5EvaluationLabel = v5Warnings.includes('IN_SAMPLE_DIAGNOSTIC_NOT_OUT_OF_SAMPLE')
+      ? '1月训练内诊断'
+      : v5Warnings.includes('EXPANDING_WINDOW_OOF_REPLAY')
+        ? '2—6月扩展窗口样本外回放'
+        : '7月冻结独立测试';
+    state.forecastSource = payload.result?.model?.version === 'sd-gfs24-spatial-lgbm-v1'
+      ? `山东 V5 GFS24 · ${v5EvaluationLabel}`
+      : payload.result?.model?.version === 'sd-target-supply-conditional-v1'
       ? (conditionalFallback ? '目标日供需预测缺失或不完整，已自动回退现有模型' : '已使用完整24点目标日供需条件增强模型')
       : payload.result?.model?.version === 'sd-sixweather-lagged-supply-v1'
       ? '7月六天气特征与D-2出力滞后研究适配版（天气发布时间待确认）'

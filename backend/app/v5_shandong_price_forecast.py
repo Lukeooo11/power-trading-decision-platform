@@ -13,8 +13,10 @@ import pandas as pd
 
 MODEL_VERSION = "sd-gfs24-spatial-lgbm-v1"
 DATA_VERSION = "sd-16city-gfs-fixed-lead24-20260101-20260831-v1"
-SUPPORTED_START = "2026-07-01"
+SUPPORTED_START = "2026-01-01"
 SUPPORTED_END = "2026-07-31"
+OOF_START = "2026-02-01"
+OOF_END = "2026-06-30"
 MODEL_FILES = {"da": "day_ahead.pkl", "rt": "real_time.pkl", "spread": "spread.pkl", "negative": "negative.pkl", "spike": "spike.pkl"}
 HISTORY_COLUMNS = ["日前价格", "实时价格", "实时价差", "直调负荷", "联络线", "风电", "光伏", "地方电厂", "自备机组", "非市场化核电总加", "新能源出力", "简单净负荷"]
 LAGS = [48, 72, 96, 120, 144, 168, 192]
@@ -82,7 +84,13 @@ def _load():
     # Render layout: /app/app + /app/model_assets.
     model_dir = Path(__file__).resolve().parents[1] / "model_assets" / MODEL_VERSION
     feature_path = model_dir / "v5_gfs24_feature_store.csv.gz"
-    required = [model_dir / v for v in MODEL_FILES.values()] + [model_dir/"model_metadata.json", model_dir/"residual_calibration.json", feature_path]
+    required = [model_dir / v for v in MODEL_FILES.values()] + [
+        model_dir / "model_metadata.json",
+        model_dir / "residual_calibration.json",
+        model_dir / "v5_expanding_oof_predictions.csv.gz",
+        model_dir / "extended_backtest_metrics.json",
+        feature_path,
+    ]
     missing = [str(p) for p in required if not p.is_file()]
     if missing:
         raise FileNotFoundError("V5 assets missing: " + ", ".join(missing))
@@ -101,6 +109,14 @@ def _load():
     return source, _features(source), models, metadata, calibration
 
 
+@lru_cache(maxsize=1)
+def _load_extended_backtest():
+    model_dir = Path(__file__).resolve().parents[1] / "model_assets" / MODEL_VERSION
+    predictions = pd.read_csv(model_dir / "v5_expanding_oof_predictions.csv.gz", compression="gzip")
+    metrics = json.loads((model_dir / "extended_backtest_metrics.json").read_text(encoding="utf-8"))
+    return predictions, metrics
+
+
 def _probability(package, rows):
     raw = package["model"].predict_proba(rows[package["features"]])[:, 1]
     with warnings.catch_warnings():
@@ -116,6 +132,34 @@ def _bounds(point, periods, key, calibration):
         low.append(value + item["q10"])
         high.append(value + item["q90"])
     return np.asarray(low), np.asarray(high), float(cfg["coverage"])
+
+
+def _point_metrics(actual, predicted, high_price_threshold):
+    actual_values = pd.to_numeric(actual, errors="coerce").to_numpy(float)
+    predicted_values = np.asarray(predicted, float)
+    valid = np.isfinite(actual_values) & np.isfinite(predicted_values)
+    if not valid.any():
+        return {"mae": None, "rmse": None, "bias": None, "negative_accuracy": None, "high_price_recall": None}
+    actual_values = actual_values[valid]
+    predicted_values = predicted_values[valid]
+    high_actual = actual_values >= high_price_threshold
+    return {
+        "mae": float(np.mean(np.abs(predicted_values - actual_values))),
+        "rmse": float(np.sqrt(np.mean((predicted_values - actual_values) ** 2))),
+        "bias": float(np.mean(predicted_values - actual_values)),
+        "negative_accuracy": float(np.mean((predicted_values < 0) == (actual_values < 0))),
+        "high_price_recall": float(np.mean(predicted_values[high_actual] >= high_price_threshold)) if high_actual.any() else None,
+    }
+
+
+def _interval_coverage(actual, lower, upper):
+    actual_values = pd.to_numeric(actual, errors="coerce").to_numpy(float)
+    lower_values = np.asarray(lower, float)
+    upper_values = np.asarray(upper, float)
+    valid = np.isfinite(actual_values) & np.isfinite(lower_values) & np.isfinite(upper_values)
+    if not valid.any():
+        return None
+    return float(np.mean((actual_values[valid] >= lower_values[valid]) & (actual_values[valid] <= upper_values[valid])))
 
 
 def run_v5_shandong_forecast(*, target_date: str, private_data_dir: Path, declaration_cutoff: datetime | None = None, high_price_threshold: float = 500.0) -> dict[str, Any]:
@@ -147,19 +191,53 @@ def run_v5_shandong_forecast(*, target_date: str, private_data_dir: Path, declar
         absent = [c for c in package["features"] if c not in rows]
         if absent:
             raise KeyError(f"{key} missing features: {absent[:5]}")
-    da = np.clip(models["da"]["model"].predict(rows[models["da"]["features"]]), -100, 1300)
-    rt = np.clip(models["rt"]["model"].predict(rows[models["rt"]["features"]]), -100, 1300)
-    spread = models["spread"]["model"].predict(rows[models["spread"]["features"]])
-    negative = np.clip(_probability(models["negative"], rows), 0, 1)
-    spike = np.clip(_probability(models["spike"], rows), 0, 1)
+    evaluation_mode = "FROZEN_HOLDOUT"
+    training_end = "2026-06-30"
+    event_probability_calibration = "OOF_CALIBRATED"
+    if OOF_START <= target_date <= OOF_END:
+        extended, _ = _load_extended_backtest()
+        replay = extended[extended["date"] == target_date].sort_values("period")
+        if len(replay) != 24 or set(replay["period"].astype(int)) != set(range(1, 25)):
+            raise ValueError(f"V5 OOF replay requires exactly 24 rows for {target_date}")
+        da = np.clip(replay["da_p50"].to_numpy(float), -100, 1300)
+        rt = np.clip(replay["rt_p50"].to_numpy(float), -100, 1300)
+        spread = replay["spread_p50"].to_numpy(float)
+        negative = np.clip(replay["negative_probability"].to_numpy(float), 0, 1)
+        spike = np.clip(replay["spike_probability"].to_numpy(float), 0, 1)
+        evaluation_mode = "EXPANDING_WINDOW_OOF"
+        training_end = str(replay.iloc[0]["training_end"])
+        event_probability_calibration = "RAW_UNCALIBRATED_OOF"
+    else:
+        da = np.clip(models["da"]["model"].predict(rows[models["da"]["features"]]), -100, 1300)
+        rt = np.clip(models["rt"]["model"].predict(rows[models["rt"]["features"]]), -100, 1300)
+        spread = models["spread"]["model"].predict(rows[models["spread"]["features"]])
+        negative = np.clip(_probability(models["negative"], rows), 0, 1)
+        spike = np.clip(_probability(models["spike"], rows), 0, 1)
+        if target_date < OOF_START:
+            evaluation_mode = "IN_SAMPLE_DIAGNOSTIC"
+            training_end = "2026-06-30"
     periods = rows["小时"].to_numpy(int)
-    da10, da90, da_cov = _bounds(da, periods, "da", calibration)
-    rt10, rt90, rt_cov = _bounds(rt, periods, "rt", calibration)
+    da10, da90, _ = _bounds(da, periods, "da", calibration)
+    rt10, rt90, _ = _bounds(rt, periods, "rt", calibration)
     forecast = []
     for i, period in enumerate(periods):
         dq = sorted([float(np.clip(da10[i], -100, 1300)), float(da[i]), float(np.clip(da90[i], -100, 1300))])
         rq = sorted([float(np.clip(rt10[i], -100, 1300)), float(rt[i]), float(np.clip(rt90[i], -100, 1300))])
         width = max(dq[2]-dq[0], rq[2]-rq[0])
         forecast.append({"period": int(period), "datetime": rows.iloc[i]["有效时间"].isoformat(), "da_p10": round(dq[0],3), "da_p50": round(dq[1],3), "da_p90": round(dq[2],3), "rt_p10": round(rq[0],3), "rt_p50": round(rq[1],3), "rt_p90": round(rq[2],3), "negative_risk_probability": round(float(negative[i]),6), "high_price_risk_probability": round(float(spike[i]),6), "confidence": round(float(np.clip(.86-width/1600,.5,.82)),3)})
-    metrics = meta["julyMetrics"]
-    return {"model_version": MODEL_VERSION, "data_version": DATA_VERSION, "forecast": forecast, "summary": {"da_selected": "V5 GFS完整+日内形态 LightGBM", "rt_selected": "V5 GFS完整+日内形态 LightGBM", "da_metrics": metrics["dayAhead"], "rt_metrics": metrics["realTime"], "window_start": "2026-07-01", "window_end": "2026-07-31", "sample_count": 744, "forecast_start": forecast[0]["datetime"], "forecast_end": forecast[-1]["datetime"], "evaluation_method": "expanding-window OOF selection plus frozen July holdout", "feature_set": "safe-lag48plus + 16-city GFS24 spatial distribution and daily shape", "weather_data_version": DATA_VERSION, "weather_known_before_declaration": cutoff_status == "VERIFIED", "weather_used_in_da_final": True, "weather_used_in_rt_final": True, "supply_data_version": "embedded-v5-safe-lag-history", "supply_used_in_da_final": True, "supply_used_in_rt_final": True, "supply_issue_time_available": False, "supply_backtest_leakage_safe": True, "supply_usage_boundary": "lag48 or older only; target-date actual supply excluded", "spread_direction_accuracy": metrics["spreadDirectionAccuracy"], "spread_mae": metrics["spreadMae"], "da_interval_coverage": da_cov, "rt_interval_coverage": rt_cov, "consistency_constraint": "platform spread = DA p50 - RT p50; V5 direct spread retained in audit", "post_day_ahead_realtime": {"status": "UNCHANGED_PLATFORM_PATH"}, "declaration_cutoff_audit": {"status": cutoff_status, "declaration_cutoff": cutoff_iso, "issue_time_max": raw_target["预报生成参考时间"].max().isoformat(), "lead_hours": 24}, "forecast_selection": {"selected_model_version": MODEL_VERSION, "fallback_used": False, "target_actual_supply_used": False}, "v5_direct_spread_p50": [round(float(v),3) for v in spread]}}
+    da_metrics = _point_metrics(rows["日前价格"], da, high_price_threshold)
+    rt_metrics = _point_metrics(rows["实时价格"], rt, high_price_threshold)
+    spread_metrics = _point_metrics(rows["实时价差"], spread, high_price_threshold)
+    actual_spread = pd.to_numeric(rows["实时价差"], errors="coerce").to_numpy(float)
+    valid_spread = np.isfinite(actual_spread) & np.isfinite(spread)
+    spread_direction_accuracy = (
+        float(np.mean(np.sign(spread[valid_spread]) == np.sign(actual_spread[valid_spread])))
+        if valid_spread.any()
+        else None
+    )
+    method = {
+        "IN_SAMPLE_DIAGNOSTIC": "in-sample diagnostic replay; no prior training window is available",
+        "EXPANDING_WINDOW_OOF": "monthly expanding-window out-of-fold replay",
+        "FROZEN_HOLDOUT": "frozen July holdout",
+    }[evaluation_mode]
+    return {"model_version": MODEL_VERSION, "data_version": DATA_VERSION, "forecast": forecast, "summary": {"da_selected": "V5 GFS完整+日内形态 LightGBM", "rt_selected": "V5 GFS完整+日内形态 LightGBM", "da_metrics": da_metrics, "rt_metrics": rt_metrics, "window_start": target_date, "window_end": target_date, "sample_count": int(pd.to_numeric(rows["日前价格"], errors="coerce").notna().sum()), "forecast_start": forecast[0]["datetime"], "forecast_end": forecast[-1]["datetime"], "evaluation_method": method, "evaluation_mode": evaluation_mode, "training_end": training_end, "event_probability_calibration": event_probability_calibration, "feature_set": "safe-lag48plus + 16-city GFS24 spatial distribution and daily shape", "weather_data_version": DATA_VERSION, "weather_known_before_declaration": cutoff_status == "VERIFIED", "weather_used_in_da_final": True, "weather_used_in_rt_final": True, "supply_data_version": "embedded-v5-safe-lag-history", "supply_used_in_da_final": True, "supply_used_in_rt_final": True, "supply_issue_time_available": False, "supply_backtest_leakage_safe": evaluation_mode != "IN_SAMPLE_DIAGNOSTIC", "supply_usage_boundary": "lag48 or older only; target-date actual supply excluded", "spread_direction_accuracy": spread_direction_accuracy, "spread_mae": spread_metrics["mae"], "da_interval_coverage": _interval_coverage(rows["日前价格"], da10, da90), "rt_interval_coverage": _interval_coverage(rows["实时价格"], rt10, rt90), "consistency_constraint": "platform spread = DA p50 - RT p50; V5 direct spread retained in audit", "post_day_ahead_realtime": {"status": "UNCHANGED_PLATFORM_PATH"}, "declaration_cutoff_audit": {"status": cutoff_status, "declaration_cutoff": cutoff_iso, "issue_time_max": raw_target["预报生成参考时间"].max().isoformat(), "lead_hours": 24}, "forecast_selection": {"selected_model_version": MODEL_VERSION, "fallback_used": False, "target_actual_supply_used": False, "evaluation_mode": evaluation_mode, "training_end": training_end}, "v5_direct_spread_p50": [round(float(v),3) for v in spread]}}

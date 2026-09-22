@@ -1233,12 +1233,20 @@ def build_price_forecast_v1_result(request: ModelRunCreateRequestV1, run_id: str
     rt_baseline_mae = rt_baseline_metrics.get("mae")
     rt_weather_improvement = rt_baseline_mae - rt_weather_mae if rt_baseline_mae is not None and rt_weather_mae is not None else None
     is_v5 = raw.get("model_version") == "sd-gfs24-spatial-lgbm-v1"
+    v5_evaluation_mode = raw["summary"].get("evaluation_mode")
+    v5_evaluation_warning = {
+        "IN_SAMPLE_DIAGNOSTIC": "IN_SAMPLE_DIAGNOSTIC_NOT_OUT_OF_SAMPLE",
+        "EXPANDING_WINDOW_OOF": "EXPANDING_WINDOW_OOF_REPLAY",
+        "FROZEN_HOLDOUT": "FROZEN_JULY_HOLDOUT",
+    }.get(v5_evaluation_mode)
     input_warnings = (
         [
             "MODEL_INPUTS_INCLUDE_PRICES_CALENDAR_LAGS_GFS24_WEATHER_AND_LAG48PLUS_SUPPLY_HISTORY",
             "GFS_FIXED_LEAD24_IS_NOT_A_UNIFIED_DECLARATION_CUTOFF_SNAPSHOT",
             "TARGET_DATE_ACTUAL_SUPPLY_EXCLUDED",
-            "BACKTEST_USES_4_TO_6_MONTH_ROLLING_OOF_SELECTION_AND_FROZEN_JULY_HOLDOUT",
+            v5_evaluation_warning or "V5_EVALUATION_MODE_UNAVAILABLE",
+            f"TRAINING_DATA_END={raw['summary'].get('training_end', 'UNKNOWN')}",
+            f"EVENT_PROBABILITY_CALIBRATION={raw['summary'].get('event_probability_calibration', 'UNKNOWN')}",
         ]
         if is_v5
         else [
@@ -1337,7 +1345,11 @@ def build_price_forecast_v1_result(request: ModelRunCreateRequestV1, run_id: str
         strategy_ready=ready,
         warnings=input_warnings + [
             f"RT_BACKTEST_MAE_YUAN_PER_MWH={rt_metrics['mae']:.3f}" if rt_metrics["mae"] is not None else "RT_BACKTEST_METRICS_UNAVAILABLE",
-            f"SPREAD_DIRECTION_ACCURACY={raw['summary'].get('spread_direction_accuracy', 0):.3f}",
+            (
+                f"SPREAD_DIRECTION_ACCURACY={raw['summary']['spread_direction_accuracy']:.3f}"
+                if raw["summary"].get("spread_direction_accuracy") is not None
+                else "SPREAD_DIRECTION_ACCURACY_UNAVAILABLE"
+            ),
             "STRATEGY_INPUTS_INCOMPLETE_HOLD_ONLY" if missing else "MANUAL_REVIEW_REQUIRED",
             "NO_AUTOMATIC_TRADING",
         ],
@@ -1514,7 +1526,7 @@ def create_model_run(request: ModelRunCreateRequestV1, parent_run_id: str | None
     if (
         market_code == "SD"
         and request.model_id == "price-forecast"
-        and "2026-07-01" <= request.market_date <= "2026-07-31"
+        and "2026-01-01" <= request.market_date <= "2026-07-31"
     ):
         request = request.model_copy(
             update={
@@ -3577,7 +3589,7 @@ def models_v1() -> dict[str, Any]:
             },
             {
                 "id": "price-forecast",
-                "name": "山东目标日供需条件增强预测",
+                "name": "山东V5 GFS24价格预测（1—7月研究回放）",
                 "status": "connected_local",
                 "versions": ["sd-gfs24-spatial-lgbm-v1", CONDITIONAL_VERSION],
                 "run_mode": "synchronous_local",
@@ -3585,7 +3597,7 @@ def models_v1() -> dict[str, Any]:
                 "output_contract": "forecast-strategy-contract-v1",
             },
         ],
-        "note": "山东默认价格引擎为V5 GFS24；历史conditional版本字符串保留为兼容别名。V5资产不可用时回退原模型，结果仍需人工复核。",
+        "note": "山东默认价格引擎为V5 GFS24：1月为训练内诊断，2—6月为扩展窗口OOF回放，7月为冻结独立测试；历史conditional版本字符串保留为兼容别名，结果仍需人工复核。",
     }
 
 
@@ -3938,6 +3950,8 @@ PUBLIC_INDEX = ROOT / "index.html"
 PUBLIC_VENDOR = ROOT / "vendor"
 if PUBLIC_VENDOR.is_dir():
     app.mount("/vendor", StaticFiles(directory=PUBLIC_VENDOR), name="vendor")
+if PUBLIC_DATA.is_dir():
+    app.mount("/data", StaticFiles(directory=PUBLIC_DATA), name="public-data")
 
 
 @app.get("/", include_in_schema=False)
@@ -3945,5 +3959,3 @@ def public_platform() -> FileResponse:
     if not PUBLIC_INDEX.is_file():
         raise HTTPException(status_code=404, detail="Public platform asset is not installed")
     return FileResponse(PUBLIC_INDEX, media_type="text/html")
-
-
