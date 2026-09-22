@@ -15,7 +15,8 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StrictFloat
 
 from .policy_agent_client import PolicyAgentClient, PolicyAgentError
@@ -3932,5 +3933,17 @@ except Exception as error:  # pragma: no cover - deployment diagnostics only
     trading_agent_app = None
     print(f"Trading Agent mount unavailable: {error}")
 
+
+PUBLIC_INDEX = ROOT / "index.html"
+PUBLIC_VENDOR = ROOT / "vendor"
+if PUBLIC_VENDOR.is_dir():
+    app.mount("/vendor", StaticFiles(directory=PUBLIC_VENDOR), name="vendor")
+
+
+@app.get("/", include_in_schema=False)
+def public_platform() -> FileResponse:
+    if not PUBLIC_INDEX.is_file():
+        raise HTTPException(status_code=404, detail="Public platform asset is not installed")
+    return FileResponse(PUBLIC_INDEX, media_type="text/html")
 
 

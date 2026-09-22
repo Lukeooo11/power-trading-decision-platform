@@ -11,6 +11,8 @@ COPY backend/agent_app ./agent_app
 COPY backend/model_assets ./model_assets
 COPY data ./data
 COPY private-data/henan-2026 ./private-data/henan-2026
+COPY index.html ./index.html
+COPY vendor ./vendor
 
 ENV POWER_TRADING_ENV=production
 ENV POWER_TRADING_CORS_ORIGINS=https://lukeooo11.github.io
