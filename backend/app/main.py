@@ -1231,12 +1231,33 @@ def build_price_forecast_v1_result(request: ModelRunCreateRequestV1, run_id: str
     rt_weather_mae = rt_weather_metrics.get("mae")
     rt_baseline_mae = rt_baseline_metrics.get("mae")
     rt_weather_improvement = rt_baseline_mae - rt_weather_mae if rt_baseline_mae is not None and rt_weather_mae is not None else None
+    is_v5 = raw.get("model_version") == "sd-gfs24-spatial-lgbm-v1"
+    input_warnings = (
+        [
+            "MODEL_INPUTS_INCLUDE_PRICES_CALENDAR_LAGS_GFS24_WEATHER_AND_LAG48PLUS_SUPPLY_HISTORY",
+            "GFS_FIXED_LEAD24_IS_NOT_A_UNIFIED_DECLARATION_CUTOFF_SNAPSHOT",
+            "TARGET_DATE_ACTUAL_SUPPLY_EXCLUDED",
+            "BACKTEST_USES_4_TO_6_MONTH_ROLLING_OOF_SELECTION_AND_FROZEN_JULY_HOLDOUT",
+        ]
+        if is_v5
+        else [
+            "MODEL_INPUTS_INCLUDE_PRICES_CALENDAR_LAGS_PRE_DECLARATION_GFS_WEATHER_AND_LAGGED_SUPPLY_FORECASTS",
+            "WEATHER_AVAILABILITY_CONFIRMED_BY_BUSINESS_OWNER",
+            "SUPPLY_SOURCE_ISSUE_TIME_MISSING_D1_D7_LAGGED_USE_ONLY",
+            "Q1_ACTUAL_SUPPLY_EXCLUDED_FROM_TARGET_DAY_FEATURES",
+            "BACKTEST_USES_ROLLING_DAILY_PRE_DECLARATION_CUTOFF",
+        ]
+    )
     result = ForecastStrategyResultV1(
         request_id=request.request_id,
         run_id=run_id,
         market_code=request.market_code.upper(),
         market_date=request.market_date,
-        model={"id": request.model_id, "name": "山东现货价格概率集成预测", "version": request.model_version},
+        model={
+            "id": request.model_id,
+            "name": "山东现货价格概率集成预测",
+            "version": raw.get("model_version", request.model_version),
+        },
         data_snapshot={
             "version": request.data_version,
             "created_at": utc_now(),
@@ -1245,7 +1266,7 @@ def build_price_forecast_v1_result(request: ModelRunCreateRequestV1, run_id: str
                 "portfolio_load": "sd-portfolio-load-2026h1-v1",
                 "weather": raw["summary"].get("weather_data_version", "sd-weather-gfs-hourly-v2"),
                 "market_supply": raw["summary"].get("supply_data_version", "sd-system-output-hourly-2026h1-v1"),
-                "algorithm_package": "wangyifan-111/-@33adaad1 integrated_price_forecast.py",
+                "algorithm_package": raw.get("model_version", "wangyifan-111/-@33adaad1 integrated_price_forecast.py"),
             },
             "available_domains": available,
             "missing_domains": missing,
@@ -1313,12 +1334,7 @@ def build_price_forecast_v1_result(request: ModelRunCreateRequestV1, run_id: str
         },
         periods=periods,
         strategy_ready=ready,
-        warnings=[
-            "MODEL_INPUTS_INCLUDE_PRICES_CALENDAR_LAGS_PRE_DECLARATION_GFS_WEATHER_AND_LAGGED_SUPPLY_FORECASTS",
-            "WEATHER_AVAILABILITY_CONFIRMED_BY_BUSINESS_OWNER",
-            "SUPPLY_SOURCE_ISSUE_TIME_MISSING_D1_D7_LAGGED_USE_ONLY",
-            "Q1_ACTUAL_SUPPLY_EXCLUDED_FROM_TARGET_DAY_FEATURES",
-            "BACKTEST_USES_ROLLING_DAILY_PRE_DECLARATION_CUTOFF",
+        warnings=input_warnings + [
             f"RT_BACKTEST_MAE_YUAN_PER_MWH={rt_metrics['mae']:.3f}" if rt_metrics["mae"] is not None else "RT_BACKTEST_METRICS_UNAVAILABLE",
             f"SPREAD_DIRECTION_ACCURACY={raw['summary'].get('spread_direction_accuracy', 0):.3f}",
             "STRATEGY_INPUTS_INCOMPLETE_HOLD_ONLY" if missing else "MANUAL_REVIEW_REQUIRED",
@@ -1494,6 +1510,17 @@ def create_model_run(request: ModelRunCreateRequestV1, parent_run_id: str | None
     market_code = request.market_code.upper()
     market_profile(market_code)
     validate_business_date(request.market_date)
+    if (
+        market_code == "SD"
+        and request.model_id == "price-forecast"
+        and "2026-07-01" <= request.market_date <= "2026-07-31"
+    ):
+        request = request.model_copy(
+            update={
+                "model_version": "sd-gfs24-spatial-lgbm-v1",
+                "data_version": "sd-16city-gfs-fixed-lead24-20260101-20260831-v1",
+            }
+        )
     if request.model_id == "lag-baseline":
         input_summary = dict(request.input_summary)
         available_domains = {str(item) for item in input_summary.get("available_domains", [])}
@@ -1576,9 +1603,17 @@ def create_model_run(request: ModelRunCreateRequestV1, parent_run_id: str | None
     elif request.model_id == "price-forecast":
         try:
             if request.model_version == CONDITIONAL_VERSION:
-                result = build_conditional_forecast_v1_result(
-                    request.model_copy(update={"market_code": market_code}), run_id
-                )
+                # Keep the historical version string as an API alias, but serve V5
+                # whenever its controlled assets cover the requested market date.
+                raw = run_price_forecast(PRIVATE_DATA, request.market_date)
+                if raw.get("model_version") == "sd-gfs24-spatial-lgbm-v1":
+                    result = build_price_forecast_v1_result(
+                        request.model_copy(update={"market_code": market_code}), run_id, raw
+                    )
+                else:
+                    result = build_conditional_forecast_v1_result(
+                        request.model_copy(update={"market_code": market_code}), run_id
+                    )
             else:
                 raw = run_price_forecast(PRIVATE_DATA, request.market_date)
                 result = build_price_forecast_v1_result(request.model_copy(update={"market_code": market_code}), run_id, raw)
@@ -3543,13 +3578,13 @@ def models_v1() -> dict[str, Any]:
                 "id": "price-forecast",
                 "name": "山东目标日供需条件增强预测",
                 "status": "connected_local",
-                "versions": [CONDITIONAL_VERSION],
+                "versions": ["sd-gfs24-spatial-lgbm-v1", CONDITIONAL_VERSION],
                 "run_mode": "synchronous_local",
                 "result_callback": "/api/v1/model-runs/{run_id}/results",
                 "output_contract": "forecast-strategy-contract-v1",
             },
         ],
-        "note": "默认使用目标日供需条件增强模型；目标日供需预测不完整时自动回退六天气特征模型，结果仍需人工复核。",
+        "note": "山东默认价格引擎为V5 GFS24；历史conditional版本字符串保留为兼容别名。V5资产不可用时回退原模型，结果仍需人工复核。",
     }
 
 

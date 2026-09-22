@@ -5,6 +5,7 @@ COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
 COPY backend/agent_app ./agent_app
+COPY backend/model_assets ./model_assets
 COPY data ./data
 COPY private-data/henan-2026 ./private-data/henan-2026
 

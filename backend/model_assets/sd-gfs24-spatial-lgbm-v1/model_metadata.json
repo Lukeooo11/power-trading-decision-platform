@@ -1,0 +1,36 @@
+{
+  "modelVersion": "sd-gfs24-spatial-lgbm-v1",
+  "weatherDataVersion": "sd-16city-gfs-fixed-lead24-20260101-20260831-v1",
+  "trainingCutoff": "2026-06-30",
+  "julyMetrics": {
+    "dayAhead": {
+      "mae": 50.16887993358531,
+      "rmse": 72.53584500587569,
+      "bias": -19.048499268218187,
+      "negative_accuracy": 1.0,
+      "high_price_recall": 0.0
+    },
+    "realTime": {
+      "mae": 79.89454305147972,
+      "rmse": 129.2270084711569,
+      "bias": -13.554602979730562,
+      "negative_accuracy": 0.9341397849462365,
+      "high_price_recall": 0.0
+    },
+    "spreadMae": 83.22682454974864,
+    "spreadDirectionAccuracy": 0.5618279569892473
+  },
+  "availabilityControl": {
+    "forecastIssueTimePresent": true,
+    "unifiedDeclarationCutoffVerified": false
+  },
+  "sha256": {
+    "day_ahead.pkl": "e10570897039d62345d545898ce61454feec251f73dbeecf885cb7bd775132dc",
+    "negative.pkl": "49e7a19cad752953e6ff0ab23f59c003daf3ebfa3338949537478974cfda2b8e",
+    "real_time.pkl": "a6dbfb64f6eb729ff82f01ba67b708113d09ccdd6c87e6cee80e9b8b9900b241",
+    "spike.pkl": "5a3cb68e1191b3f961e7e91030965ac7b4618cc2eafee1ff4c068128ab2b7389",
+    "spread.pkl": "42a615c035a1bea57ccd6027a95a8ac528aad7801f38b0e2e27910caf22147a7",
+    "residual_calibration.json": "7f1ded50ed9c4f9ec546ebcb82e6acd7e042f8ed4f00483118f2bfa3593d3e9c",
+    "v5_gfs24_feature_store.csv.gz": "7f08411249d24bec727ac0267b9e50d745a51a590ef21242220867784da17ccf"
+  }
+}

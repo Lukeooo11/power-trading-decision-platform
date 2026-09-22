@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from .price_forecast_tabular import run_supply_candidate
+from .v5_shandong_price_forecast import run_v5_shandong_forecast
 from .deep_sequence_models import run_sequence_challengers
 
 
@@ -712,6 +713,20 @@ def _run_latest_repository_adapter(private_data_dir: Path, market_date: str) -> 
 
 
 def run_price_forecast(private_data_dir: Path, market_date: str, high_price_threshold: float = 500.0) -> dict[str, Any]:
+    # Primary Shandong price engine. The pre-existing model below remains the fallback.
+    v5_error: str | None = None
+    try:
+        return run_v5_shandong_forecast(
+            target_date=market_date,
+            private_data_dir=private_data_dir,
+            high_price_threshold=high_price_threshold,
+        )
+    except (FileNotFoundError, ImportError, KeyError, ValueError, OSError) as error:
+        v5_error = str(error)
+
+    if '2026-07-01' <= market_date <= '2026-07-31' and (private_data_dir / 'july_import_manifest.json').exists():
+        from .july_pipeline import raw_cached_forecast
+        return raw_cached_forecast(private_data_dir, market_date)
     # Prefer the reproducible adapter shipped in the latest algorithm package.
     # Keep the normalized-data implementation below as a compatibility fallback
     # for environments where optional LightGBM/XGBoost dependencies are absent.
@@ -1007,4 +1022,13 @@ def run_price_forecast(private_data_dir: Path, market_date: str, high_price_thre
     }
     if latest_error:
         result["summary"]["latest_repository_adapter_error"] = latest_error
+    if v5_error:
+        result["summary"]["v5_fallback_used"] = True
+        result["summary"]["v5_fallback_reason"] = v5_error
+        result["summary"]["forecast_selection"] = {
+            "selected_model_version": result.get("model_version"),
+            "fallback_used": True,
+            "fallback_reason": v5_error,
+            "target_actual_supply_used": False,
+        }
     return result
