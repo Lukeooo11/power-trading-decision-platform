@@ -2287,6 +2287,82 @@ canvas {
   min-height: 280px;
 }
 
+.period-reliability-panel {
+  overflow: hidden;
+}
+
+.reliability-strip {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.period-reliability-card {
+  min-width: 0;
+  min-height: 116px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--muted);
+  border-radius: 6px;
+  background: #f8faf9;
+  font-variant-numeric: tabular-nums;
+}
+
+.period-reliability-card header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--line);
+}
+
+.period-reliability-card header strong {
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.period-reliability-card header span,
+.period-reliability-card dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.period-reliability-card dl {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+}
+
+.period-reliability-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.period-reliability-card dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.period-reliability-card.level-high {
+  border-left-color: var(--teal);
+  background: #f1f8f6;
+}
+
+.period-reliability-card.level-medium {
+  border-left-color: var(--amber);
+  background: #fbf7ed;
+}
+
+.period-reliability-card.level-low {
+  border-left-color: var(--red);
+  background: #fcf3f1;
+}
+
 .forecast-comparison-table table {
   min-width: 940px;
 }
@@ -3219,6 +3295,10 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .reliability-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .report-kpi-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -3275,6 +3355,15 @@ th {
 @media (max-width: 720px) {
   .main {
     padding: 16px;
+  }
+
+  .reliability-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .period-reliability-card {
+    min-height: 112px;
+    padding: 9px;
   }
 
   .topbar,
@@ -4719,6 +4808,17 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
             </div>
             <div class="metric-row" id="forecastBacktest"></div>
             <div class="model-governance" id="forecastGovernance" hidden></div>
+          </section>
+
+          <section class="panel period-reliability-panel" id="forecastPeriodReliabilityPanel" hidden>
+            <div class="panel-head">
+              <div>
+                <h3>盘前实时逐时段可靠性</h3>
+                <p>基于98天严格D-3滚动回测；等级描述历史稳定性，不是未来预测点的正确概率</p>
+              </div>
+              <span class="pill partial" id="forecastReliabilityStatus">待运行</span>
+            </div>
+            <div class="reliability-strip" id="forecastPeriodReliability"></div>
           </section>
 
           <section class="panel">
@@ -6484,6 +6584,8 @@ const state = {
   forecastSource: "山东真实历史价格与组合负荷",
   forecastProvidedMetrics: null,
   forecastRunMeta: null,
+  henanForecastResult: null,
+  henanDataQuality: null,
   secondaryPriceForecastResult: null,
   backendOnline: false,
   selectedMarket: "national",
@@ -6908,6 +7010,16 @@ function hydrateDates() {
 function hydrateForecastDates() {
   const select = document.querySelector("#forecastDateSelect");
   const marketData = selectedMarketData();
+  hydrateForecastModelOptions();
+  if (state.selectedMarket === "HA") {
+    const availability = state.henanDataQuality?.availability || {};
+    const range = String(availability.priceLabels || "").match(/(\d{4}-\d{2}-\d{2})\/(\d{4}-\d{2}-\d{2})/);
+    const dates = range ? dateRange(range[1], range[2]) : [];
+    state.forecastDate = state.henanForecastResult?.targetDate || dates.at(-1) || "";
+    select.innerHTML = dates.map((date) => `<option value="${date}">${date} · 河南研究回测</option>`).join("");
+    select.value = state.forecastDate;
+    return;
+  }
   const priceDates = [...new Set(marketData.spotPrices.map((row) => row.date).filter(Boolean))].sort();
   const publishedForecastDates = [...new Set((state.priceForecastHistory?.results || []).map((row) => row.market_date).filter(Boolean))].sort();
   const dates = hasConnectedMarketData() && publishedForecastDates.length
@@ -6925,6 +7037,37 @@ function hydrateForecastDates() {
   const observedDateSet = new Set(priceDates);
   select.innerHTML = dates.map((date) => `<option value="${date}">${date} · ${observedDateSet.has(date) ? "历史可回测" : "预测目标日"}</option>`).join("");
   select.value = state.forecastDate;
+}
+
+function dateRange(start, end) {
+  const dates = [];
+  const cursor = new Date(`${start}T00:00:00Z`);
+  const last = new Date(`${end}T00:00:00Z`);
+  while (cursor <= last && dates.length < 370) {
+    dates.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return dates;
+}
+
+function hydrateForecastModelOptions() {
+  const select = document.querySelector("#forecastModelSelect");
+  if (!select) return;
+  if (state.selectedMarket === "HA") {
+    select.innerHTML = '<option value="henan-real-time-pre-da-da-anchor-v3">河南分时日前锚定（严格D-3研究版）</option>';
+    select.value = "henan-real-time-pre-da-da-anchor-v3";
+    return;
+  }
+  select.innerHTML = '<option value="sd-target-supply-conditional-v1">目标日供需条件增强（缺失自动回退）</option>';
+  select.value = "sd-target-supply-conditional-v1";
+}
+
+async function prepareHenanForecastControls() {
+  if (state.selectedMarket !== "HA") return;
+  state.henanDataQuality = await fetchJsonOptional(`${PLATFORM_API_BASE}/api/henan/data-quality`, null);
+  if (state.selectedMarket !== "HA") return;
+  hydrateForecastDates();
+  renderForecast();
 }
 
 function selectedForecastBacktest() {
@@ -7128,7 +7271,9 @@ function switchView(view) {
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.view === view));
   document.querySelectorAll(".view").forEach((item) => item.classList.remove("active"));
   const market = selectedMarketProfile();
-  const pending = MARKET_DEPENDENT_VIEWS.has(view) && !hasConnectedMarketData();
+  const pending = MARKET_DEPENDENT_VIEWS.has(view)
+    && !hasConnectedMarketData()
+    && !(view === "forecast" && hasForecastMarketData());
   document.querySelector("#marketPendingState").hidden = !pending;
   if (!pending) document.querySelector(`#${view}View`).classList.add("active");
   els.viewTitle.textContent = pending ? `${market ? market.name : "全国"} · ${titles[view]}` : titles[view];
@@ -7162,6 +7307,9 @@ function selectMarket(code) {
     switchView("desk");
   }
   renderAll();
+  if (code === "HA") prepareHenanForecastControls().catch((error) => {
+    console.warn("Henan forecast controls unavailable", error);
+  });
 }
 
 function selectSubject(subject) {
@@ -7191,6 +7339,10 @@ function hasConnectedMarketData() {
   return state.selectedMarket === "SD" && state.selectedSubject === "retail";
 }
 
+function hasForecastMarketData() {
+  return hasConnectedMarketData() || state.selectedMarket === "HA";
+}
+
 function clearMarketScopedState() {
   state.forecastResults = [];
   state.forecastProvidedMetrics = null;
@@ -7207,6 +7359,7 @@ function clearMarketScopedState() {
   state.selectedCustomerAlias = "";
   state.selectedCustomerDate = "";
   state.weatherDate = "";
+  state.henanForecastResult = null;
 }
 
 function selectedMarketData() {
@@ -7259,6 +7412,11 @@ function updateMarketContext() {
     text.textContent = `${role.name}视角 · 已接入小时价格、127家客户脱敏负荷、5月至7月GFS天气和1至6月月度结算；竞价空间、申报成交和市场规则仍待补。`;
     status.textContent = "真实数据（已脱敏）";
     status.className = "pill partial";
+  } else if (state.selectedMarket === "HA") {
+    title.textContent = `${market.name}电力市场 · ${subject.name}`;
+    text.textContent = `${role.name}视角 · 已接入河南小时日前/实时价格、天气和电源预测研究数据；发布时间、交易规则、持仓与申报成交仍待补齐。`;
+    status.textContent = "预测研究数据";
+    status.className = "pill partial";
   } else {
     title.textContent = `${market.name}电力市场 · ${subject.name}`;
     text.textContent = `${role.name}视角 · ${subject.description} 当前仅保留业务流程与接口，真实规则和数据尚未接入。`;
@@ -7279,6 +7437,9 @@ function updateMarketContext() {
   } else if (hasConnectedMarketData()) {
     setText("#platformReadiness", `${subject.name} · 真实数据（已脱敏）`);
     setText("#platformCoverage", `价格、127家客户脱敏负荷、62天GFS天气和6个月经营结算已接入；${CUSTOMER.company} 单日结算保留为附加案例。`);
+  } else if (state.selectedMarket === "HA") {
+    setText("#platformReadiness", "价格预测 · 研究数据已接入");
+    setText("#platformCoverage", "河南24点价格、天气和电源预测已接入；缺少可审计发布时间，仅用于研究回测。 ");
   } else {
     setText("#platformReadiness", `${subject.name} · 模板就绪`);
     setText("#platformCoverage", "该省份与交易主体的数据隔离空间和接口已预留，当前未载入其他业务数据。");
@@ -8670,9 +8831,52 @@ function buildForecastResults(date) {
 async function runForecastEvaluation(options = {}) {
   state.forecastResults = [];
   state.forecastProvidedMetrics = null;
-  state.forecastRunMeta = { status: "RUNNING", message: "正在调用山东一体化价格预测模型。" };
-  state.forecastSource = "山东一体化价格预测模型";
+  const isHenanForecast = state.selectedMarket === "HA";
+  state.forecastRunMeta = { status: "RUNNING", message: isHenanForecast ? "正在调用河南研究性预测接口。" : "正在调用山东一体化价格预测模型。" };
+  state.forecastSource = isHenanForecast ? "河南严格D-3研究性预测" : "山东一体化价格预测模型";
   renderForecast();
+  if (isHenanForecast) {
+    state.forecastRunMeta = { status: "RUNNING", message: "正在调用河南研究性预测接口。" };
+    state.forecastSource = "河南严格D-3研究性预测";
+    try {
+      if (!state.henanDataQuality) {
+        state.henanDataQuality = await fetchJson(`${PLATFORM_API_BASE}/api/henan/data-quality`);
+        hydrateForecastDates();
+      }
+      const targetDate = state.forecastDate || document.querySelector("#forecastDateSelect")?.value;
+      if (!targetDate) throw new Error("河南预测日期不可用");
+      const response = await fetch(`${PLATFORM_API_BASE}/api/henan/forecast?date=${encodeURIComponent(targetDate)}`, { cache: "no-store" });
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail?.detail?.message || `HTTP ${response.status}`);
+      }
+      const payload = await response.json();
+      state.henanForecastResult = payload;
+      state.forecastModelVersion = payload.modelVersion || "henan-real-time-pre-da-da-anchor-v3";
+      state.forecastResults = normalizeForecastRows(payload.forecast || [], {
+        target: "real_time",
+        market_date: payload.targetDate,
+        model: { version: payload.modelVersion },
+        data_snapshot: { version: payload.dataVersion },
+      });
+      state.forecastProvidedMetrics = payload.backtest || null;
+      state.forecastRunMeta = {
+        status: "SUCCEEDED",
+        review_status: "RESEARCH_ONLY",
+        data_version: payload.dataVersion,
+        message: "河南结果已生成；缺少历史天气和电源预测发布时间，不可视为严格实时预测。",
+      };
+      state.forecastSource = "河南严格D-3盘前实时研究模型";
+      renderForecast();
+      drawForecastChart(chartEls.forecast, state.forecastResults);
+      if (!options.silent) showToast(`已生成河南 ${state.forecastResults.length} 点研究性预测。`);
+    } catch (error) {
+      state.forecastRunMeta = { status: "FAILED", message: error.message || String(error) };
+      renderForecast();
+      if (!options.silent) showToast(`河南模型运行失败：${state.forecastRunMeta.message}`);
+    }
+    return;
+  }
   if (!hasConnectedMarketData()) {
     state.forecastRunMeta = { status: "BLOCKED", message: "当前市场没有可用的山东真实数据。" };
     renderForecast();
@@ -8860,7 +9064,7 @@ async function checkBackend() {
 }
 
 function renderForecast() {
-  if (!hasConnectedMarketData()) {
+  if (!hasForecastMarketData()) {
     document.querySelector("#forecastKpis").innerHTML = sampleItem({ title: "预测数据待接入", body: "当前省份和交易主体没有可用的价格预测输入或模型结果。" });
     document.querySelector("#forecastChartSubtitle").textContent = "不会跨省份或跨交易主体复用模型结果";
     document.querySelector("#forecastPointStatus").textContent = "0 点";
@@ -8869,6 +9073,7 @@ function renderForecast() {
     renderDailyForecastAccuracy();
     document.querySelector("#forecastGovernance").innerHTML = "";
     document.querySelector("#forecastResultTable").innerHTML = '<tr><td colspan="8">暂无预测结果。</td></tr>';
+    renderForecastPeriodReliability();
     renderForecastActualComparison();
     return;
   }
@@ -8880,6 +9085,7 @@ function renderForecast() {
     renderDailyForecastAccuracy();
     document.querySelector("#forecastGovernance").innerHTML = "";
     document.querySelector("#forecastResultTable").innerHTML = "";
+    renderForecastPeriodReliability();
     for (const canvas of [chartEls.forecast, chartEls.forecastDayAheadActual, chartEls.forecastRealTimeActual, chartEls.forecastSpreadActual]) {
       if (canvas) canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
     }
@@ -8900,6 +9106,11 @@ function renderForecast() {
   const isJulyResearch = resultModelVersion === "sd-sixweather-lagged-supply-v1";
   const negativeRiskCount = rows.filter((row) => ["MEDIUM", "HIGH"].includes(row.negativeRisk?.level)).length;
   const highRiskCount = rows.filter((row) => ["MEDIUM", "HIGH"].includes(row.highRisk?.level)).length;
+  const reliabilityCounts = (state.henanForecastResult?.periodReliability?.periods || []).reduce((result, item) => {
+    const level = String(item.reliabilityLevel || "LOW").toUpperCase();
+    result[level] = (result[level] || 0) + 1;
+    return result;
+  }, {});
   document.querySelector("#forecastKpis").innerHTML = [
     ["预测点数", `${rows.length} 点`],
     [`平均预测${targetLabel}`, `${fmt(avgPrice)} 元/MWh`],
@@ -8909,7 +9120,7 @@ function renderForecast() {
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
   document.querySelector("#forecastChartSubtitle").textContent = `${state.forecastDate} · ${state.forecastSource} · ${resultModelVersion}`;
   document.querySelector("#forecastPointStatus").textContent = `${rows.length} 点`;
-  document.querySelector("#forecastModeStatus").textContent = isJulyResearch ? "7月研究模型" : state.forecastSource.includes("外部导入")
+  document.querySelector("#forecastModeStatus").textContent = state.selectedMarket === "HA" ? "河南研究模型" : isJulyResearch ? "7月研究模型" : state.forecastSource.includes("外部导入")
     ? "外部文件结果"
     : state.forecastSource.includes("价格预测模型")
       ? "价格预测模型"
@@ -8917,19 +9128,22 @@ function renderForecast() {
       ? "本地后端基线"
       : "浏览器回退基线";
   const insightItems = [
-    { title: "预测目标", body: isJulyResearch ? "分别输出日前、盘前实时、日前出清后实时预测。区间来自历史滚动预测误差；出清后实时结果不参与盘前策略。" : `当前主模型输出${targetLabel}P10/P50/P90。${isDayAheadTarget ? "实时价格和日前-实时价差由后续实时模型补充。" : "可用于日前申报前的实时价差判断。"}` },
-    { title: "风险时段", body: `负价中高风险 ${negativeRiskCount} 点，高价中高风险 ${highRiskCount} 点；风险原因码保留在小时结果中供人工复核。` },
+    { title: "预测目标", body: state.selectedMarket === "HA" ? "分别输出日前D+1、盘前实时D+2和日前出清后实时预测；当前表格主结果为盘前实时，出清后结果不参与盘前策略。" : isJulyResearch ? "分别输出日前、盘前实时、日前出清后实时预测。区间来自历史滚动预测误差；出清后实时结果不参与盘前策略。" : `当前主模型输出${targetLabel}P10/P50/P90。${isDayAheadTarget ? "实时价格和日前-实时价差由后续实时模型补充。" : "可用于日前申报前的实时价差判断。"}` },
+    state.selectedMarket === "HA"
+      ? { title: "可靠性分布", body: `严格D-3历史回测中，高可靠性${reliabilityCounts.HIGH || 0}点、中可靠性${reliabilityCounts.MEDIUM || 0}点、低可靠性${reliabilityCounts.LOW || 0}点；低可靠性点必须优先人工复核。` }
+      : { title: "风险时段", body: `负价中高风险 ${negativeRiskCount} 点，高价中高风险 ${highRiskCount} 点；风险原因码保留在小时结果中供人工复核。` },
     { title: "峰值时段", body: `${peakPoint.time} 预测价格最高，为 ${fmt(peakPoint.predictedPrice)} 元/MWh；驱动因素：${peakPoint.drivers}。` },
   ];
   if (Number.isFinite(peakSpread.spread)) insightItems.push({ title: "最大偏离", body: `${peakSpread.time} 相对日前参考价差 ${signed(peakSpread.spread)} 元/MWh，建议作为申报复核点。` });
   document.querySelector("#forecastInsights").innerHTML = insightItems.map((item) => `<article class="signal-item"><strong>${item.title}</strong><p>${item.body}</p></article>`).join("");
 
   renderDailyForecastAccuracy();
+  renderForecastPeriodReliability();
   document.querySelector("#forecastGovernance").innerHTML = [
-    ["数据来源", isJulyResearch ? `${state.forecastSource}；六项天气特征（发布时间待核验，不含湿度），价格最短滞后D-2、出力采用D-2/D-7滞后；不使用目标日实际出力。仅作研究回放。` : `${state.forecastSource}；价格、日历滞后、申报前GFS天气与Q2电源预测D-1/D-7滞后；逐户名称未进入模型输入`],
+    ["数据来源", state.selectedMarket === "HA" ? `${state.forecastSource}；河南小时价格、目标日电源预测和省级天气。实时训练标签严格截止目标日D-3；天气和电源预测发布时间缺失，仅作研究回放。` : isJulyResearch ? `${state.forecastSource}；六项天气特征（发布时间待核验，不含湿度），价格最短滞后D-2、出力采用D-2/D-7滞后；不使用目标日实际出力。仅作研究回放。` : `${state.forecastSource}；价格、日历滞后、申报前GFS天气与Q2电源预测D-1/D-7滞后；逐户名称未进入模型输入`],
     ["输入批次", rows[0].importBatchId || "外部导入批次"],
     ["运行追踪", state.forecastRunMeta?.run_id ? `${state.forecastRunMeta.run_id} · ${state.forecastRunMeta.data_version || "待补数据版本"}` : "浏览器结果，尚未生成run_id"],
-    ["上线门槛", "补齐目标日电源预测发布时间、连续滚动回测、规则校验和交易员确认"],
+    ["上线门槛", state.selectedMarket === "HA" ? "补齐天气与电源预测发布时间、机组故障/检修和断面约束，完成前瞻验证后再用于申报" : "补齐目标日电源预测发布时间、连续滚动回测、规则校验和交易员确认"],
   ].map(([label, value]) => `<article class="governance-item"><strong>${label}</strong><span>${value}</span></article>`).join("");
   document.querySelector("#forecastResultTable").innerHTML = rows.map((row) => `
     <tr>
@@ -9028,6 +9242,50 @@ function renderDailyForecastAccuracy() {
     ["价差Bias", `${signed(spread.bias)} 元/MWh`],
     ...postDaItems,
   ].map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
+}
+
+function renderForecastPeriodReliability() {
+  const panel = document.querySelector("#forecastPeriodReliabilityPanel");
+  const container = document.querySelector("#forecastPeriodReliability");
+  const status = document.querySelector("#forecastReliabilityStatus");
+  if (!panel || !container || !status) return;
+
+  const profile = state.henanForecastResult?.periodReliability;
+  const periods = profile?.periods || state.forecastResults
+    .map((row) => row.historicalReliability)
+    .filter(Boolean);
+  panel.hidden = state.selectedMarket !== "HA";
+  if (panel.hidden) return;
+  if (!periods.length) {
+    status.textContent = state.forecastRunMeta?.status === "RUNNING" ? "计算中" : "待运行";
+    status.className = "pill partial";
+    container.innerHTML = sampleItem({
+      title: "逐时段可靠性待加载",
+      body: "运行河南预测后，将显示各时段严格D-3历史回测的MAE、固定误差容忍命中率和系统偏差。",
+    });
+    return;
+  }
+
+  const counts = periods.reduce((result, item) => {
+    const level = String(item.reliabilityLevel || "LOW").toUpperCase();
+    result[level] = (result[level] || 0) + 1;
+    return result;
+  }, {});
+  status.textContent = `高 ${counts.HIGH || 0} · 中 ${counts.MEDIUM || 0} · 低 ${counts.LOW || 0}`;
+  status.className = `pill ${(counts.LOW || 0) ? "partial" : "ok"}`;
+  container.innerHTML = periods.map((item) => {
+    const level = String(item.reliabilityLevel || "LOW").toUpperCase();
+    const levelLabel = { HIGH: "高", MEDIUM: "中", LOW: "低" }[level] || "待核验";
+    return `
+      <article class="period-reliability-card level-${level.toLowerCase()}">
+        <header><strong>${escapeHtml(String(item.period).padStart(2, "0"))}</strong><span>${levelLabel}可靠性</span></header>
+        <dl>
+          <div><dt>MAE</dt><dd>${fmt(item.maeYuanPerMwh)}</dd></div>
+          <div><dt>±50命中</dt><dd>${fmt(Number(item.within50YuanAccuracy) * 100)}%</dd></div>
+          <div><dt>Bias</dt><dd>${signed(Number(item.biasYuanPerMwh))}</dd></div>
+        </dl>
+      </article>`;
+  }).join("");
 }
 
 function directionClass(direction) {
@@ -9140,8 +9398,8 @@ function renderForecastActualComparison() {
 
 function normalizeForecastRows(rows, context = {}) {
   return rows.map((row, index) => {
-    const realtimeQuantiles = row.real_time_price_yuan_per_mwh;
-    const dayAheadQuantiles = row.day_ahead_price_yuan_per_mwh;
+    const realtimeQuantiles = row.real_time_price_yuan_per_mwh || row.real_time_pre_da;
+    const dayAheadQuantiles = row.day_ahead_price_yuan_per_mwh || row.day_ahead;
     const target = context.target || row.target || context.prediction_target || "real_time";
     const targetQuantiles = target === "day_ahead" ? dayAheadQuantiles : realtimeQuantiles;
     const fallbackQuantiles = targetQuantiles || realtimeQuantiles || dayAheadQuantiles;
@@ -9153,7 +9411,9 @@ function normalizeForecastRows(rows, context = {}) {
     const dayAheadReference = Number(dayAheadQuantiles?.p50 ?? row.dayAheadReference ?? row.day_ahead_reference ?? row.dayAheadPrice ?? row["日前参考"] ?? predictedPrice);
     const lower = Number(fallbackQuantiles?.p10 ?? row.lower ?? row.lowerBound ?? row.lower_bound ?? row["置信区间下限"] ?? predictedPrice - 40);
     const upper = Number(fallbackQuantiles?.p90 ?? row.upper ?? row.upperBound ?? row.upper_bound ?? row["置信区间上限"] ?? predictedPrice + 40);
-    const explicitSpread = row.spread_day_ahead_minus_real_time_yuan_per_mwh ?? row.spread;
+    const henanRtMinusDa = row.spread_rt_minus_da;
+    const explicitSpread = row.spread_day_ahead_minus_real_time_yuan_per_mwh
+      ?? (Number.isFinite(Number(henanRtMinusDa)) ? -Number(henanRtMinusDa) : row.spread);
     const spread = explicitSpread === null || explicitSpread === undefined || explicitSpread === ""
       ? target === "day_ahead" ? null : dayAheadReference - predictedPrice
       : Number(explicitSpread);
@@ -9185,7 +9445,12 @@ function normalizeForecastRows(rows, context = {}) {
       spread,
       direction,
       confidence: confidenceRaw !== null && confidenceRaw !== undefined && confidenceRaw !== "" && Number.isFinite(Number(confidenceRaw)) ? Number(confidenceRaw) : null,
-      drivers: reasonCodes || row.drivers || row["主要驱动"] || "外部模型输出",
+      drivers: reasonCodes
+        || row.drivers
+        || row["主要驱动"]
+        || (Number.isFinite(Number(realtimeQuantiles?.anchorWeight))
+          ? `分时日前锚点：${realtimeQuantiles.anchorSegment} ${fmt(Number(realtimeQuantiles.anchorWeight) * 100)}%`
+          : "外部模型输出"),
       modelVersion: row.modelVersion ?? row.model_version ?? context.model?.version ?? row["模型版本"] ?? "external",
       actualPrice: actualRaw !== null && actualRaw !== undefined && actualRaw !== "" && Number.isFinite(Number(actualRaw)) ? Number(actualRaw) : null,
       actualDayAhead,
@@ -9195,6 +9460,13 @@ function normalizeForecastRows(rows, context = {}) {
       highRisk: row.high_price_risk || null,
       dataCompleteness: row.data_completeness || null,
       strategySuggestion: row.strategy_suggestion || null,
+      historicalReliability: realtimeQuantiles?.historicalReliability || row.historicalReliability || null,
+      pointOptimization: Number.isFinite(Number(realtimeQuantiles?.anchorWeight)) ? {
+        baseP50: Number(realtimeQuantiles.baseP50),
+        dayAheadD2AnchorP50: Number(realtimeQuantiles.dayAheadD2AnchorP50),
+        anchorSegment: realtimeQuantiles.anchorSegment,
+        anchorWeight: Number(realtimeQuantiles.anchorWeight),
+      } : null,
       sourceFile: "external-upload",
       importBatchId: context.data_snapshot?.version || `upload-${Date.now()}`,
     };

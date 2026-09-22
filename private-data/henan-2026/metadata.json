@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "henan-price-forecast-input-v1",
+  "marketCode": "HA",
+  "marketName": "河南",
+  "dataVersion": "henan-spot-weather-power-2026-v1",
+  "processedAt": "2026-09-10T12:12:45.394420+08:00",
+  "sourceFiles": {
+    "marketWorkbook": {
+      "name": "河南省现货出清价格及边界信息.xlsx",
+      "path": "C:\\Users\\40126\\Documents\\xwechat_files\\wxid_uv84xy1l6k3e22_dbd8\\msg\\file\\2026-09\\河南省现货出清价格及边界信息.xlsx",
+      "sha256": "96e7a3e114c3f2586fd6cb488fb412b44279e719e4435795d9e34c19c3704200"
+    },
+    "weatherZip": {
+      "name": "河南天气数据包_20260910_1124.zip",
+      "path": "C:\\Users\\40126\\Documents\\xwechat_files\\wxid_uv84xy1l6k3e22_dbd8\\msg\\file\\2026-09\\河南天气数据包_20260910_1124.zip",
+      "sha256": "646f89c777bfa6caf7c0b0192ea9156e51f39174431d6ba9d6eb2938a1998fb4"
+    }
+  },
+  "quality": {
+    "prices": {
+      "rows": 6000,
+      "day_ahead_date_min": "2026-01-01",
+      "day_ahead_date_max": "2026-09-07",
+      "real_time_date_min": "2026-01-01",
+      "real_time_date_max": "2026-09-06",
+      "day_ahead_missing": 0,
+      "real_time_missing": 24,
+      "period_rows_per_date": [
+        [
+          "2026-01-01",
+          24
+        ],
+        [
+          "2026-01-02",
+          24
+        ],
+        [
+          "2026-01-03",
+          24
+        ]
+      ]
+    },
+    "forecast_power_96_to_hour": {
+      "source_rows": 24073,
+      "date_count": 251,
+      "period_rows": 6019,
+      "incomplete_hour_rows": 0,
+      "source_points_per_date": {
+        "min": 73,
+        "max": 96
+      }
+    },
+    "actual_power_96_to_hour": {
+      "source_rows": 23904,
+      "date_count": 249,
+      "period_rows": 5976,
+      "incomplete_hour_rows": 0,
+      "source_points_per_date": {
+        "min": 96,
+        "max": 96
+      }
+    },
+    "renewable_forecast_96_to_hour": {
+      "source_rows": 24192,
+      "date_count": 251,
+      "period_rows": 6024,
+      "incomplete_hour_rows": 0,
+      "source_points_per_date": {
+        "min": 96,
+        "max": 192
+      }
+    },
+    "renewable_actual_96_to_hour": {
+      "source_rows": 24000,
+      "date_count": 248,
+      "period_rows": 5952,
+      "incomplete_hour_rows": 0,
+      "source_points_per_date": {
+        "min": 96,
+        "max": 192
+      }
+    },
+    "weather": {
+      "city_count": 18,
+      "hour_rows": 6240,
+      "date_min": "2026-01-01",
+      "date_max": "2026-09-17",
+      "incomplete_rows": 0,
+      "source_rows": 112320,
+      "historical_weather_is_not_forecast_snapshot": true
+    }
+  },
+  "availability": {
+    "priceLabels": "2026-01-01/2026-09-07 (DA); 2026-01-01/2026-09-06 (RT)",
+    "powerForecast": "2026-01-01/2026-09-08",
+    "actualPower": "2026-01-01/2026-09-06",
+    "weather": "2026-01-01/2026-09-14",
+    "weatherIssueTimeAvailable": false,
+    "powerForecastIssueTimeAvailable": false
+  },
+  "safety": {
+    "researchOnly": true,
+    "reason": "Historical weather and power forecast publication timestamps are not included; results cannot be claimed as strict real-time prospective forecasts.",
+    "actualTargetValuesExcludedFromFeatures": true,
+    "duplicateRevisionRows": "Some 96-point sheets contain repeated dates (up to 192 source rows); without issue timestamps the current snapshot aggregates repeated points and exposes the count in quality metadata."
+  }
+}

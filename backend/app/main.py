@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field, StrictFloat
 
 from .policy_agent_client import PolicyAgentClient, PolicyAgentError
 from .price_forecast_model import run_price_forecast
+from .henan_price_forecast import run_henan_forecast, run_henan_seven_day_forecast
 from .bidding_strategy import build_historical_price_scenarios, generate_strategy
 from .strategy_backtest import run_strategy_backtest
 from .strategy_comparison import compare_strategy_versions
@@ -50,6 +51,7 @@ else:
     ROOT = _LOCAL_ROOT
 CUSTOMER_DATA = ROOT / "customer-data" / "weifang-caixin"
 PRIVATE_DATA = ROOT / "private-data" / "shandong-2026h1"
+HENAN_PRIVATE_DATA = ROOT / "private-data" / "henan-2026"
 PUBLIC_DATA = ROOT / "data"
 DB_PATH = ROOT / "backend" / "data" / "platform.db"
 SHANGHAI_TZ = timezone(timedelta(hours=8), name="Asia/Shanghai")
@@ -497,6 +499,19 @@ def load_private_json(name: str) -> Any:
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"Data product not found: {name}")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def henan_data_available() -> bool:
+    return all(
+        (HENAN_PRIVATE_DATA / name).exists()
+        for name in (
+            "metadata.json",
+            "prices_hourly.json",
+            "power_forecast_hourly.json",
+            "renewable_forecast_hourly.json",
+            "weather_hourly_province.json",
+        )
+    )
 
 
 _PUBLIC_STRATEGY_ASSETS = {
@@ -2144,6 +2159,45 @@ def market_capabilities(market_code: str) -> dict[str, Any]:
         "客户实际负荷", "结算与财务", "中长期持仓", "运行约束与检修",
     ]
     return profile
+
+
+@app.get("/api/henan/forecast")
+def henan_forecast(
+    date: str = Query(..., description="目标交易日，格式 YYYY-MM-DD"),
+    backtest_start: str | None = Query(default=None),
+    backtest_end: str | None = Query(default=None),
+) -> dict[str, Any]:
+    """Read-only 河南适配预测；结果明确标记为研究性，不生成申报指令。"""
+    if not henan_data_available():
+        raise api_error(409, "HENAN_DATA_NOT_READY", "河南公开市场数据快照尚未生成")
+    validate_business_date(date)
+    if (backtest_start is None) != (backtest_end is None):
+        raise api_error(422, "BACKTEST_RANGE_INCOMPLETE", "backtest_start and backtest_end must be provided together")
+    result = run_henan_forecast(HENAN_PRIVATE_DATA, date, backtest_start, backtest_end)
+    result["source"] = {
+        "data_version": "henan-spot-weather-power-2026-v1",
+        "metadata_url": "/api/henan/data-quality",
+        "execution_allowed": False,
+    }
+    return result
+
+
+@app.get("/api/henan/data-quality")
+def henan_data_quality() -> dict[str, Any]:
+    if not henan_data_available():
+        raise api_error(409, "HENAN_DATA_NOT_READY", "河南公开市场数据快照尚未生成")
+    return json.loads((HENAN_PRIVATE_DATA / "metadata.json").read_text(encoding="utf-8"))
+
+
+@app.get("/api/henan/forecast/seven-day")
+def henan_seven_day_forecast(
+    start_date: str = Query(default="2026-09-11"),
+    days: int = Query(default=7, ge=1, le=7),
+) -> dict[str, Any]:
+    if not henan_data_available():
+        raise api_error(409, "HENAN_DATA_NOT_READY", "河南公开市场数据快照尚未生成")
+    validate_business_date(start_date)
+    return run_henan_seven_day_forecast(HENAN_PRIVATE_DATA, start_date, days)
 
 
 @app.get("/api/org/roles")

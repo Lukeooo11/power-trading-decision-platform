@@ -1,0 +1,285 @@
+{
+  "schemaVersion": "henan-period-reliability-v1",
+  "modelId": "henan-real-time-pre-da-da-anchor-v3",
+  "target": "real_time_pre_da_D_plus_2",
+  "latestCompleteRealtimeLabelRelativeToTarget": "D-3",
+  "backtest": {
+    "start": "2026-06-01",
+    "end": "2026-09-06",
+    "dayCount": 98,
+    "hourCount": 2352
+  },
+  "pointPredictionColumn": "segmented",
+  "accuracyDefinition": "Share of historical absolute errors within a fixed yuan/MWh tolerance; not a probability that a future point is correct.",
+  "levelRules": {
+    "HIGH": "MAE <= 55 and within-50 accuracy >= 65%",
+    "MEDIUM": "MAE <= 75 and within-50 accuracy >= 50%",
+    "LOW": "Otherwise"
+  },
+  "periods": [
+    {
+      "period": 1,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 82.980224,
+      "rmseYuanPerMwh": 118.169613,
+      "biasYuanPerMwh": -40.579392,
+      "within20YuanAccuracy": 0.204082,
+      "within50YuanAccuracy": 0.489796,
+      "within100YuanAccuracy": 0.714286,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 2,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 56.844198,
+      "rmseYuanPerMwh": 79.129277,
+      "biasYuanPerMwh": -3.873312,
+      "within20YuanAccuracy": 0.27551,
+      "within50YuanAccuracy": 0.622449,
+      "within100YuanAccuracy": 0.826531,
+      "reliabilityLevel": "MEDIUM"
+    },
+    {
+      "period": 3,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 48.779065,
+      "rmseYuanPerMwh": 69.148569,
+      "biasYuanPerMwh": -1.227257,
+      "within20YuanAccuracy": 0.285714,
+      "within50YuanAccuracy": 0.653061,
+      "within100YuanAccuracy": 0.877551,
+      "reliabilityLevel": "HIGH"
+    },
+    {
+      "period": 4,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 47.583382,
+      "rmseYuanPerMwh": 67.183643,
+      "biasYuanPerMwh": 2.308406,
+      "within20YuanAccuracy": 0.295918,
+      "within50YuanAccuracy": 0.673469,
+      "within100YuanAccuracy": 0.887755,
+      "reliabilityLevel": "HIGH"
+    },
+    {
+      "period": 5,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 45.881312,
+      "rmseYuanPerMwh": 65.955672,
+      "biasYuanPerMwh": 1.047986,
+      "within20YuanAccuracy": 0.367347,
+      "within50YuanAccuracy": 0.673469,
+      "within100YuanAccuracy": 0.887755,
+      "reliabilityLevel": "HIGH"
+    },
+    {
+      "period": 6,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 42.989147,
+      "rmseYuanPerMwh": 64.840316,
+      "biasYuanPerMwh": -6.811265,
+      "within20YuanAccuracy": 0.377551,
+      "within50YuanAccuracy": 0.755102,
+      "within100YuanAccuracy": 0.897959,
+      "reliabilityLevel": "HIGH"
+    },
+    {
+      "period": 7,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 47.93461,
+      "rmseYuanPerMwh": 69.916573,
+      "biasYuanPerMwh": -9.181014,
+      "within20YuanAccuracy": 0.357143,
+      "within50YuanAccuracy": 0.693878,
+      "within100YuanAccuracy": 0.887755,
+      "reliabilityLevel": "HIGH"
+    },
+    {
+      "period": 8,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 60.526178,
+      "rmseYuanPerMwh": 79.166936,
+      "biasYuanPerMwh": 5.36621,
+      "within20YuanAccuracy": 0.183673,
+      "within50YuanAccuracy": 0.581633,
+      "within100YuanAccuracy": 0.826531,
+      "reliabilityLevel": "MEDIUM"
+    },
+    {
+      "period": 9,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 60.735404,
+      "rmseYuanPerMwh": 85.074829,
+      "biasYuanPerMwh": -16.459537,
+      "within20YuanAccuracy": 0.346939,
+      "within50YuanAccuracy": 0.571429,
+      "within100YuanAccuracy": 0.744898,
+      "reliabilityLevel": "MEDIUM"
+    },
+    {
+      "period": 10,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 76.432716,
+      "rmseYuanPerMwh": 100.61264,
+      "biasYuanPerMwh": -25.950271,
+      "within20YuanAccuracy": 0.214286,
+      "within50YuanAccuracy": 0.489796,
+      "within100YuanAccuracy": 0.683673,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 11,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 73.92961,
+      "rmseYuanPerMwh": 97.19684,
+      "biasYuanPerMwh": -22.65951,
+      "within20YuanAccuracy": 0.22449,
+      "within50YuanAccuracy": 0.459184,
+      "within100YuanAccuracy": 0.72449,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 12,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 72.093724,
+      "rmseYuanPerMwh": 96.461988,
+      "biasYuanPerMwh": -17.5225,
+      "within20YuanAccuracy": 0.173469,
+      "within50YuanAccuracy": 0.520408,
+      "within100YuanAccuracy": 0.744898,
+      "reliabilityLevel": "MEDIUM"
+    },
+    {
+      "period": 13,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 78.338214,
+      "rmseYuanPerMwh": 109.353671,
+      "biasYuanPerMwh": -15.963847,
+      "within20YuanAccuracy": 0.204082,
+      "within50YuanAccuracy": 0.469388,
+      "within100YuanAccuracy": 0.744898,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 14,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 85.362847,
+      "rmseYuanPerMwh": 116.791234,
+      "biasYuanPerMwh": -6.985949,
+      "within20YuanAccuracy": 0.204082,
+      "within50YuanAccuracy": 0.438776,
+      "within100YuanAccuracy": 0.704082,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 15,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 80.757418,
+      "rmseYuanPerMwh": 104.907204,
+      "biasYuanPerMwh": -8.077092,
+      "within20YuanAccuracy": 0.173469,
+      "within50YuanAccuracy": 0.438776,
+      "within100YuanAccuracy": 0.653061,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 16,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 76.279582,
+      "rmseYuanPerMwh": 99.890283,
+      "biasYuanPerMwh": -4.217071,
+      "within20YuanAccuracy": 0.193878,
+      "within50YuanAccuracy": 0.418367,
+      "within100YuanAccuracy": 0.744898,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 17,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 69.856643,
+      "rmseYuanPerMwh": 96.484893,
+      "biasYuanPerMwh": -2.258745,
+      "within20YuanAccuracy": 0.255102,
+      "within50YuanAccuracy": 0.479592,
+      "within100YuanAccuracy": 0.765306,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 18,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 67.309849,
+      "rmseYuanPerMwh": 94.951887,
+      "biasYuanPerMwh": -16.223268,
+      "within20YuanAccuracy": 0.22449,
+      "within50YuanAccuracy": 0.540816,
+      "within100YuanAccuracy": 0.785714,
+      "reliabilityLevel": "MEDIUM"
+    },
+    {
+      "period": 19,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 70.012074,
+      "rmseYuanPerMwh": 97.605657,
+      "biasYuanPerMwh": 0.163824,
+      "within20YuanAccuracy": 0.204082,
+      "within50YuanAccuracy": 0.540816,
+      "within100YuanAccuracy": 0.785714,
+      "reliabilityLevel": "MEDIUM"
+    },
+    {
+      "period": 20,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 76.498908,
+      "rmseYuanPerMwh": 104.120769,
+      "biasYuanPerMwh": 9.589327,
+      "within20YuanAccuracy": 0.153061,
+      "within50YuanAccuracy": 0.530612,
+      "within100YuanAccuracy": 0.72449,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 21,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 79.095597,
+      "rmseYuanPerMwh": 113.044598,
+      "biasYuanPerMwh": -3.618296,
+      "within20YuanAccuracy": 0.183673,
+      "within50YuanAccuracy": 0.5,
+      "within100YuanAccuracy": 0.693878,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 22,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 84.419513,
+      "rmseYuanPerMwh": 121.407142,
+      "biasYuanPerMwh": -9.265967,
+      "within20YuanAccuracy": 0.234694,
+      "within50YuanAccuracy": 0.44898,
+      "within100YuanAccuracy": 0.642857,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 23,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 87.547673,
+      "rmseYuanPerMwh": 118.625666,
+      "biasYuanPerMwh": -19.66648,
+      "within20YuanAccuracy": 0.183673,
+      "within50YuanAccuracy": 0.428571,
+      "within100YuanAccuracy": 0.642857,
+      "reliabilityLevel": "LOW"
+    },
+    {
+      "period": 24,
+      "sampleCount": 98,
+      "maeYuanPerMwh": 74.62252,
+      "rmseYuanPerMwh": 106.943993,
+      "biasYuanPerMwh": -33.706602,
+      "within20YuanAccuracy": 0.27551,
+      "within50YuanAccuracy": 0.489796,
+      "within100YuanAccuracy": 0.755102,
+      "reliabilityLevel": "LOW"
+    }
+  ]
+}
