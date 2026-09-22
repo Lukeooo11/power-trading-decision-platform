@@ -6,14 +6,12 @@
   "processedAt": "2026-09-10T12:12:45.394420+08:00",
   "sourceFiles": {
     "marketWorkbook": {
-      "name": "河南省现货出清价格及边界信息.xlsx",
-      "path": "C:\\Users\\40126\\Documents\\xwechat_files\\wxid_uv84xy1l6k3e22_dbd8\\msg\\file\\2026-09\\河南省现货出清价格及边界信息.xlsx",
-      "sha256": "96e7a3e114c3f2586fd6cb488fb412b44279e719e4435795d9e34c19c3704200"
+      "name": "河南现货价格与边界数据（公开脱敏）",
+      "sourceType": "authorized_market_snapshot"
     },
     "weatherZip": {
-      "name": "河南天气数据包_20260910_1124.zip",
-      "path": "C:\\Users\\40126\\Documents\\xwechat_files\\wxid_uv84xy1l6k3e22_dbd8\\msg\\file\\2026-09\\河南天气数据包_20260910_1124.zip",
-      "sha256": "646f89c777bfa6caf7c0b0192ea9156e51f39174431d6ba9d6eb2938a1998fb4"
+      "name": "河南天气数据（公开脱敏）",
+      "sourceType": "authorized_weather_snapshot"
     }
   },
   "quality": {
