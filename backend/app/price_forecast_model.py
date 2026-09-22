@@ -722,6 +722,8 @@ def run_price_forecast(private_data_dir: Path, market_date: str, high_price_thre
             high_price_threshold=high_price_threshold,
         )
     except (FileNotFoundError, ImportError, KeyError, ValueError, OSError) as error:
+        if '2026-07-01' <= market_date <= '2026-07-31':
+            raise RuntimeError(f"V5 initialization failed: {error}") from error
         v5_error = str(error)
 
     if '2026-07-01' <= market_date <= '2026-07-31' and (private_data_dir / 'july_import_manifest.json').exists():
