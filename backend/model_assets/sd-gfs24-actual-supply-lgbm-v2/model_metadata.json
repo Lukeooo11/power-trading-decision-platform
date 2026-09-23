@@ -1,0 +1,174 @@
+{
+  "modelVersion": "sd-gfs24-actual-supply-lgbm-v2",
+  "weatherDataVersion": "sd-16city-gfs24-actual-supply-20260101-20260831-v2",
+  "trainingCutoff": "2026-06-30",
+  "supplyDataPolicy": "January-June actual output only; April 3 and April 30 absent and retained as missing; no forecast-output backfill",
+  "missingActualSupplyDates": [
+    "2026-04-03",
+    "2026-04-30"
+  ],
+  "selected": {
+    "da": {
+      "featureSet": "GFS完整+日内形态",
+      "algorithm": "LightGBM",
+      "thresholdF1": null,
+      "thresholdF2": null
+    },
+    "rt": {
+      "featureSet": "GFS完整+日内形态",
+      "algorithm": "LightGBM",
+      "thresholdF1": null,
+      "thresholdF2": null
+    },
+    "spread": {
+      "featureSet": "GFS核心+空间分布",
+      "algorithm": "LightGBM",
+      "thresholdF1": null,
+      "thresholdF2": null
+    },
+    "negative": {
+      "featureSet": "GFS完整+日内形态",
+      "algorithm": "LightGBM",
+      "thresholdF1": 0.20999999999999996,
+      "thresholdF2": 0.049999999999999996
+    },
+    "spike": {
+      "featureSet": "GFS完整+日内形态",
+      "algorithm": "LightGBM",
+      "thresholdF1": 0.07999999999999999,
+      "thresholdF2": 0.06999999999999999
+    }
+  },
+  "julyMetrics": {
+    "dayAhead": {
+      "MAE": 57.41064270334778,
+      "RMSE": 78.03877153428459,
+      "sMAPE(%)": 22.479319544633015,
+      "R2": 0.5717324145099172,
+      "任务": "日前价格",
+      "特征组": "GFS完整+日内形态",
+      "算法": "LightGBM",
+      "阶段": "7月独立测试"
+    },
+    "realTime": {
+      "MAE": 83.70005415491279,
+      "RMSE": 132.37790148086938,
+      "sMAPE(%)": 38.38296713582319,
+      "R2": 0.38701610020517097,
+      "任务": "实时价格",
+      "特征组": "GFS完整+日内形态",
+      "算法": "LightGBM",
+      "阶段": "7月独立测试"
+    },
+    "spread": {
+      "MAE": 82.95277510409917,
+      "RMSE": 130.94329909912383,
+      "sMAPE(%)": 149.6454897619634,
+      "R2": -0.015080801644642872,
+      "任务": "实时价差",
+      "特征组": "GFS核心+空间分布",
+      "算法": "LightGBM",
+      "阶段": "7月独立测试"
+    },
+    "negative": {
+      "阈值": 0.20999999999999996,
+      "TP": 24,
+      "FP": 50,
+      "FN": 31,
+      "TN": 639,
+      "精确率": 0.32432432432432434,
+      "召回率": 0.43636363636363634,
+      "F1": 0.37209302325581395,
+      "F2": 0.40816326530612246,
+      "PR_AUC": 0.4562937560847282,
+      "ROC_AUC": 0.8982187623697058,
+      "Brier": 0.061154150205377,
+      "任务": "负价事件",
+      "特征组": "GFS完整+日内形态",
+      "算法": "LightGBM",
+      "阶段": "7月独立测试",
+      "策略": "平衡F1"
+    },
+    "spike": {
+      "阈值": 0.07999999999999999,
+      "TP": 2,
+      "FP": 35,
+      "FN": 24,
+      "TN": 683,
+      "精确率": 0.05405405405405406,
+      "召回率": 0.07692307692307693,
+      "F1": 0.06349206349206349,
+      "F2": 0.07092198581560284,
+      "PR_AUC": 0.052034465997371056,
+      "ROC_AUC": 0.6266338118705808,
+      "Brier": 0.03469612442881289,
+      "任务": "尖峰事件",
+      "特征组": "GFS完整+日内形态",
+      "算法": "LightGBM",
+      "阶段": "7月独立测试",
+      "策略": "平衡F1"
+    },
+    "spreadDirectionAccuracy": 0.571236559139785
+  },
+  "parityMaxAbsError": {
+    "da": 5.684341886080802e-14,
+    "rt": 5.684341886080802e-14,
+    "spread": 7.105427357601002e-15,
+    "negative": 9.71445146547012e-17,
+    "spike": 0.002658512709016514
+  },
+  "availabilityControl": {
+    "leadHours": 24,
+    "forecastIssueTimePresent": true,
+    "unifiedDeclarationCutoffVerified": false
+  },
+  "sha256": {
+    "day_ahead.pkl": "4a0a1e118078a11cef4333becc24864f12acc678f1dc881c3c85072a961b09f7",
+    "negative.pkl": "a06897f408e3acb4bb66a945b68b5c0a026dbaaa83739ce532fb7e2e1e1de841",
+    "real_time.pkl": "b99aa8d5557efb09d1910a928c735f884e7ebb801dcf21ab1dbe2e3e0f6df616",
+    "spike.pkl": "3bbf63ee2a2fd875b52915ad91664100d7c9c0838e06c0a0a94e202e86c0b83d",
+    "spread.pkl": "5cd29c64455f449eff951e79a2907c2d15dc8efca494e269147d4c2ee677c5a6",
+    "residual_calibration.json": "ee73043001302b19a1a8fc9b39f4334926c164427907c14c4b643fc7a070d211",
+    "v6_gfs24_actual_supply_feature_store.csv.gz": "e8c0746c3f4767cd553ccd6b941f5730f10d15365a1d300c4c762ad6548eb581"
+  },
+  "extendedBacktest": {
+    "schemaVersion": "v6-extended-backtest-v1",
+    "windowStart": "2026-02-01",
+    "windowEnd": "2026-06-30",
+    "method": "monthly expanding-window OOF; January-June supply history is actual; target features lag48plus only",
+    "dayAhead": {
+      "sample_count": 3600,
+      "mae": 78.5893624173017,
+      "rmse": 101.99930506534301,
+      "bias": -15.910599575537518
+    },
+    "realTime": {
+      "sample_count": 3576,
+      "mae": 116.54562569572822,
+      "rmse": 158.94629409028028,
+      "bias": -24.909320327505203
+    },
+    "spread": {
+      "sample_count": 3576,
+      "mae": 86.87351834240614,
+      "rmse": 132.56228399283137,
+      "bias": 2.593614352150666
+    },
+    "negative": {
+      "sample_count": 3576,
+      "pr_auc": 0.7919708175341376,
+      "roc_auc": 0.9340542562390284,
+      "brier": 0.08990886616739727
+    },
+    "spike": {
+      "sample_count": 3576,
+      "pr_auc": 0.15439530057827605,
+      "roc_auc": 0.6876472782665464,
+      "brier": 0.050199142013547776
+    }
+  },
+  "assetNotes": {
+    "oof": "Rebuilt using actual-output training history",
+    "featureStore": "Packaged beside model assets"
+  }
+}

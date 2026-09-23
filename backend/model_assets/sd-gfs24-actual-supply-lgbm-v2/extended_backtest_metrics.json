@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "v6-extended-backtest-v1",
+  "windowStart": "2026-02-01",
+  "windowEnd": "2026-06-30",
+  "method": "monthly expanding-window OOF; January-June supply history is actual; target features lag48plus only",
+  "dayAhead": {
+    "sample_count": 3600,
+    "mae": 78.5893624173017,
+    "rmse": 101.99930506534301,
+    "bias": -15.910599575537518
+  },
+  "realTime": {
+    "sample_count": 3576,
+    "mae": 116.54562569572822,
+    "rmse": 158.94629409028028,
+    "bias": -24.909320327505203
+  },
+  "spread": {
+    "sample_count": 3576,
+    "mae": 86.87351834240614,
+    "rmse": 132.56228399283137,
+    "bias": 2.593614352150666
+  },
+  "negative": {
+    "sample_count": 3576,
+    "pr_auc": 0.7919708175341376,
+    "roc_auc": 0.9340542562390284,
+    "brier": 0.08990886616739727
+  },
+  "spike": {
+    "sample_count": 3576,
+    "pr_auc": 0.15439530057827605,
+    "roc_auc": 0.6876472782665464,
+    "brier": 0.050199142013547776
+  }
+}

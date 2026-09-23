@@ -1232,7 +1232,7 @@ def build_price_forecast_v1_result(request: ModelRunCreateRequestV1, run_id: str
     rt_weather_mae = rt_weather_metrics.get("mae")
     rt_baseline_mae = rt_baseline_metrics.get("mae")
     rt_weather_improvement = rt_baseline_mae - rt_weather_mae if rt_baseline_mae is not None and rt_weather_mae is not None else None
-    is_v5 = raw.get("model_version") == "sd-gfs24-spatial-lgbm-v1"
+    is_v5 = raw.get("model_version") == "sd-gfs24-actual-supply-lgbm-v2"
     v5_evaluation_mode = raw["summary"].get("evaluation_mode")
     v5_evaluation_warning = {
         "IN_SAMPLE_DIAGNOSTIC": "IN_SAMPLE_DIAGNOSTIC_NOT_OUT_OF_SAMPLE",
@@ -1530,7 +1530,7 @@ def create_model_run(request: ModelRunCreateRequestV1, parent_run_id: str | None
     ):
         request = request.model_copy(
             update={
-                "model_version": "sd-gfs24-spatial-lgbm-v1",
+                "model_version": "sd-gfs24-actual-supply-lgbm-v2",
                 "data_version": "sd-16city-gfs-fixed-lead24-20260101-20260831-v1",
             }
         )
@@ -1619,7 +1619,7 @@ def create_model_run(request: ModelRunCreateRequestV1, parent_run_id: str | None
                 # Keep the historical version string as an API alias, but serve V5
                 # whenever its controlled assets cover the requested market date.
                 raw = run_price_forecast(PRIVATE_DATA, request.market_date)
-                if raw.get("model_version") == "sd-gfs24-spatial-lgbm-v1":
+                if raw.get("model_version") == "sd-gfs24-actual-supply-lgbm-v2":
                     result = build_price_forecast_v1_result(
                         request.model_copy(update={"market_code": market_code}), run_id, raw
                     )
@@ -3591,7 +3591,7 @@ def models_v1() -> dict[str, Any]:
                 "id": "price-forecast",
                 "name": "山东V5 GFS24价格预测（1—7月研究回放）",
                 "status": "connected_local",
-                "versions": ["sd-gfs24-spatial-lgbm-v1", CONDITIONAL_VERSION],
+                "versions": ["sd-gfs24-actual-supply-lgbm-v2", CONDITIONAL_VERSION],
                 "run_mode": "synchronous_local",
                 "result_callback": "/api/v1/model-runs/{run_id}/results",
                 "output_contract": "forecast-strategy-contract-v1",

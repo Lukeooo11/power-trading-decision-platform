@@ -11,8 +11,8 @@ import warnings
 import numpy as np
 import pandas as pd
 
-MODEL_VERSION = "sd-gfs24-spatial-lgbm-v1"
-DATA_VERSION = "sd-16city-gfs-fixed-lead24-20260101-20260831-v1"
+MODEL_VERSION = "sd-gfs24-actual-supply-lgbm-v2"
+DATA_VERSION = "sd-16city-gfs24-actual-supply-20260101-20260831-v2"
 SUPPORTED_START = "2026-01-01"
 SUPPORTED_END = "2026-07-31"
 OOF_START = "2026-02-01"
@@ -35,7 +35,7 @@ def _features(source: pd.DataFrame) -> pd.DataFrame:
     d["是否供暖季"] = d["月份"].isin([11, 12, 1, 2, 3]).astype(int)
     d["是否迎峰度夏"] = d["月份"].isin([6, 7, 8]).astype(int)
     d["是否午间"] = d["小时"].between(10, 15).astype(int)
-    d["是否晚高峰"] = d["小时"].between(17, 21).astype(int)
+    d["是否晚高峰"] = d["小时"].between(17, 22).astype(int)
     for column in HISTORY_COLUMNS:
         lagged = []
         values = pd.to_numeric(d[column], errors="coerce")
@@ -83,7 +83,7 @@ def _load():
     # Local layout: <repo>/backend/app + <repo>/backend/model_assets.
     # Render layout: /app/app + /app/model_assets.
     model_dir = Path(__file__).resolve().parents[1] / "model_assets" / MODEL_VERSION
-    feature_path = model_dir / "v5_gfs24_feature_store.csv.gz"
+    feature_path = model_dir / "v6_gfs24_actual_supply_feature_store.csv.gz"
     required = [model_dir / v for v in MODEL_FILES.values()] + [
         model_dir / "model_metadata.json",
         model_dir / "residual_calibration.json",
@@ -240,4 +240,4 @@ def run_v5_shandong_forecast(*, target_date: str, private_data_dir: Path, declar
         "EXPANDING_WINDOW_OOF": "monthly expanding-window out-of-fold replay",
         "FROZEN_HOLDOUT": "frozen July holdout",
     }[evaluation_mode]
-    return {"model_version": MODEL_VERSION, "data_version": DATA_VERSION, "forecast": forecast, "summary": {"da_selected": "V5 GFS完整+日内形态 LightGBM", "rt_selected": "V5 GFS完整+日内形态 LightGBM", "da_metrics": da_metrics, "rt_metrics": rt_metrics, "window_start": target_date, "window_end": target_date, "sample_count": int(pd.to_numeric(rows["日前价格"], errors="coerce").notna().sum()), "forecast_start": forecast[0]["datetime"], "forecast_end": forecast[-1]["datetime"], "evaluation_method": method, "evaluation_mode": evaluation_mode, "training_end": training_end, "event_probability_calibration": event_probability_calibration, "feature_set": "safe-lag48plus + 16-city GFS24 spatial distribution and daily shape", "weather_data_version": DATA_VERSION, "weather_known_before_declaration": cutoff_status == "VERIFIED", "weather_used_in_da_final": True, "weather_used_in_rt_final": True, "supply_data_version": "embedded-v5-safe-lag-history", "supply_used_in_da_final": True, "supply_used_in_rt_final": True, "supply_issue_time_available": False, "supply_backtest_leakage_safe": evaluation_mode != "IN_SAMPLE_DIAGNOSTIC", "supply_usage_boundary": "lag48 or older only; target-date actual supply excluded", "spread_direction_accuracy": spread_direction_accuracy, "spread_mae": spread_metrics["mae"], "da_interval_coverage": _interval_coverage(rows["日前价格"], da10, da90), "rt_interval_coverage": _interval_coverage(rows["实时价格"], rt10, rt90), "consistency_constraint": "platform spread = DA p50 - RT p50; V5 direct spread retained in audit", "post_day_ahead_realtime": {"status": "UNCHANGED_PLATFORM_PATH"}, "declaration_cutoff_audit": {"status": cutoff_status, "declaration_cutoff": cutoff_iso, "issue_time_max": raw_target["预报生成参考时间"].max().isoformat(), "lead_hours": 24}, "forecast_selection": {"selected_model_version": MODEL_VERSION, "fallback_used": False, "target_actual_supply_used": False, "evaluation_mode": evaluation_mode, "training_end": training_end}, "v5_direct_spread_p50": [round(float(v),3) for v in spread]}}
+    return {"model_version": MODEL_VERSION, "data_version": DATA_VERSION, "forecast": forecast, "summary": {"da_selected": "V5 GFS完整+日内形态 LightGBM", "rt_selected": "V5 GFS完整+日内形态 LightGBM", "da_metrics": da_metrics, "rt_metrics": rt_metrics, "window_start": target_date, "window_end": target_date, "sample_count": int(pd.to_numeric(rows["日前价格"], errors="coerce").notna().sum()), "forecast_start": forecast[0]["datetime"], "forecast_end": forecast[-1]["datetime"], "evaluation_method": method, "evaluation_mode": evaluation_mode, "training_end": training_end, "event_probability_calibration": event_probability_calibration, "feature_set": "safe-lag48plus + 16-city GFS24 spatial distribution and daily shape", "weather_data_version": DATA_VERSION, "weather_known_before_declaration": cutoff_status == "VERIFIED", "weather_used_in_da_final": True, "weather_used_in_rt_final": True, "supply_data_version": "actual-supply-2026h1-safe-lag48plus", "supply_used_in_da_final": True, "supply_used_in_rt_final": True, "supply_issue_time_available": False, "supply_backtest_leakage_safe": evaluation_mode != "IN_SAMPLE_DIAGNOSTIC", "supply_usage_boundary": "lag48 or older only; target-date actual supply excluded", "spread_direction_accuracy": spread_direction_accuracy, "spread_mae": spread_metrics["mae"], "da_interval_coverage": _interval_coverage(rows["日前价格"], da10, da90), "rt_interval_coverage": _interval_coverage(rows["实时价格"], rt10, rt90), "consistency_constraint": "platform spread = DA p50 - RT p50; V5 direct spread retained in audit", "post_day_ahead_realtime": {"status": "UNCHANGED_PLATFORM_PATH"}, "declaration_cutoff_audit": {"status": cutoff_status, "declaration_cutoff": cutoff_iso, "issue_time_max": raw_target["预报生成参考时间"].max().isoformat(), "lead_hours": 24}, "forecast_selection": {"selected_model_version": MODEL_VERSION, "fallback_used": False, "target_actual_supply_used": False, "evaluation_mode": evaluation_mode, "training_end": training_end}, "v5_direct_spread_p50": [round(float(v),3) for v in spread]}}
