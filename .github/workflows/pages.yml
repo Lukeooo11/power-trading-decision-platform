@@ -1,5 +1,8 @@
 name: Deploy static demo to GitHub Pages
 
+# 只发布前端静态资源，不发布 backend/ 与 private-data/
+# 后端继续由 Render 提供：https://power-trading-api-0902.onrender.com
+
 on:
   push:
     branches: [main]
@@ -23,15 +26,37 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # 关键改动：只挑前端真正需要的文件
+      # 前端依赖 = index.html + vendor/ + data/
+      # 不能整仓库上传，否则 backend/ 源码与 private-data/ 也会被当作静态资源公开
+      - name: Stage static site
+        run: |
+          set -e
+          mkdir -p _site
+          cp index.html _site/
+          cp -r vendor _site/
+          cp -r data _site/
+          touch _site/.nojekyll
+          echo "--- staged size ---"
+          du -sh _site
+          echo "--- staged top level ---"
+          ls -1 _site
+
+      # 注意：这里不再传 enablement / token
+      # enablement: true 会尝试用 GITHUB_TOKEN 通过 API 创建 Pages 站点，这一步正是之前失败的地方
+      # 请先在 Settings → Pages → Source 选 "GitHub Actions"，之后本步骤即可通过
       - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Report URL
+        run: echo "已发布到 ${{ steps.deployment.outputs.page_url }}"
