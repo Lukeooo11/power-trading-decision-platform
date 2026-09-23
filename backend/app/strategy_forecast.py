@@ -19,10 +19,15 @@ TARGET_SUPPLY_FIELDS = (
 
 
 def _complete_forecast_dates(supply):
-    """Only complete target-day FORECAST rows may activate the enhanced model."""
+    """Complete target-day forecast-type rows may activate the enhanced model.
+
+    来源判定交由 supply_source_policy：FORECAST / PROXY_FORECAST /
+    SEASONAL_PROXY_FORECAST 均为事前可得的预测类来源；ACTUAL 默认排除。
+    """
+    from .supply_source_policy import source_rank
     grouped = {}
     for row in (supply or {}).get("rows", []):
-        if row.get("sourceType") != "FORECAST":
+        if source_rank(row.get("sourceType")) is None:
             continue
         grouped.setdefault(row.get("marketDate"), []).append(row)
     complete = set()

@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StrictFloat
 
+from .supply_source_policy import select_supply_rows
 from .policy_agent_client import PolicyAgentClient, PolicyAgentError
 from .price_forecast_model import run_price_forecast
 from .henan_price_forecast import run_henan_forecast, run_henan_seven_day_forecast
@@ -2309,14 +2310,14 @@ def forecast_features(date: str = Query(...), market_code: str = "SD") -> dict[s
     weather_asset = load_private_json("weather_hourly_gfs_20260501_20260701.json")
     weather_rows = [row for row in weather_asset.get("rows", []) if row.get("marketDate") == date]
     supply_asset = load_private_json("market_supply_hourly_2026h1.json")
+    # 电源滞后来源按 supply_source_policy 的优先级取用（预测类来源，默认不含 ACTUAL）
+    supply_selected, supply_source_audit = select_supply_rows(supply_asset.get("rows", []))
     supply_lag_one_rows = [
-        row for row in supply_asset.get("rows", [])
-        if row.get("marketDate") == lag_one_date and row.get("sourceType") == "FORECAST"
+        row for (stamp, _), row in sorted(supply_selected.items()) if stamp == lag_one_date
     ]
     supply_lag_seven_date = offset_date(date, -7)
     supply_lag_seven_rows = [
-        row for row in supply_asset.get("rows", [])
-        if row.get("marketDate") == supply_lag_seven_date and row.get("sourceType") == "FORECAST"
+        row for (stamp, _), row in sorted(supply_selected.items()) if stamp == supply_lag_seven_date
     ]
     return {
         "market_code": market_code.upper(),
@@ -2327,6 +2328,7 @@ def forecast_features(date: str = Query(...), market_code: str = "SD") -> dict[s
         "realtime_rows": realtime,
         "portfolio_load_rows": load_rows,
         "weather_rows": weather_rows,
+        "supply_lag_source_policy": supply_source_audit,
         "supply_lag_one_rows": supply_lag_one_rows,
         "supply_lag_seven_rows": supply_lag_seven_rows,
         "supply_data_version": supply_asset.get("dataVersion"),

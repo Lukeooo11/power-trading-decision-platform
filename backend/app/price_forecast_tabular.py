@@ -11,6 +11,12 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+from .supply_source_policy import (
+    OPTIONAL_SUPPLY_COLUMNS,
+    select_supply_rows,
+    supply_column_values,
+)
+
 
 SUPPLY_DATA_VERSION = "sd-system-output-hourly-2026h1-v1"
 SUPPLY_COLUMNS = [
@@ -65,18 +71,32 @@ def _load_weather(private_data_dir: Path) -> dict[pd.Timestamp, dict[str, float]
 
 
 def _load_supply(private_data_dir: Path) -> tuple[dict[tuple[str, int], dict[str, float]], dict[str, Any]]:
+    """加载电源滞后快照。
+
+    来源按 ``supply_source_policy`` 的优先级取用：FORECAST > PROXY_FORECAST >
+    SEASONAL_PROXY_FORECAST；ACTUAL 默认排除（需显式开启研究口径）。
+    可选字段（testUnitMw）缺失时按声明默认值处理并记录，其余字段仍要求完整。
+    """
     asset = json.loads((private_data_dir / "market_supply_hourly_2026h1.json").read_text(encoding="utf-8"))
+    selected, source_audit = select_supply_rows(asset.get("rows", []))
     lookup: dict[tuple[str, int], dict[str, float]] = {}
-    for row in asset.get("rows", []):
-        if row.get("sourceType") != "FORECAST":
+    defaulted_columns: dict[str, int] = {}
+    for key, row in selected.items():
+        values, defaulted = supply_column_values(row, SUPPLY_COLUMNS)
+        if values is None:
             continue
-        values = {name: row.get(name) for name in SUPPLY_COLUMNS}
-        if all(value is not None and np.isfinite(float(value)) for value in values.values()):
-            lookup[(row["marketDate"], int(row["period"]))] = {
-                name: float(value) for name, value in values.items()
-            }
+        for name in defaulted:
+            defaulted_columns[name] = defaulted_columns.get(name, 0) + 1
+        lookup[key] = values
     if not lookup:
-        raise ValueError("market supply forecast snapshot has no complete eligible rows")
+        raise ValueError("market supply snapshot has no complete eligible rows")
+    asset = {
+        **asset,
+        "lagSourcePolicy": source_audit,
+        "optionalSupplyColumns": sorted(OPTIONAL_SUPPLY_COLUMNS),
+        "defaultedSupplyColumnRows": defaulted_columns,
+        "eligibleRowCount": len(lookup),
+    }
     return lookup, asset
 
 
