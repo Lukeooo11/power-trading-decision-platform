@@ -4760,7 +4760,7 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
               <label class="field">
                 <span>模型版本（外部服务提供）</span>
                 <select id="forecastModelSelect">
-                  <option value="sd-target-supply-conditional-v1">山东 V5 GFS24（1—7月研究回放）</option>
+                  <option value="sd-target-supply-conditional-v1">目标日供需条件增强（缺失自动回退）</option>
                 </select>
               </label>
               <label class="upload-card compact-upload">
@@ -4814,7 +4814,7 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
             <div class="panel-head">
               <div>
                 <h3>盘前实时逐时段可靠性</h3>
-                <p>基于98天严格D-3滚动回测；等级描述历史稳定性，不是未来预测点的正确概率</p>
+                <p>基于98天T-1滚动回测；等级描述历史稳定性，不是未来预测点的正确概率</p>
               </div>
               <span class="pill partial" id="forecastReliabilityStatus">待运行</span>
             </div>
@@ -7022,10 +7022,13 @@ function hydrateForecastDates() {
   }
   const priceDates = [...new Set(marketData.spotPrices.map((row) => row.date).filter(Boolean))].sort();
   const publishedForecastDates = [...new Set((state.priceForecastHistory?.results || []).map((row) => row.market_date).filter(Boolean))].sort();
-  const controlledReplayDates = priceDates.filter((date) => date >= "2026-01-01" && date <= "2026-07-31");
-  const dates = hasConnectedMarketData()
-    ? [...new Set([...controlledReplayDates, ...publishedForecastDates])].sort()
-    : [];
+  const dates = hasConnectedMarketData() && publishedForecastDates.length
+    ? publishedForecastDates
+    : hasConnectedMarketData() && priceDates.length > 2
+    ? priceDates.slice(2)
+    : hasConnectedMarketData()
+      ? [...new Set(state.forecast96.map((row) => row.date).filter(Boolean))].sort()
+      : [];
   const modelDate = hasConnectedMarketData() ? state.priceForecastResult?.market_date : "";
   if (modelDate && !dates.includes(modelDate)) dates.push(modelDate);
   dates.sort();
@@ -7051,11 +7054,11 @@ function hydrateForecastModelOptions() {
   const select = document.querySelector("#forecastModelSelect");
   if (!select) return;
   if (state.selectedMarket === "HA") {
-    select.innerHTML = '<option value="henan-real-time-pre-da-da-anchor-v3">河南分时日前锚定（严格D-3研究版）</option>';
-    select.value = "henan-real-time-pre-da-da-anchor-v3";
+    select.innerHTML = '<option value="henan-real-time-pre-da-da-anchor-v4-t1">河南分时日前锚定（T-1研究版）</option>';
+    select.value = "henan-real-time-pre-da-da-anchor-v4-t1";
     return;
   }
-  select.innerHTML = '<option value="sd-target-supply-conditional-v1">山东 V5 GFS24（1—7月研究回放）</option>';
+  select.innerHTML = '<option value="sd-target-supply-conditional-v1">目标日供需条件增强（缺失自动回退）</option>';
   select.value = "sd-target-supply-conditional-v1";
 }
 
@@ -8830,11 +8833,11 @@ async function runForecastEvaluation(options = {}) {
   state.forecastProvidedMetrics = null;
   const isHenanForecast = state.selectedMarket === "HA";
   state.forecastRunMeta = { status: "RUNNING", message: isHenanForecast ? "正在调用河南研究性预测接口。" : "正在调用山东一体化价格预测模型。" };
-  state.forecastSource = isHenanForecast ? "河南严格D-3研究性预测" : "山东一体化价格预测模型";
+  state.forecastSource = isHenanForecast ? "河南T-1研究性预测" : "山东一体化价格预测模型";
   renderForecast();
   if (isHenanForecast) {
     state.forecastRunMeta = { status: "RUNNING", message: "正在调用河南研究性预测接口。" };
-    state.forecastSource = "河南严格D-3研究性预测";
+    state.forecastSource = "河南T-1研究性预测";
     try {
       if (!state.henanDataQuality) {
         state.henanDataQuality = await fetchJson(`${PLATFORM_API_BASE}/api/henan/data-quality`);
@@ -8849,7 +8852,7 @@ async function runForecastEvaluation(options = {}) {
       }
       const payload = await response.json();
       state.henanForecastResult = payload;
-      state.forecastModelVersion = payload.modelVersion || "henan-real-time-pre-da-da-anchor-v3";
+      state.forecastModelVersion = payload.modelVersion || "henan-real-time-pre-da-da-anchor-v4-t1";
       state.forecastResults = normalizeForecastRows(payload.forecast || [], {
         target: "real_time",
         market_date: payload.targetDate,
@@ -8863,7 +8866,7 @@ async function runForecastEvaluation(options = {}) {
         data_version: payload.dataVersion,
         message: "河南结果已生成；缺少历史天气和电源预测发布时间，不可视为严格实时预测。",
       };
-      state.forecastSource = "河南严格D-3盘前实时研究模型";
+      state.forecastSource = "河南T-1实时研究模型";
       renderForecast();
       drawForecastChart(chartEls.forecast, state.forecastResults);
       if (!options.silent) showToast(`已生成河南 ${state.forecastResults.length} 点研究性预测。`);
@@ -8881,11 +8884,7 @@ async function runForecastEvaluation(options = {}) {
     return;
   }
   state.forecastModelVersion = document.querySelector("#forecastModelSelect")?.value || "sd-target-supply-conditional-v1";
-  const useConnectedV5Replay = state.selectedMarket === "SD"
-    && state.forecastModelVersion === "sd-target-supply-conditional-v1"
-    && state.forecastDate >= "2026-01-01"
-    && state.forecastDate <= "2026-07-31";
-  const storedResult = useConnectedV5Replay ? null : selectedIntegratedForecastResultForDate();
+  const storedResult = selectedIntegratedForecastResultForDate();
   if (storedResult) {
     state.forecastResults = normalizeForecastRows(storedResult.periods || [], storedResult);
     state.forecastProvidedMetrics = storedResult.backtest || null;
@@ -8953,15 +8952,7 @@ async function runForecastEvaluation(options = {}) {
     state.forecastProvidedMetrics = payload.result?.backtest || null;
     state.forecastRunMeta = { ...run, review_status: payload.review?.status || run.review_status };
     const conditionalFallback = payload.result?.warnings?.includes('FALLBACK_USED=TRUE');
-    const v5Warnings = payload.result?.warnings || [];
-    const v5EvaluationLabel = v5Warnings.includes('IN_SAMPLE_DIAGNOSTIC_NOT_OUT_OF_SAMPLE')
-      ? '1月训练内诊断'
-      : v5Warnings.includes('EXPANDING_WINDOW_OOF_REPLAY')
-        ? '2—6月扩展窗口样本外回放'
-        : '7月冻结独立测试';
-    state.forecastSource = payload.result?.model?.version === 'sd-gfs24-spatial-lgbm-v1'
-      ? `山东 V5 GFS24 · ${v5EvaluationLabel}`
-      : payload.result?.model?.version === 'sd-target-supply-conditional-v1'
+    state.forecastSource = payload.result?.model?.version === 'sd-target-supply-conditional-v1'
       ? (conditionalFallback ? '目标日供需预测缺失或不完整，已自动回退现有模型' : '已使用完整24点目标日供需条件增强模型')
       : payload.result?.model?.version === 'sd-sixweather-lagged-supply-v1'
       ? '7月六天气特征与D-2出力滞后研究适配版（天气发布时间待确认）'
@@ -9137,9 +9128,9 @@ function renderForecast() {
       ? "本地后端基线"
       : "浏览器回退基线";
   const insightItems = [
-    { title: "预测目标", body: state.selectedMarket === "HA" ? "分别输出日前D+1、盘前实时D+2和日前出清后实时预测；当前表格主结果为盘前实时，出清后结果不参与盘前策略。" : isJulyResearch ? "分别输出日前、盘前实时、日前出清后实时预测。区间来自历史滚动预测误差；出清后实时结果不参与盘前策略。" : `当前主模型输出${targetLabel}P10/P50/P90。${isDayAheadTarget ? "实时价格和日前-实时价差由后续实时模型补充。" : "可用于日前申报前的实时价差判断。"}` },
+    { title: "预测目标", body: state.selectedMarket === "HA" ? "河南日前与实时均按T-1生成目标日24点预测；当前表格主结果为T-1实时预测，出清后实时结果单独展示。" : isJulyResearch ? "分别输出日前、盘前实时、日前出清后实时预测。区间来自历史滚动预测误差；出清后实时结果不参与盘前策略。" : `当前主模型输出${targetLabel}P10/P50/P90。${isDayAheadTarget ? "实时价格和日前-实时价差由后续实时模型补充。" : "可用于日前申报前的实时价差判断。"}` },
     state.selectedMarket === "HA"
-      ? { title: "可靠性分布", body: `严格D-3历史回测中，高可靠性${reliabilityCounts.HIGH || 0}点、中可靠性${reliabilityCounts.MEDIUM || 0}点、低可靠性${reliabilityCounts.LOW || 0}点；低可靠性点必须优先人工复核。` }
+      ? { title: "可靠性分布", body: `T-1历史回测中，高可靠性${reliabilityCounts.HIGH || 0}点、中可靠性${reliabilityCounts.MEDIUM || 0}点、低可靠性${reliabilityCounts.LOW || 0}点；低可靠性点必须优先人工复核。` }
       : { title: "风险时段", body: `负价中高风险 ${negativeRiskCount} 点，高价中高风险 ${highRiskCount} 点；风险原因码保留在小时结果中供人工复核。` },
     { title: "峰值时段", body: `${peakPoint.time} 预测价格最高，为 ${fmt(peakPoint.predictedPrice)} 元/MWh；驱动因素：${peakPoint.drivers}。` },
   ];
@@ -9149,7 +9140,7 @@ function renderForecast() {
   renderDailyForecastAccuracy();
   renderForecastPeriodReliability();
   document.querySelector("#forecastGovernance").innerHTML = [
-    ["数据来源", state.selectedMarket === "HA" ? `${state.forecastSource}；河南小时价格、目标日电源预测和省级天气。实时训练标签严格截止目标日D-3；天气和电源预测发布时间缺失，仅作研究回放。` : isJulyResearch ? `${state.forecastSource}；六项天气特征（发布时间待核验，不含湿度），价格最短滞后D-2、出力采用D-2/D-7滞后；不使用目标日实际出力。仅作研究回放。` : `${state.forecastSource}；价格、日历滞后、申报前GFS天气与Q2电源预测D-1/D-7滞后；逐户名称未进入模型输入`],
+    ["数据来源", state.selectedMarket === "HA" ? `${state.forecastSource}；河南小时价格、目标日电源预测和省级天气。日前与实时历史价格标签统一截止目标日D-1；天气和电源预测发布时间缺失，仅作研究回放。` : isJulyResearch ? `${state.forecastSource}；六项天气特征（发布时间待核验，不含湿度），价格最短滞后D-2、出力采用D-2/D-7滞后；不使用目标日实际出力。仅作研究回放。` : `${state.forecastSource}；价格、日历滞后、申报前GFS天气与Q2电源预测D-1/D-7滞后；逐户名称未进入模型输入`],
     ["输入批次", rows[0].importBatchId || "外部导入批次"],
     ["运行追踪", state.forecastRunMeta?.run_id ? `${state.forecastRunMeta.run_id} · ${state.forecastRunMeta.data_version || "待补数据版本"}` : "浏览器结果，尚未生成run_id"],
     ["上线门槛", state.selectedMarket === "HA" ? "补齐天气与电源预测发布时间、机组故障/检修和断面约束，完成前瞻验证后再用于申报" : "补齐目标日电源预测发布时间、连续滚动回测、规则校验和交易员确认"],
@@ -9270,7 +9261,7 @@ function renderForecastPeriodReliability() {
     status.className = "pill partial";
     container.innerHTML = sampleItem({
       title: "逐时段可靠性待加载",
-      body: "运行河南预测后，将显示各时段严格D-3历史回测的MAE、固定误差容忍命中率和系统偏差。",
+      body: "运行河南预测后，将显示各时段T-1历史回测的MAE、固定误差容忍命中率和系统偏差。",
     });
     return;
   }
@@ -9472,7 +9463,7 @@ function normalizeForecastRows(rows, context = {}) {
       historicalReliability: realtimeQuantiles?.historicalReliability || row.historicalReliability || null,
       pointOptimization: Number.isFinite(Number(realtimeQuantiles?.anchorWeight)) ? {
         baseP50: Number(realtimeQuantiles.baseP50),
-        dayAheadD2AnchorP50: Number(realtimeQuantiles.dayAheadD2AnchorP50),
+        dayAheadT1AnchorP50: Number(realtimeQuantiles.dayAheadT1AnchorP50),
         anchorSegment: realtimeQuantiles.anchorSegment,
         anchorWeight: Number(realtimeQuantiles.anchorWeight),
       } : null,
