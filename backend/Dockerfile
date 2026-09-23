@@ -14,6 +14,10 @@ COPY private-data/henan-2026 ./private-data/henan-2026
 COPY index.html ./index.html
 COPY vendor ./vendor
 
+# 电源滞后来源策略：允许 ACTUAL 作为最低优先级来源。
+# 现状只有完整的实际出力、缺少预测出力，属权衡后的临时口径；
+# 输出会带 lag_leakage_risk 标记。补齐预测出力后应关闭此项。
+ENV POWER_TRADING_ALLOW_ACTUAL_LAG=1
 ENV POWER_TRADING_ENV=production
 ENV POWER_TRADING_CORS_ORIGINS=https://lukeooo11.github.io
 ENV AGENT_ENV=production
