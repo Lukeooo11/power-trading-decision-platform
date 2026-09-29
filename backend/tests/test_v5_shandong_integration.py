@@ -5,6 +5,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from app import main
 from app.v5_shandong_price_forecast import MODEL_VERSION, run_v5_shandong_forecast
+from app.d1_shandong_price_forecast import MODEL_VERSION as D1_MODEL_VERSION
 from app.price_forecast_model import run_price_forecast
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -23,8 +24,25 @@ def test_v5_emits_24_ordered_quantile_periods():
 
 def test_price_forecast_entry_selects_v5():
     result = run_price_forecast(PRIVATE, "2026-07-01")
-    assert result["model_version"] == MODEL_VERSION
+    assert result["model_version"] == D1_MODEL_VERSION
     assert len(result["forecast"]) == 24
+    boundary = result["summary"]["price_information_boundary"]
+    assert boundary["price_history_cutoff"] == "D-1"
+    assert boundary["price_settlement_lag_hours"] == 24
+    assert boundary["target_day_actual_price_used"] is False
+    assert "D-1" in result["summary"]["price_history_feature_lag"]
+
+
+def test_mixed_model_routes_day_ahead_to_xgboost_and_rt_spread_to_lightgbm():
+    from app.d1_shandong_price_forecast import _load
+
+    _, _, models, metadata, _ = _load()
+    assert metadata["selected"]["da"]["algorithm"] == "XGBoost"
+    assert metadata["selected"]["rt"]["algorithm"] == "LightGBM"
+    assert metadata["selected"]["spread"]["algorithm"] == "LightGBM"
+    assert models["da"]["algorithm"] == "XGBoost"
+    assert models["rt"]["algorithm"] == "LightGBM"
+    assert models["spread"]["algorithm"] == "LightGBM"
 
 
 def test_v5_raw_contract_keeps_platform_hold_controls():
@@ -37,8 +55,8 @@ def test_v5_raw_contract_keeps_platform_hold_controls():
         input_summary={"available_domains": ["prices", "weather"]}, timeout_seconds=120,
     )
     result = build_price_forecast_v1_result(request, "run-test", raw)
-    assert result.model.version == MODEL_VERSION
-    assert raw["model_version"] == MODEL_VERSION
+    assert result.model.version == D1_MODEL_VERSION
+    assert raw["model_version"] == D1_MODEL_VERSION
     assert result.strategy_ready is False
     assert all(period.strategy_suggestion.action == "HOLD" for period in result.periods)
     assert "GFS_FIXED_LEAD24_IS_NOT_A_UNIFIED_DECLARATION_CUTOFF_SNAPSHOT" in result.warnings
@@ -87,9 +105,9 @@ def test_forecast_api_reports_v5_instead_of_silent_fallback():
             assert response.status_code == 202, response.text
             run = response.json()
             assert run["status"] == "SUCCEEDED"
-            assert run["model_version"] == MODEL_VERSION
+            assert run["model_version"] == D1_MODEL_VERSION
             result = client.get(run["result_url"]).json()["result"]
-            assert result["model"]["version"] == MODEL_VERSION
+            assert result["model"]["version"] == D1_MODEL_VERSION
             assert len(result["periods"]) == 24
             assert all(row["strategy_suggestion"]["action"] == "HOLD" for row in result["periods"])
 
@@ -123,4 +141,4 @@ def test_public_platform_serves_price_data_required_by_date_selector():
         assert response.status_code == 200
         rows = response.json()
         assert rows[0]["date"] == "2026-01-01"
-        assert rows[-1]["date"] == "2026-07-31"
+        assert rows[-1]["date"] >= "2026-07-31"

@@ -11,11 +11,12 @@ from statistics import median
 from typing import Any
 
 from .bidding_strategy import _num, generate_strategy
+from .information_boundary import PRICE_SETTLEMENT_LAG_DAYS
 
 STRATEGY_KEY = "similar_day_cvar_v04"
 VERSION = "da-rt-split-similar-day-cvar-v0.4"
 CONFIG = {
-    "lookback_calendar_days": 90, "outcome_lag_days": 2,
+    "lookback_calendar_days": 90, "outcome_lag_days": PRICE_SETTLEMENT_LAG_DAYS,
     "max_neighbors": 20, "min_neighbors": 10,
     "min_effective_samples": 8.0, "max_distance": 2.0,
     "max_newest_age_days": 14, "recency_half_life_days": 30,

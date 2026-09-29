@@ -1,0 +1,70 @@
+{
+  "modelVersion": "sd-gfs24-d1-price-actual-supply-lgbm-v4",
+  "weatherDataVersion": "sd-16city-gfs24-actual-supply-20260101-20260831-d1-v4",
+  "trainingCutoff": "2026-06-30",
+  "featurePolicy": "D-1 settlement prices/events plus D-1 measured load and renewable output; target-day actual supply excluded; forecast output pending",
+  "selected": {
+    "da": {
+      "featureSet": "GFS完整+日内形态+D-1结算价+D-1实际负荷风光",
+      "algorithm": "LightGBM"
+    },
+    "rt": {
+      "featureSet": "GFS完整+日内形态+D-1结算价+D-1实际负荷风光",
+      "algorithm": "LightGBM"
+    },
+    "spread": {
+      "featureSet": "GFS核心+空间分布+D-1结算价+D-1实际负荷风光",
+      "algorithm": "LightGBM"
+    },
+    "negative": {
+      "featureSet": "GFS完整+日内形态+D-1结算价+D-1实际负荷风光",
+      "algorithm": "LightGBM"
+    },
+    "spike": {
+      "featureSet": "GFS完整+日内形态+D-1结算价+D-1实际负荷风光",
+      "algorithm": "LightGBM"
+    }
+  },
+  "julyMetrics": {
+    "da": {
+      "mae": 51.807059911266904,
+      "rmse": 72.32456510544107,
+      "bias": -24.249773710958276,
+      "sampleCount": 744
+    },
+    "rt": {
+      "mae": 84.29409543509638,
+      "rmse": 132.38055093829837,
+      "bias": -24.44374360886952,
+      "sampleCount": 744
+    },
+    "spread": {
+      "mae": 84.05669680059867,
+      "rmse": 133.0048874039901,
+      "bias": -12.432023708620228,
+      "sampleCount": 744
+    }
+  },
+  "evaluationModes": {
+    "2026-02_to_2026-06": "EXPANDING_WINDOW_OOF",
+    "2026-07": "FROZEN_HOLDOUT"
+  },
+  "availabilityControl": {
+    "priceSettlementLagDays": 1,
+    "supplyMinimumLagHours": 24,
+    "d1ActualLoadWindSolarUsed": true,
+    "targetDateActualSupplyUsed": false,
+    "forecastSupplyPending": true
+  },
+  "sha256": {
+    "day_ahead.pkl": "18ad9b135ae98e6742622d87315386efad214824695856d31a6def72d86d1a37",
+    "extended_backtest_metrics.json": "f317e6eb1986972bcc36abfdb7e5574dfb61545e13bcf12e626a97c7f8b1b416",
+    "negative.pkl": "209b5d3a81fd1cc01f8c263d539e77642a176386a7aca9d9945e41e27f791e74",
+    "real_time.pkl": "8438cbbedef93ca367c93d4b486b85bf97afe5fb0706a041d2749fcd1c2062f9",
+    "residual_calibration.json": "b0f15c0d9f1ec71e548b66cc7e2835127f735ca52ed455c6fa8c1c25f118ee72",
+    "spike.pkl": "ba4dad9c29f1192b90cfff79d348c1630477db0a80b9478c4db47ccc98fb7a31",
+    "spread.pkl": "e28545b81409cfbe15c6106db292145939afc8444b9e37fe02c82b3d207cf11e",
+    "v5_expanding_oof_predictions.csv.gz": "0037dc95ba4b17bd114174e4c3d1cd5c704f33d7cca7f212cb8be854c66d0b31",
+    "v6_gfs24_actual_supply_feature_store.csv.gz": "e8c0746c3f4767cd553ccd6b941f5730f10d15365a1d300c4c762ad6548eb581"
+  }
+}

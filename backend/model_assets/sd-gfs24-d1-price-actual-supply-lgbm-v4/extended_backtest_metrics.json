@@ -1,0 +1,157 @@
+{
+  "schemaVersion": "v8-d1-actual-supply-backtest-v1",
+  "modelVersion": "sd-gfs24-d1-price-actual-supply-lgbm-v4",
+  "method": "monthly expanding-window OOF plus frozen July holdout",
+  "windowStart": "2026-02-01",
+  "windowEnd": "2026-07-31",
+  "monthly": {
+    "2026-02": {
+      "trainingEnd": "2026-01-31",
+      "sampleCount": 672,
+      "dayAhead": {
+        "mae": 94.70794828767633,
+        "rmse": 120.20875132064893,
+        "bias": 31.461780338064447,
+        "sampleCount": 672
+      },
+      "realTime": {
+        "mae": 125.06714810073734,
+        "rmse": 157.28085482248204,
+        "bias": 30.52457922709712,
+        "sampleCount": 648
+      },
+      "spread": {
+        "mae": 84.7851764388825,
+        "rmse": 117.23774079580987,
+        "bias": -10.064952495270516,
+        "sampleCount": 648
+      }
+    },
+    "2026-03": {
+      "trainingEnd": "2026-02-28",
+      "sampleCount": 744,
+      "dayAhead": {
+        "mae": 73.98129494254388,
+        "rmse": 94.10065493243937,
+        "bias": -23.914287073014474,
+        "sampleCount": 744
+      },
+      "realTime": {
+        "mae": 126.33143901742811,
+        "rmse": 167.05597583453152,
+        "bias": -71.45013814437549,
+        "sampleCount": 744
+      },
+      "spread": {
+        "mae": 92.4759997418169,
+        "rmse": 140.4431083513607,
+        "bias": 34.55947929955286,
+        "sampleCount": 744
+      }
+    },
+    "2026-04": {
+      "trainingEnd": "2026-03-31",
+      "sampleCount": 720,
+      "dayAhead": {
+        "mae": 81.00632447553595,
+        "rmse": 108.17486691425644,
+        "bias": -54.750505529199636,
+        "sampleCount": 720
+      },
+      "realTime": {
+        "mae": 113.73976918173551,
+        "rmse": 165.9230848469428,
+        "bias": -30.64108306979823,
+        "sampleCount": 720
+      },
+      "spread": {
+        "mae": 80.48032795333499,
+        "rmse": 136.1745114434438,
+        "bias": -2.298662378263482,
+        "sampleCount": 720
+      }
+    },
+    "2026-05": {
+      "trainingEnd": "2026-04-30",
+      "sampleCount": 744,
+      "dayAhead": {
+        "mae": 76.74364164732985,
+        "rmse": 97.3258587294201,
+        "bias": -38.55649712660873,
+        "sampleCount": 744
+      },
+      "realTime": {
+        "mae": 96.61268803347205,
+        "rmse": 132.8623695518159,
+        "bias": -2.746511934464274,
+        "sampleCount": 744
+      },
+      "spread": {
+        "mae": 77.89691174642273,
+        "rmse": 114.63470621696226,
+        "bias": -32.29996811787299,
+        "sampleCount": 744
+      }
+    },
+    "2026-06": {
+      "trainingEnd": "2026-05-31",
+      "sampleCount": 720,
+      "dayAhead": {
+        "mae": 66.4186526276514,
+        "rmse": 84.08541575818204,
+        "bias": 6.215798348777964,
+        "sampleCount": 720
+      },
+      "realTime": {
+        "mae": 115.6892327832613,
+        "rmse": 162.33214143401992,
+        "bias": -13.957020808083094,
+        "sampleCount": 720
+      },
+      "spread": {
+        "mae": 94.38714740480985,
+        "rmse": 146.96716841590654,
+        "bias": 29.87078942261252,
+        "sampleCount": 720
+      }
+    }
+  },
+  "julyMetrics": {
+    "da": {
+      "mae": 51.807059911266904,
+      "rmse": 72.32456510544107,
+      "bias": -24.249773710958276,
+      "sampleCount": 744
+    },
+    "rt": {
+      "mae": 84.29409543509638,
+      "rmse": 132.38055093829837,
+      "bias": -24.44374360886952,
+      "sampleCount": 744
+    },
+    "spread": {
+      "mae": 84.05669680059867,
+      "rmse": 133.0048874039901,
+      "bias": -12.432023708620228,
+      "sampleCount": 744
+    }
+  },
+  "julyEvents": {
+    "negative": {
+      "sampleCount": 744,
+      "prAuc": null,
+      "thresholdF1": 0.13,
+      "thresholdF2": 0.08,
+      "positiveCount": 55
+    },
+    "spike": {
+      "sampleCount": 744,
+      "prAuc": null,
+      "thresholdF1": 0.06,
+      "thresholdF2": 0.06,
+      "positiveCount": 26
+    }
+  },
+  "priceInformationBoundary": "D-1日前和D-1实时结算价以及D-1实际负荷/风光出力可用；目标日实际数据未使用",
+  "forecastSupplyPending": true
+}

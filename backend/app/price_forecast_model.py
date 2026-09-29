@@ -16,8 +16,9 @@ import numpy as np
 import pandas as pd
 
 from .price_forecast_tabular import run_supply_candidate
-from .v5_shandong_price_forecast import run_v5_shandong_forecast
+from .d1_shandong_price_forecast import run_d1_shandong_forecast
 from .deep_sequence_models import run_sequence_challengers
+from .information_boundary import price_boundary_metadata
 
 
 MODEL_VERSION = "price-forecast-v1.3.0"
@@ -329,7 +330,7 @@ def _run_price_forecast_v11(private_data_dir: Path, market_date: str, high_price
     frame = load_price_history(private_data_dir)
     weather_lookup, weather_asset = load_weather_features(private_data_dir)
     da = _select_and_forecast(frame, "da", market_date, weather_lookup, label_lag_days=1)
-    rt = _select_and_forecast(frame, "rt", market_date, weather_lookup, label_lag_days=2)
+    rt = _select_and_forecast(frame, "rt", market_date, weather_lookup, label_lag_days=1)
     rows: list[dict[str, Any]] = []
     for index, timestamp in enumerate(da["future_times"], 1):
         da_quantiles = [float(da["lower"][index - 1]), float(da["forecast"][index - 1]), float(da["upper"][index - 1])]
@@ -716,14 +717,19 @@ def run_price_forecast(private_data_dir: Path, market_date: str, high_price_thre
     # Primary Shandong price engine. The pre-existing model below remains the fallback.
     v5_error: str | None = None
     try:
-        return run_v5_shandong_forecast(
+        result = run_d1_shandong_forecast(
             target_date=market_date,
             private_data_dir=private_data_dir,
             high_price_threshold=high_price_threshold,
         )
+        result.setdefault("summary", {})["price_information_boundary"] = price_boundary_metadata()
+        result["summary"]["price_history_feature_lag"] = (
+            "D-1日前和实时结算价已进入LightGBM主模型；电源出力仍使用safe-lag48plus"
+        )
+        return result
     except (FileNotFoundError, ImportError, KeyError, ValueError, OSError) as error:
         if '2026-01-01' <= market_date <= '2026-07-31':
-            raise RuntimeError(f"V5 initialization failed: {error}") from error
+            raise RuntimeError(f"D-1 LightGBM initialization failed: {error}") from error
         v5_error = str(error)
 
     if '2026-07-01' <= market_date <= '2026-07-31' and (private_data_dir / 'july_import_manifest.json').exists():
@@ -744,7 +750,7 @@ def run_price_forecast(private_data_dir: Path, market_date: str, high_price_thre
     frame = load_price_history(private_data_dir)
     weather_lookup, weather_asset = load_weather_features(private_data_dir)
     da_legacy = _select_and_forecast(frame, "da", market_date, weather_lookup, label_lag_days=1)
-    rt_legacy = _select_and_forecast(frame, "rt", market_date, weather_lookup, label_lag_days=2)
+    rt_legacy = _select_and_forecast(frame, "rt", market_date, weather_lookup, label_lag_days=1)
 
     supply_error: str | None = None
     supply_candidates: dict[str, dict[str, Any]] = {}
@@ -761,12 +767,12 @@ def run_price_forecast(private_data_dir: Path, market_date: str, high_price_thre
             market_date,
             target="rt",
             model_kind="histgb",
-            label_cutoff_days=2,
+            label_cutoff_days=1,
         )
         supply_candidates["random_forest"] = da_supply
         try:
             rt_xgb = run_supply_candidate(
-                private_data_dir, market_date, target="rt", model_kind="xgboost", label_cutoff_days=2
+                private_data_dir, market_date, target="rt", model_kind="xgboost", label_cutoff_days=1
             )
             supply_candidates["rt_xgboost"] = rt_xgb
             rt_supply = rt_xgb
@@ -930,6 +936,8 @@ def run_price_forecast(private_data_dir: Path, market_date: str, high_price_thre
             "forecast_end": rows[-1]["datetime"],
             "evaluation_method": "rolling_daily_pre_declaration",
             "feature_set": "calendar_price_lags_gfs_weather_supply_d1_d7_adaptive_ensemble_v3",
+            "price_information_boundary": price_boundary_metadata(),
+            "price_history_feature_lag": "D-1 and older settlement prices; confirmed available before trade",
             "weather_data_version": weather_asset.get("dataVersion"),
             "weather_known_before_declaration": weather_asset.get("knownBeforeDeclaration", False),
             "weather_used_in_da_final": True,

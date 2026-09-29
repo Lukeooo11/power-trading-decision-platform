@@ -23,6 +23,7 @@ from typing import Any
 
 from .bidding_strategy import _num, _weighted_cvar, build_historical_price_scenarios, generate_strategy
 from .similar_day_scenarios import build_similar_day_scenarios
+from .information_boundary import PRICE_SETTLEMENT_LAG_DAYS
 
 ADVANCED_KEY = "advanced_cvar_v05"
 JOINT_KEY = "joint_cvar_v06"
@@ -33,7 +34,7 @@ CONFIG: dict[str, Any] = {
     "mixture_weights": {"similar_day": 0.55, "recent_error": 0.25, "extreme_tail": 0.20},
     "recent_lookback_days": 30,
     "calibration_lookback_days": 45,
-    "outcome_lag_days": 2,
+    "outcome_lag_days": PRICE_SETTLEMENT_LAG_DAYS,
     "minimum_residual_samples": 10,
     "newsvendor_weight": 0.20,
     "confidence_sample_target": 20.0,

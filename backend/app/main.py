@@ -20,8 +20,10 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StrictFloat
 
 from .supply_source_policy import select_supply_rows
+from .information_boundary import price_boundary_metadata
 from .policy_agent_client import PolicyAgentClient, PolicyAgentError
 from .price_forecast_model import run_price_forecast
+from .d1_shandong_price_forecast import MODEL_VERSION as D1_MODEL_VERSION
 from .henan_price_forecast import run_henan_forecast, run_henan_seven_day_forecast
 from .bidding_strategy import build_historical_price_scenarios, generate_strategy
 from .strategy_backtest import run_strategy_backtest
@@ -1006,18 +1008,19 @@ def build_forecast(date: str, model_version: str, market_code: str = "SD") -> li
     if not targets:
         raise HTTPException(status_code=404, detail=f"No spot price rows for {date}")
     lag_one_date = offset_date(date, -1)
-    lag_two_date = offset_date(date, -2)
+    # 业务确认：目标交易前 D-1 的日前、实时结算价均已可得。
+    previous_settlement_date = lag_one_date
     lag_one = {row["time"]: row for row in prices if row.get("date") == lag_one_date}
-    lag_two = {row["time"]: row for row in prices if row.get("date") == lag_two_date}
-    if not lag_one or not lag_two:
-        raise HTTPException(status_code=409, detail="The lag baseline requires D-1 day-ahead and D-2 real-time price rows.")
+    previous_settlement = {row["time"]: row for row in prices if row.get("date") == previous_settlement_date}
+    if not lag_one or not previous_settlement:
+        raise HTTPException(status_code=409, detail="The lag baseline requires D-1 day-ahead and D-1 real-time settlement rows.")
     lag_one_load = {row["time"]: row for row in loads if row.get("date") == lag_one_date}
     results: list[dict[str, Any]] = []
     for index, target in enumerate(targets):
         time_point = target["time"]
         previous_day = lag_one.get(time_point)
-        two_days_before = lag_two.get(time_point)
-        if not previous_day or not two_days_before:
+        previous_settlement_row = previous_settlement.get(time_point)
+        if not previous_day or not previous_settlement_row:
             continue
         historical_prices = [
             float(row["realtimePriceYuanMwh"])
@@ -1027,8 +1030,8 @@ def build_forecast(date: str, model_version: str, market_code: str = "SD") -> li
         if not historical_prices:
             continue
         historical_mean = average(historical_prices)
-        lag_two_rt = two_days_before.get("realtimePriceYuanMwh")
-        lag_two_rt = float(lag_two_rt) if isinstance(lag_two_rt, (int, float)) else historical_mean
+        previous_rt_settlement = previous_settlement_row.get("realtimePriceYuanMwh")
+        previous_rt_settlement = float(previous_rt_settlement) if isinstance(previous_rt_settlement, (int, float)) else historical_mean
         day_ahead = float(previous_day["dayAheadPriceYuanMwh"])
         prior_loads = [
             float(row["totalMwh"])
@@ -1039,14 +1042,14 @@ def build_forecast(date: str, model_version: str, market_code: str = "SD") -> li
         lag_load_value = lag_one_load.get(time_point, {}).get("totalMwh")
         load_delta = (float(lag_load_value) - load_reference) / load_reference if isinstance(lag_load_value, (int, float)) and load_reference > 0 else 0.0
         load_adjustment = max(-0.3, min(0.3, load_delta)) * 90.0
-        predicted = day_ahead * 0.5 + lag_two_rt * 0.3 + historical_mean * 0.2 + load_adjustment
+        predicted = day_ahead * 0.5 + previous_rt_settlement * 0.3 + historical_mean * 0.2 + load_adjustment
         variance = average([(value - historical_mean) ** 2 for value in historical_prices])
         interval = max(28.0, min(180.0, math.sqrt(variance) * 1.15 or 45.0))
         spread = day_ahead - predicted
         direction = "实时高于日前" if spread < -10 else "实时低于日前" if spread > 10 else "价差收敛"
         drivers: list[str] = []
-        if lag_two_rt > historical_mean * 1.15:
-            drivers.append("D-2实时价格偏高")
+        if previous_rt_settlement > historical_mean * 1.15:
+            drivers.append("D-1实时结算价格偏高")
         if day_ahead > historical_mean * 1.15:
             drivers.append("D-1日前价格偏高")
         if load_delta > 0.05:
@@ -1074,7 +1077,7 @@ def build_forecast(date: str, model_version: str, market_code: str = "SD") -> li
                 "actualSpread": round(day_ahead - float(target["realtimePriceYuanMwh"]), 3) if isinstance(target.get("realtimePriceYuanMwh"), (int, float)) else None,
                 "sourceFile": "spot_prices_2026h1.json + portfolio_load_hourly_2026h1.json",
                 "importBatchId": f"sd-backtest-{date.replace('-', '')}-01",
-                "inputDates": {"dayAhead": lag_one_date, "realtime": lag_two_date, "load": lag_one_date},
+                "inputDates": {"dayAhead": lag_one_date, "realtime": previous_settlement_date, "load": lag_one_date},
             }
         )
     return results
@@ -1233,7 +1236,7 @@ def build_price_forecast_v1_result(request: ModelRunCreateRequestV1, run_id: str
     rt_weather_mae = rt_weather_metrics.get("mae")
     rt_baseline_mae = rt_baseline_metrics.get("mae")
     rt_weather_improvement = rt_baseline_mae - rt_weather_mae if rt_baseline_mae is not None and rt_weather_mae is not None else None
-    is_v5 = raw.get("model_version") == "sd-gfs24-actual-supply-lgbm-v2"
+    is_v5 = raw.get("model_version") in {"sd-gfs24-actual-supply-lgbm-v2", D1_MODEL_VERSION}
     v5_evaluation_mode = raw["summary"].get("evaluation_mode")
     v5_evaluation_warning = {
         "IN_SAMPLE_DIAGNOSTIC": "IN_SAMPLE_DIAGNOSTIC_NOT_OUT_OF_SAMPLE",
@@ -1455,7 +1458,7 @@ def build_conditional_forecast_v1_result(request: ModelRunCreateRequestV1, run_i
             "bias_yuan_per_mwh": da_metrics.get("bias"),
             "negative_price_direction_accuracy": da_metrics.get("negative_accuracy"),
             "extreme_high_price_recall": da_metrics.get("high_recall"),
-            "evaluation_method": "D-2 rolling forecast; selected-day actuals used only for post-event evaluation",
+            "evaluation_method": "D-1 settlement-aware rolling forecast; selected-day actuals used only for post-event evaluation",
             "feature_set": "calendar_price_lags_gfs_weather_lagged_supply_plus_conditional_target_supply_forecast",
             "weather_data_version": "sd-weather-gfs-hourly-v2",
             "weather_known_before_declaration": True,
@@ -1531,8 +1534,8 @@ def create_model_run(request: ModelRunCreateRequestV1, parent_run_id: str | None
     ):
         request = request.model_copy(
             update={
-                "model_version": "sd-gfs24-actual-supply-lgbm-v2",
-                "data_version": "sd-16city-gfs-fixed-lead24-20260101-20260831-v1",
+                "model_version": D1_MODEL_VERSION,
+                "data_version": "sd-16city-gfs24-actual-supply-20260101-20260831-d1-mixed-v5",
             }
         )
     if request.model_id == "lag-baseline":
@@ -1620,7 +1623,7 @@ def create_model_run(request: ModelRunCreateRequestV1, parent_run_id: str | None
                 # Keep the historical version string as an API alias, but serve V5
                 # whenever its controlled assets cover the requested market date.
                 raw = run_price_forecast(PRIVATE_DATA, request.market_date)
-                if raw.get("model_version") == "sd-gfs24-actual-supply-lgbm-v2":
+                if raw.get("model_version") in {"sd-gfs24-actual-supply-lgbm-v2", D1_MODEL_VERSION}:
                     result = build_price_forecast_v1_result(
                         request.model_copy(update={"market_code": market_code}), run_id, raw
                     )
@@ -2303,9 +2306,9 @@ def forecast_features(date: str = Query(...), market_code: str = "SD") -> dict[s
     prices = load_private_json("spot_prices_2026h1.json")
     loads = load_private_json("portfolio_load_hourly_2026h1.json")
     lag_one_date = offset_date(date, -1)
-    lag_two_date = offset_date(date, -2)
+    realtime_settlement_date = lag_one_date
     day_ahead = [row for row in prices if row.get("date") == lag_one_date]
-    realtime = [row for row in prices if row.get("date") == lag_two_date]
+    realtime = [row for row in prices if row.get("date") == realtime_settlement_date]
     load_rows = [row for row in loads if row.get("date") == lag_one_date]
     weather_asset = load_private_json("weather_hourly_gfs_20260501_20260701.json")
     weather_rows = [row for row in weather_asset.get("rows", []) if row.get("marketDate") == date]
@@ -2323,12 +2326,13 @@ def forecast_features(date: str = Query(...), market_code: str = "SD") -> dict[s
         "market_code": market_code.upper(),
         "date": date,
         "point_count": len(day_ahead),
-        "input_dates": {"dayAhead": lag_one_date, "realtime": lag_two_date, "load": lag_one_date, "weather": date, "supplyLagOne": lag_one_date, "supplyLagSeven": supply_lag_seven_date},
+        "input_dates": {"dayAhead": lag_one_date, "realtime": realtime_settlement_date, "load": lag_one_date, "weather": date, "supplyLagOne": lag_one_date, "supplyLagSeven": supply_lag_seven_date},
         "day_ahead_rows": day_ahead,
         "realtime_rows": realtime,
         "portfolio_load_rows": load_rows,
         "weather_rows": weather_rows,
         "supply_lag_source_policy": supply_source_audit,
+        "price_information_boundary": price_boundary_metadata(),
         "supply_lag_one_rows": supply_lag_one_rows,
         "supply_lag_seven_rows": supply_lag_seven_rows,
         "supply_data_version": supply_asset.get("dataVersion"),
@@ -2336,7 +2340,7 @@ def forecast_features(date: str = Query(...), market_code: str = "SD") -> dict[s
         "weather_data_version": weather_asset.get("dataVersion"),
         "weather_known_before_declaration": weather_asset.get("knownBeforeDeclaration", False),
         "weather_backtest_leakage_safe": weather_asset.get("backtestLeakageSafe", False),
-        "note": "D-1日前、D-2实时和组合负荷按当前业务顺序组织；目标日GFS天气已按业务确认口径使用。Q2电源预测当前仅提供D-1/D-7滞后特征，目标日竞价空间、供需边界及精确forecast_issue_time仍待补。",
+        "note": "目标交易前可读取D-1日前与D-1实时结算价；目标日GFS天气按业务确认口径使用。电源实际出力及目标日供需预测仍需独立发布时间审计，不能因价格结算可得而直接放开。",
     }
 
 
@@ -3591,15 +3595,15 @@ def models_v1() -> dict[str, Any]:
             },
             {
                 "id": "price-forecast",
-                "name": "山东V5 GFS24价格预测（1—7月研究回放）",
+                "name": "山东D-1价格与实际出力增强GFS24价格预测（1—7月研究回放）",
                 "status": "connected_local",
-                "versions": ["sd-gfs24-actual-supply-lgbm-v2", CONDITIONAL_VERSION],
+                "versions": [D1_MODEL_VERSION, "sd-gfs24-d1-price-actual-supply-lgbm-v4", "sd-gfs24-actual-supply-lgbm-v2", CONDITIONAL_VERSION],
                 "run_mode": "synchronous_local",
                 "result_callback": "/api/v1/model-runs/{run_id}/results",
                 "output_contract": "forecast-strategy-contract-v1",
             },
         ],
-        "note": "山东默认价格引擎为V5 GFS24：1月为训练内诊断，2—6月为扩展窗口OOF回放，7月为冻结独立测试；历史conditional版本字符串保留为兼容别名，结果仍需人工复核。",
+        "note": "山东默认本地候选引擎为混合模型：日前价格使用XGBoost，实时价格和价差使用LightGBM；三者共享D-1结算价、D-1实际负荷/风光出力和提前24小时GFS特征，目标日预测出力待接入；1月为训练内诊断，2—6月为扩展窗口OOF回放，7月为冻结独立测试，结果仍需人工复核。",
     }
 
 

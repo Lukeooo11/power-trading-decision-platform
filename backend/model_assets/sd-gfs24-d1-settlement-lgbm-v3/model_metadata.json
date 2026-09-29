@@ -1,0 +1,69 @@
+{
+  "modelVersion": "sd-gfs24-d1-settlement-lgbm-v3",
+  "weatherDataVersion": "sd-16city-gfs24-actual-supply-20260101-20260831-d1-v3",
+  "trainingCutoff": "2026-06-30",
+  "featurePolicy": "D-1 settlement prices and event lags; supply/output safe-lag48plus",
+  "selected": {
+    "da": {
+      "featureSet": "GFS完整+日内形态+D-1结算价",
+      "algorithm": "LightGBM"
+    },
+    "rt": {
+      "featureSet": "GFS完整+日内形态+D-1结算价",
+      "algorithm": "LightGBM"
+    },
+    "spread": {
+      "featureSet": "GFS核心+空间分布+D-1结算价",
+      "algorithm": "LightGBM"
+    },
+    "negative": {
+      "featureSet": "GFS完整+日内形态+D-1结算价",
+      "algorithm": "LightGBM"
+    },
+    "spike": {
+      "featureSet": "GFS完整+日内形态+D-1结算价",
+      "algorithm": "LightGBM"
+    }
+  },
+  "julyMetrics": {
+    "da": {
+      "mae": 53.46723972307817,
+      "rmse": 71.59771497367164,
+      "bias": -28.041289570382105,
+      "sampleCount": 744
+    },
+    "rt": {
+      "mae": 83.99453226652143,
+      "rmse": 132.98409555033203,
+      "bias": -27.80774039622914,
+      "sampleCount": 744
+    },
+    "spread": {
+      "mae": 82.83177758279103,
+      "rmse": 130.89485553742173,
+      "bias": -4.886432637683109,
+      "sampleCount": 744
+    }
+  },
+  "evaluationModes": {
+    "2026-02_to_2026-06": "EXPANDING_WINDOW_OOF",
+    "2026-07": "FROZEN_HOLDOUT"
+  },
+  "availabilityControl": {
+    "priceSettlementLagDays": 1,
+    "supplyMinimumLagHours": 48,
+    "targetDateActualSupplyUsed": false
+  },
+  "sha256": {
+    "day_ahead.pkl": "39964829c28310241671e17121ae46d7c88dc3f5b42c214e6b3581b1aa50f7d1",
+    "extended_backtest_metrics.json": "b4d7c65b8c0a93138d15632e1a69ca75aa24ecb5871183a223a5b6e2dd0d1d4e",
+    "MODEL_CARD.md": "3d98ec44769d28fa149d80076d03f75087acfbb605e6f8ce41f625ce099fd10b",
+    "negative.pkl": "431d5a20aba8c1329b8570b0652f7e6d4349b72a2f5a4e9a650a312ffaa93312",
+    "real_time.pkl": "cc1a4f00c9443dfbe42e40a4f24d87744e7225702c6a78b1ef497cb833c2daf0",
+    "residual_calibration.json": "06b5e0fa59050ca12851f42c3098fbd56e734893832327f41eeeaedf63289996",
+    "spike.pkl": "aaca41f8b4906693650c5eaad12c3517e3e07f321309098879c66d7f0073d886",
+    "spread.pkl": "188a9a8a6586de3ba91876205f98f34a1e298e09a7f8abc7bbf06552a4e68f36",
+    "v5_expanding_oof_predictions.csv.gz": "43110bf681491ab4dd7ce24a7c14a581c9f1127d90094e8835b8f38100494f3b",
+    "v6_gfs24_actual_supply_feature_store.csv.gz": "e8c0746c3f4767cd553ccd6b941f5730f10d15365a1d300c4c762ad6548eb581"
+  }
+}

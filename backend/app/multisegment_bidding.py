@@ -262,7 +262,7 @@ def optimize_multisegment_bids(*, business_date, records, scenario_banks,
         for p in paths:
             if not isinstance(p, dict): raise ValueError('Scenario object required')
             stamp = p.get('source_date')
-            if date.fromisoformat(stamp) > cutoff or stamp in seen: raise ValueError('Unique D-2 paths required')
+            if date.fromisoformat(stamp) > cutoff or stamp in seen: raise ValueError('Unique D-1 price paths required')
             seen.add(stamp)
             if not finite(p.get('weight')) or p['weight'] <= 0: raise ValueError('Positive scenario weight required')
             for key in ('day_ahead','real_time'):

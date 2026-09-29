@@ -137,7 +137,7 @@ def optimize_independent_bids(*, business_date, records, scenario_banks,
             stamp=p.get('source_date')
             try:parsed=date.fromisoformat(stamp)
             except (TypeError,ValueError):raise ValueError('Invalid source date') from None
-            if parsed>cutoff or stamp in seen:raise ValueError('Unique D-2 historical sources required')
+            if parsed>cutoff or stamp in seen:raise ValueError('Unique D-1 historical price sources required')
             seen.add(stamp)
             if not finite(p.get('weight')) or p['weight']<=0:raise ValueError('Positive finite weight required')
             for k in ['day_ahead','real_time']:

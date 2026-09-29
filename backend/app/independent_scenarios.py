@@ -1,6 +1,7 @@
-"""Paired historical residual paths for independent bids, with a D-2 boundary."""
+"""Paired historical residual paths for independent bids, with a D-1 price boundary."""
 from datetime import date, datetime, timedelta, timezone
 from math import isfinite
+from .information_boundary import PRICE_SETTLEMENT_LAG_DAYS
 
 DA='day_ahead_price_yuan_per_mwh'
 RT='real_time_price_yuan_per_mwh'
@@ -16,10 +17,10 @@ def audit_premarket_snapshot(day):
     audit = day.get('audit') or {}
     if day.get('forecast_scenario') != 'pre_market':
         raise ValueError('Premarket snapshots required; post-clearing RT cannot drive DA bids')
-    cutoff = delivery-timedelta(days=2)
+    cutoff = delivery-timedelta(days=PRICE_SETTLEMENT_LAG_DAYS)
     train_end = audit.get('train_end')
     if train_end is not None and date.fromisoformat(train_end) > cutoff:
-        raise ValueError('Forecast training cutoff exceeds D-2')
+        raise ValueError('Forecast training cutoff exceeds D-1 price boundary')
     # The official deadline is D-1 15:00 China time, for the SAME delivery day.
     deadline = datetime.combine(delivery-timedelta(days=1), datetime.min.time(),
         timezone(timedelta(hours=8))).replace(hour=15)
@@ -44,7 +45,7 @@ def build_independent_inputs(history, business_date, exposure_by_period=None):
     Missing exposure defaults to an explicitly labelled unit research, not a
     customer volume estimate. No post-clearing RT forecast enters the paths.
     """
-    cutoff=(date.fromisoformat(business_date)-timedelta(days=2)).isoformat()
+    cutoff=(date.fromisoformat(business_date)-timedelta(days=PRICE_SETTLEMENT_LAG_DAYS)).isoformat()
     lookup={r['market_date']:r for r in history}
     if len(lookup)!=len(history):raise ValueError('Duplicate forecast date')
     target=lookup.get(business_date)

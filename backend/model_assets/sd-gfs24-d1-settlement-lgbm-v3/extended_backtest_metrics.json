@@ -1,0 +1,156 @@
+{
+  "schemaVersion": "v7-d1-backtest-v1",
+  "modelVersion": "sd-gfs24-d1-settlement-lgbm-v3",
+  "method": "monthly expanding-window OOF plus frozen July holdout",
+  "windowStart": "2026-02-01",
+  "windowEnd": "2026-07-31",
+  "monthly": {
+    "2026-02": {
+      "trainingEnd": "2026-01-31",
+      "sampleCount": 672,
+      "dayAhead": {
+        "mae": 88.4176514809286,
+        "rmse": 113.09295134752546,
+        "bias": 27.905754393756858,
+        "sampleCount": 672
+      },
+      "realTime": {
+        "mae": 127.74335650971504,
+        "rmse": 163.27476981659944,
+        "bias": 31.840866157823353,
+        "sampleCount": 648
+      },
+      "spread": {
+        "mae": 87.93986950152856,
+        "rmse": 119.64869917083429,
+        "bias": -17.935178238097127,
+        "sampleCount": 648
+      }
+    },
+    "2026-03": {
+      "trainingEnd": "2026-02-28",
+      "sampleCount": 744,
+      "dayAhead": {
+        "mae": 75.27117569634173,
+        "rmse": 96.82225173413771,
+        "bias": -23.896814041072492,
+        "sampleCount": 744
+      },
+      "realTime": {
+        "mae": 129.36950254850822,
+        "rmse": 171.40097378922545,
+        "bias": -74.62281864230724,
+        "sampleCount": 744
+      },
+      "spread": {
+        "mae": 92.44570503284574,
+        "rmse": 139.97358525410496,
+        "bias": 36.3845741480301,
+        "sampleCount": 744
+      }
+    },
+    "2026-04": {
+      "trainingEnd": "2026-03-31",
+      "sampleCount": 720,
+      "dayAhead": {
+        "mae": 73.8477898058872,
+        "rmse": 99.98361391309943,
+        "bias": -49.69860358655351,
+        "sampleCount": 720
+      },
+      "realTime": {
+        "mae": 115.09837208064512,
+        "rmse": 168.29867107303343,
+        "bias": -43.00317044008612,
+        "sampleCount": 720
+      },
+      "spread": {
+        "mae": 80.40302509189866,
+        "rmse": 136.58117315365112,
+        "bias": -1.3596939437953661,
+        "sampleCount": 720
+      }
+    },
+    "2026-05": {
+      "trainingEnd": "2026-04-30",
+      "sampleCount": 744,
+      "dayAhead": {
+        "mae": 77.36891924345004,
+        "rmse": 97.90365390212473,
+        "bias": -35.846497976734966,
+        "sampleCount": 744
+      },
+      "realTime": {
+        "mae": 92.53869688422668,
+        "rmse": 131.02548261920737,
+        "bias": -1.5988683892851538,
+        "sampleCount": 744
+      },
+      "spread": {
+        "mae": 77.02865236231945,
+        "rmse": 114.591454498064,
+        "bias": -28.568555704347105,
+        "sampleCount": 744
+      }
+    },
+    "2026-06": {
+      "trainingEnd": "2026-05-31",
+      "sampleCount": 720,
+      "dayAhead": {
+        "mae": 66.40636164699279,
+        "rmse": 83.97881604057272,
+        "bias": 5.99274470790616,
+        "sampleCount": 720
+      },
+      "realTime": {
+        "mae": 115.03439616908794,
+        "rmse": 160.76470547587414,
+        "bias": -7.254677943524711,
+        "sampleCount": 720
+      },
+      "spread": {
+        "mae": 94.36463644686849,
+        "rmse": 146.70287475936166,
+        "bias": 28.952625966439978,
+        "sampleCount": 720
+      }
+    }
+  },
+  "julyMetrics": {
+    "da": {
+      "mae": 53.46723972307817,
+      "rmse": 71.59771497367164,
+      "bias": -28.041289570382105,
+      "sampleCount": 744
+    },
+    "rt": {
+      "mae": 83.99453226652143,
+      "rmse": 132.98409555033203,
+      "bias": -27.80774039622914,
+      "sampleCount": 744
+    },
+    "spread": {
+      "mae": 82.83177758279103,
+      "rmse": 130.89485553742173,
+      "bias": -4.886432637683109,
+      "sampleCount": 744
+    }
+  },
+  "julyEvents": {
+    "negative": {
+      "sampleCount": 744,
+      "prAuc": null,
+      "thresholdF1": 0.18,
+      "thresholdF2": 0.08,
+      "positiveCount": 55
+    },
+    "spike": {
+      "sampleCount": 744,
+      "prAuc": null,
+      "thresholdF1": 0.07,
+      "thresholdF2": 0.05,
+      "positiveCount": 26
+    }
+  },
+  "priceInformationBoundary": "D-1日前和D-1实时结算价可用；电源出力仍保持48小时及以上滞后"
+}

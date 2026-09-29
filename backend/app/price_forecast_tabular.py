@@ -202,6 +202,7 @@ def _build_frame(
     supply: dict[tuple[str, int], dict[str, float]],
     target: str,
     dates: list[str],
+    price_settlement_lag_days: int = 1,
 ) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     # Callers commonly append the target date to the historical date list;
@@ -211,7 +212,11 @@ def _build_frame(
     cross_name = "rt" if target == "da" else "da"
     cross_series = prices[cross_name].ffill()
     spread_series = prices["spread"].ffill()
-    own_lags = [24, 48, 72, 168, 336] if target == "da" else [48, 72, 96, 168, 336]
+    if price_settlement_lag_days not in (1, 2):
+        raise ValueError("price_settlement_lag_days must be 1 or 2")
+    # 业务确认 D-1 的日前、实时结算价在目标交易前可得。保留 D-2
+    # 选项用于同口径基线回放；供需出力仍只取经过来源审计的滞后快照。
+    own_lags = [24, 48, 72, 168, 336] if price_settlement_lag_days == 1 or target == "da" else [48, 72, 96, 168, 336]
     cross_lags = [48, 72, 168, 336] if target == "da" else [24, 48, 72, 168]
     own_end_offset = 24 if target == "da" else 48
     cross_end_offset = 48 if target == "da" else 24
@@ -300,12 +305,16 @@ def run_supply_candidate(
     target: str,
     model_kind: str,
     label_cutoff_days: int,
+    price_settlement_lag_days: int = 1,
 ) -> dict[str, Any]:
     prices = _load_prices(private_data_dir)
     weather = _load_weather(private_data_dir)
     supply, supply_asset = _load_supply(private_data_dir)
     historical_dates = sorted({value.date().isoformat() for value in prices.index})
-    frame = _build_frame(prices, weather, supply, target, historical_dates + [target_date])
+    frame = _build_frame(
+        prices, weather, supply, target, historical_dates + [target_date],
+        price_settlement_lag_days=price_settlement_lag_days,
+    )
     if frame.empty:
         raise ValueError("no complete weather and lagged supply feature rows")
     feature_columns = [column for column in frame.columns if column not in {"target", "marketDate"}]
@@ -357,6 +366,7 @@ def run_supply_candidate(
         "sample_count": len(keys),
         "training_rows": len(train),
         "model_kind": model_kind,
+        "price_settlement_lag_days": price_settlement_lag_days,
         "supply_data_version": supply_asset.get("dataVersion", SUPPLY_DATA_VERSION),
         "supply_issue_time_available": supply_asset.get("sourceIssueTimeAvailable", False),
         "supply_backtest_leakage_safe": supply_asset.get("backtestLeakageSafe", False),

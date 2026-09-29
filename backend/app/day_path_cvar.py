@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from math import isfinite
 
 from .bidding_strategy import _num, _weighted_cvar
+from .information_boundary import PRICE_SETTLEMENT_LAG_DAYS
 
 VERSION = "research-paired-day-path-cvar-v1"
 DA = "day_ahead_price_yuan_per_mwh"
@@ -36,10 +37,10 @@ def _center(row, key):
 
 
 def build_day_paths(*, forecast_doc, target_date, target_forecasts,
-                    samples=30, decay=.95, outcome_lag_days=2):
-    """D-2 is an availability assumption, not proof of publication timestamps."""
-    if type(samples) is not int or samples < 1 or type(outcome_lag_days) is not int or outcome_lag_days < 2:
-        raise ValueError("Positive sample count and at least D-2 lag required")
+                    samples=30, decay=.95, outcome_lag_days=PRICE_SETTLEMENT_LAG_DAYS):
+    """历史价格场景使用已确认在交易前可得的 D-1 结算结果。"""
+    if type(samples) is not int or samples < 1 or type(outcome_lag_days) is not int or outcome_lag_days < PRICE_SETTLEMENT_LAG_DAYS:
+        raise ValueError("Positive sample count and at least D-1 settlement lag required")
     if _num(decay) is None or not 0 < decay <= 1:
         raise ValueError("Invalid decay")
     target = _period_map(target_forecasts)
@@ -80,7 +81,7 @@ def build_day_paths(*, forecast_doc, target_date, target_forecasts,
     ess = 1 / sum(s["weight"] ** 2 for s in usable) if usable else 0
     return {"paths": usable, "source_cutoff": cutoff, "sample_count": len(usable),
             "effective_sample_size": ess, "excluded_days": excluded,
-            "execution_allowed": False, "availability": "D-2_ASSUMED_NOT_TIMESTAMP_VERIFIED"}
+            "execution_allowed": False, "availability": "D-1_SETTLEMENT_AVAILABLE_BEFORE_TRADE"}
 
 
 def evaluate_allocation(paths, exposure, ratios, confidence=.95, risk_aversion=.3):
