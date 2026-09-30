@@ -24,6 +24,7 @@ from .information_boundary import price_boundary_metadata
 from .policy_agent_client import PolicyAgentClient, PolicyAgentError
 from .price_forecast_model import run_price_forecast
 from .d1_shandong_price_forecast import MODEL_VERSION as D1_MODEL_VERSION
+from .v7_shandong_price_forecast import MODEL_VERSION as V7_MODEL_VERSION
 from .henan_price_forecast import run_henan_forecast, run_henan_seven_day_forecast
 from .bidding_strategy import build_historical_price_scenarios, generate_strategy
 from .strategy_backtest import run_strategy_backtest
@@ -1236,19 +1237,20 @@ def build_price_forecast_v1_result(request: ModelRunCreateRequestV1, run_id: str
     rt_weather_mae = rt_weather_metrics.get("mae")
     rt_baseline_mae = rt_baseline_metrics.get("mae")
     rt_weather_improvement = rt_baseline_mae - rt_weather_mae if rt_baseline_mae is not None and rt_weather_mae is not None else None
-    is_v5 = raw.get("model_version") in {"sd-gfs24-actual-supply-lgbm-v2", D1_MODEL_VERSION}
+    is_v5 = raw.get("model_version") in {"sd-gfs24-actual-supply-lgbm-v2", D1_MODEL_VERSION, V7_MODEL_VERSION}
     v5_evaluation_mode = raw["summary"].get("evaluation_mode")
     v5_evaluation_warning = {
         "IN_SAMPLE_DIAGNOSTIC": "IN_SAMPLE_DIAGNOSTIC_NOT_OUT_OF_SAMPLE",
         "EXPANDING_WINDOW_OOF": "EXPANDING_WINDOW_OOF_REPLAY",
         "FROZEN_HOLDOUT": "FROZEN_JULY_HOLDOUT",
+        "MONTHLY_WALK_FORWARD_RESEARCH": "MONTHLY_WALK_FORWARD_RESEARCH_REPLAY",
     }.get(v5_evaluation_mode)
     input_warnings = (
         [
             "MODEL_INPUTS_INCLUDE_PRICES_CALENDAR_LAGS_GFS24_WEATHER_AND_LAG48PLUS_SUPPLY_HISTORY",
             "GFS_FIXED_LEAD24_IS_NOT_A_UNIFIED_DECLARATION_CUTOFF_SNAPSHOT",
             "TARGET_DATE_ACTUAL_SUPPLY_EXCLUDED",
-            v5_evaluation_warning or "V5_EVALUATION_MODE_UNAVAILABLE",
+            v5_evaluation_warning or "EVALUATION_MODE_UNAVAILABLE",
             f"TRAINING_DATA_END={raw['summary'].get('training_end', 'UNKNOWN')}",
             f"EVENT_PROBABILITY_CALIBRATION={raw['summary'].get('event_probability_calibration', 'UNKNOWN')}",
         ]
@@ -1348,6 +1350,8 @@ def build_price_forecast_v1_result(request: ModelRunCreateRequestV1, run_id: str
         periods=periods,
         strategy_ready=ready,
         warnings=input_warnings + [
+            *(["V7_NEGATIVE_PRICE_TAIL_UNDERCOVERED_RESEARCH_ONLY", "V7_JULY_SEPTEMBER_NOT_INDEPENDENT_HOLDOUT"]
+              if raw.get("model_version") == V7_MODEL_VERSION else []),
             f"RT_BACKTEST_MAE_YUAN_PER_MWH={rt_metrics['mae']:.3f}" if rt_metrics["mae"] is not None else "RT_BACKTEST_METRICS_UNAVAILABLE",
             (
                 f"SPREAD_DIRECTION_ACCURACY={raw['summary']['spread_direction_accuracy']:.3f}"
@@ -1527,15 +1531,14 @@ def create_model_run(request: ModelRunCreateRequestV1, parent_run_id: str | None
     market_code = request.market_code.upper()
     market_profile(market_code)
     validate_business_date(request.market_date)
-    if (
-        market_code == "SD"
-        and request.model_id == "price-forecast"
-        and "2026-01-01" <= request.market_date <= "2026-07-31"
-    ):
+    if (market_code == "SD" and request.model_id == "price-forecast"
+            and request.model_version == CONDITIONAL_VERSION
+            and "2026-01-01" <= request.market_date <= "2026-09-30"):
+        selected_version = V7_MODEL_VERSION if request.market_date >= "2026-07-01" else D1_MODEL_VERSION
         request = request.model_copy(
             update={
-                "model_version": D1_MODEL_VERSION,
-                "data_version": "sd-16city-gfs24-actual-supply-20260101-20260831-d1-mixed-v5",
+                "model_version": selected_version,
+                "data_version": "sd-16city-gfs24-actual-supply-20260101-20260930-d1-enhanced-v6",
             }
         )
     if request.model_id == "lag-baseline":
@@ -1622,8 +1625,8 @@ def create_model_run(request: ModelRunCreateRequestV1, parent_run_id: str | None
             if request.model_version == CONDITIONAL_VERSION:
                 # Keep the historical version string as an API alias, but serve V5
                 # whenever its controlled assets cover the requested market date.
-                raw = run_price_forecast(PRIVATE_DATA, request.market_date)
-                if raw.get("model_version") in {"sd-gfs24-actual-supply-lgbm-v2", D1_MODEL_VERSION}:
+                raw = run_price_forecast(PRIVATE_DATA, request.market_date, model_version=request.model_version)
+                if raw.get("model_version") in {"sd-gfs24-actual-supply-lgbm-v2", D1_MODEL_VERSION, V7_MODEL_VERSION}:
                     result = build_price_forecast_v1_result(
                         request.model_copy(update={"market_code": market_code}), run_id, raw
                     )
@@ -1632,7 +1635,7 @@ def create_model_run(request: ModelRunCreateRequestV1, parent_run_id: str | None
                         request.model_copy(update={"market_code": market_code}), run_id
                     )
             else:
-                raw = run_price_forecast(PRIVATE_DATA, request.market_date)
+                raw = run_price_forecast(PRIVATE_DATA, request.market_date, model_version=request.model_version)
                 result = build_price_forecast_v1_result(request.model_copy(update={"market_code": market_code}), run_id, raw)
             complete_model_run(run_id, result, "price-forecast-local")
         except Exception as error:
@@ -3595,15 +3598,15 @@ def models_v1() -> dict[str, Any]:
             },
             {
                 "id": "price-forecast",
-                "name": "山东D-1价格与实际出力增强GFS24价格预测（1—7月研究回放）",
+                "name": "山东日前QRA与实时分状态价格预测（7—9月研究回放）",
                 "status": "connected_local",
-                "versions": [D1_MODEL_VERSION, "sd-gfs24-d1-price-actual-supply-lgbm-v4", "sd-gfs24-actual-supply-lgbm-v2", CONDITIONAL_VERSION],
+                "versions": [V7_MODEL_VERSION, D1_MODEL_VERSION, "sd-gfs24-d1-price-actual-supply-lgbm-v4", "sd-gfs24-actual-supply-lgbm-v2", CONDITIONAL_VERSION],
                 "run_mode": "synchronous_local",
                 "result_callback": "/api/v1/model-runs/{run_id}/results",
                 "output_contract": "forecast-strategy-contract-v1",
             },
         ],
-        "note": "山东默认本地候选引擎为混合模型：日前价格使用XGBoost，实时价格和价差使用LightGBM；三者共享D-1结算价、D-1实际负荷/风光出力和提前24小时GFS特征，目标日预测出力待接入；1月为训练内诊断，2—6月为扩展窗口OOF回放，7月为冻结独立测试，结果仍需人工复核。",
+        "note": "7—9月默认研究回放：日前正则化QRA，实时正常/负价/尖峰三状态价格幅度按事前事件概率加权。V6仍可选择对照。V7总体MAE较低但真实负价时段点预测误差增加，区间下尾仍未校准；10月独立测试尚未进行，所有输出仅供人工复核。",
     }
 
 

@@ -17,6 +17,8 @@ import pandas as pd
 
 from .price_forecast_tabular import run_supply_candidate
 from .d1_shandong_price_forecast import run_d1_shandong_forecast
+from .d1_shandong_price_forecast import MODEL_VERSION as D1_MODEL_VERSION
+from .v7_shandong_price_forecast import MODEL_VERSION as V7_MODEL_VERSION, run_v7_shandong_forecast
 from .deep_sequence_models import run_sequence_challengers
 from .information_boundary import price_boundary_metadata
 
@@ -713,23 +715,33 @@ def _run_latest_repository_adapter(private_data_dir: Path, market_date: str) -> 
     }
 
 
-def run_price_forecast(private_data_dir: Path, market_date: str, high_price_threshold: float = 500.0) -> dict[str, Any]:
+def run_price_forecast(
+    private_data_dir: Path, market_date: str, high_price_threshold: float = 500.0,
+    model_version: str | None = None,
+) -> dict[str, Any]:
     # Primary Shandong price engine. The pre-existing model below remains the fallback.
     v5_error: str | None = None
     try:
-        result = run_d1_shandong_forecast(
+        if model_version == V7_MODEL_VERSION and not "2026-07-01" <= market_date <= "2026-09-30":
+            raise ValueError("V7 research replay is available only from 2026-07-01 to 2026-09-30")
+        model_runner = (
+            run_v7_shandong_forecast
+            if "2026-07-01" <= market_date <= "2026-09-30" and model_version != D1_MODEL_VERSION
+            else run_d1_shandong_forecast
+        )
+        result = model_runner(
             target_date=market_date,
             private_data_dir=private_data_dir,
             high_price_threshold=high_price_threshold,
         )
         result.setdefault("summary", {})["price_information_boundary"] = price_boundary_metadata()
         result["summary"]["price_history_feature_lag"] = (
-            "D-1日前和实时结算价已进入LightGBM主模型；电源出力仍使用safe-lag48plus"
+            "D-1日前和实时结算价、D-1实际负荷/风电/光伏已进入主模型；目标日实际价格与实际出力未使用"
         )
         return result
     except (FileNotFoundError, ImportError, KeyError, ValueError, OSError) as error:
-        if '2026-01-01' <= market_date <= '2026-07-31':
-            raise RuntimeError(f"D-1 LightGBM initialization failed: {error}") from error
+        if model_version == V7_MODEL_VERSION or '2026-01-01' <= market_date <= '2026-09-30':
+            raise RuntimeError(f"Requested Shandong model initialization failed: {error}") from error
         v5_error = str(error)
 
     if '2026-07-01' <= market_date <= '2026-07-31' and (private_data_dir / 'july_import_manifest.json').exists():

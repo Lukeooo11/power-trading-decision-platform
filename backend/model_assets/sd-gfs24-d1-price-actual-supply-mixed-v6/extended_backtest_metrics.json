@@ -1,0 +1,418 @@
+{
+  "schemaVersion": "v10-d1-enhanced-backtest",
+  "modelVersion": "sd-gfs24-d1-price-actual-supply-mixed-v6",
+  "method": "monthly expanding-window OOF through September; robust feature selection across July-September; October is the next untouched holdout",
+  "windowStart": "2026-02-01",
+  "windowEnd": "2026-09-30",
+  "monthly": {
+    "2026-02": {
+      "trainingEnd": "2026-01-31",
+      "sampleCount": 672,
+      "da": {
+        "mae": 90.28324093172948,
+        "rmse": 115.84080750701087,
+        "bias": 20.742004360826243,
+        "sampleCount": 672
+      },
+      "rt": {
+        "mae": 125.0290625214507,
+        "rmse": 158.10046675451207,
+        "bias": 26.889278312886095,
+        "sampleCount": 648
+      },
+      "spread": {
+        "mae": 84.29869828129257,
+        "rmse": 116.8553713961939,
+        "bias": -9.411001111086431,
+        "sampleCount": 648
+      },
+      "negative": {
+        "sampleCount": 648,
+        "positiveCount": 200,
+        "prAuc": 0.8040521383330993,
+        "brier": 0.13094284660970607,
+        "precision": 0.7176470588235294,
+        "recall": 0.61,
+        "f1": 0.6594594594594595
+      },
+      "spike": {
+        "sampleCount": 648,
+        "positiveCount": 21,
+        "prAuc": 0.09087444625843596,
+        "brier": 0.032788353513025725,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "2026-03": {
+      "trainingEnd": "2026-02-28",
+      "sampleCount": 744,
+      "da": {
+        "mae": 71.91898950662184,
+        "rmse": 92.68164556453308,
+        "bias": -22.340582282842806,
+        "sampleCount": 744
+      },
+      "rt": {
+        "mae": 126.6941265755798,
+        "rmse": 165.44196197046693,
+        "bias": -66.6912364970093,
+        "sampleCount": 744
+      },
+      "spread": {
+        "mae": 91.30411607593456,
+        "rmse": 139.66078167400394,
+        "bias": 27.369564394838,
+        "sampleCount": 744
+      },
+      "negative": {
+        "sampleCount": 744,
+        "positiveCount": 111,
+        "prAuc": 0.6881863073426479,
+        "brier": 0.08573262549934,
+        "precision": 0.6102941176470589,
+        "recall": 0.7477477477477478,
+        "f1": 0.6720647773279352
+      },
+      "spike": {
+        "sampleCount": 744,
+        "positiveCount": 131,
+        "prAuc": 0.28311034885130604,
+        "brier": 0.16249666795870535,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      }
+    },
+    "2026-04": {
+      "trainingEnd": "2026-03-31",
+      "sampleCount": 720,
+      "da": {
+        "mae": 82.33428716398278,
+        "rmse": 106.84565994783586,
+        "bias": -52.55304879600804,
+        "sampleCount": 720
+      },
+      "rt": {
+        "mae": 115.04529288833275,
+        "rmse": 165.3605291373781,
+        "bias": -33.64057847889795,
+        "sampleCount": 720
+      },
+      "spread": {
+        "mae": 80.73706165931623,
+        "rmse": 135.92285557737287,
+        "bias": -6.325362641098003,
+        "sampleCount": 720
+      },
+      "negative": {
+        "sampleCount": 720,
+        "positiveCount": 185,
+        "prAuc": 0.9200050077035115,
+        "brier": 0.06392069069834624,
+        "precision": 0.8461538461538461,
+        "recall": 0.772972972972973,
+        "f1": 0.807909604519774
+      },
+      "spike": {
+        "sampleCount": 720,
+        "positiveCount": 152,
+        "prAuc": 0.4955885105889182,
+        "brier": 0.1469191458759486,
+        "precision": 0.5,
+        "recall": 0.26973684210526316,
+        "f1": 0.3504273504273504
+      }
+    },
+    "2026-05": {
+      "trainingEnd": "2026-04-30",
+      "sampleCount": 744,
+      "da": {
+        "mae": 76.92602098329934,
+        "rmse": 95.00498970986563,
+        "bias": -37.06245615435984,
+        "sampleCount": 744
+      },
+      "rt": {
+        "mae": 94.67413406243851,
+        "rmse": 130.46194952415289,
+        "bias": -6.754972871607404,
+        "sampleCount": 744
+      },
+      "spread": {
+        "mae": 77.07258848685908,
+        "rmse": 114.39726119404611,
+        "bias": -28.677631619703313,
+        "sampleCount": 744
+      },
+      "negative": {
+        "sampleCount": 744,
+        "positiveCount": 180,
+        "prAuc": 0.9245186298940699,
+        "brier": 0.06113423901902987,
+        "precision": 0.8409090909090909,
+        "recall": 0.8222222222222222,
+        "f1": 0.8314606741573034
+      },
+      "spike": {
+        "sampleCount": 744,
+        "positiveCount": 181,
+        "prAuc": 0.6989662418696059,
+        "brier": 0.1223324117461187,
+        "precision": 0.7142857142857143,
+        "recall": 0.4972375690607735,
+        "f1": 0.5863192182410424
+      }
+    },
+    "2026-06": {
+      "trainingEnd": "2026-05-31",
+      "sampleCount": 720,
+      "da": {
+        "mae": 62.60814416640335,
+        "rmse": 80.24879387173831,
+        "bias": -3.0673420426448175,
+        "sampleCount": 720
+      },
+      "rt": {
+        "mae": 114.63275866680779,
+        "rmse": 157.65364062479745,
+        "bias": -3.3207947670624915,
+        "sampleCount": 720
+      },
+      "spread": {
+        "mae": 93.11850138601953,
+        "rmse": 145.8902952314979,
+        "bias": 25.35263955507364,
+        "sampleCount": 720
+      },
+      "negative": {
+        "sampleCount": 720,
+        "positiveCount": 107,
+        "prAuc": 0.6401564387687652,
+        "brier": 0.11009724756866966,
+        "precision": 0.5139664804469274,
+        "recall": 0.8598130841121495,
+        "f1": 0.6433566433566433
+      },
+      "spike": {
+        "sampleCount": 720,
+        "positiveCount": 139,
+        "prAuc": 0.47744446166535387,
+        "brier": 0.20045622312049735,
+        "precision": 0.39473684210526316,
+        "recall": 0.7553956834532374,
+        "f1": 0.5185185185185185
+      }
+    },
+    "2026-07": {
+      "trainingEnd": "2026-06-30",
+      "sampleCount": 744,
+      "da": {
+        "mae": 50.87626905543829,
+        "rmse": 68.1189742129052,
+        "bias": -24.840689672654673,
+        "sampleCount": 744
+      },
+      "rt": {
+        "mae": 82.4691413021428,
+        "rmse": 129.53478349215993,
+        "bias": -22.366831731158953,
+        "sampleCount": 744
+      },
+      "spread": {
+        "mae": 84.64482001006479,
+        "rmse": 132.87523144312743,
+        "bias": -12.917739085534095,
+        "sampleCount": 744
+      },
+      "negative": {
+        "sampleCount": 744,
+        "positiveCount": 55,
+        "prAuc": 0.43015595779474936,
+        "brier": 0.0704899212738187,
+        "precision": 0.36507936507936506,
+        "recall": 0.41818181818181815,
+        "f1": 0.3898305084745763
+      },
+      "spike": {
+        "sampleCount": 744,
+        "positiveCount": 72,
+        "prAuc": 0.3179956559255184,
+        "brier": 0.07608693230986927,
+        "precision": 0.391304347826087,
+        "recall": 0.125,
+        "f1": 0.18947368421052632
+      }
+    },
+    "2026-08": {
+      "trainingEnd": "2026-07-31",
+      "sampleCount": 744,
+      "da": {
+        "mae": 49.037481450316726,
+        "rmse": 67.91835730721002,
+        "bias": -5.325493803537019,
+        "sampleCount": 744
+      },
+      "rt": {
+        "mae": 67.82157003414095,
+        "rmse": 100.20660619334392,
+        "bias": -22.197690963576015,
+        "sampleCount": 744
+      },
+      "spread": {
+        "mae": 46.165051653154954,
+        "rmse": 69.83713238212847,
+        "bias": 19.394470783393988,
+        "sampleCount": 744
+      },
+      "negative": {
+        "sampleCount": 744,
+        "positiveCount": 27,
+        "prAuc": 0.33255016050766606,
+        "brier": 0.03308089628973556,
+        "precision": 0.34615384615384615,
+        "recall": 0.3333333333333333,
+        "f1": 0.33962264150943394
+      },
+      "spike": {
+        "sampleCount": 744,
+        "positiveCount": 110,
+        "prAuc": 0.6327665197009972,
+        "brier": 0.08660422794670944,
+        "precision": 0.6438356164383562,
+        "recall": 0.42727272727272725,
+        "f1": 0.5136612021857924
+      }
+    },
+    "2026-09": {
+      "trainingEnd": "2026-08-31",
+      "sampleCount": 720,
+      "da": {
+        "mae": 46.208453975899346,
+        "rmse": 72.55892766743793,
+        "bias": -33.89888081557552,
+        "sampleCount": 720
+      },
+      "rt": {
+        "mae": 81.21946929371465,
+        "rmse": 126.76776900705418,
+        "bias": -52.03461108358842,
+        "sampleCount": 624
+      },
+      "spread": {
+        "mae": 52.56574936849972,
+        "rmse": 97.47611014894747,
+        "bias": 0.4485740934409345,
+        "sampleCount": 624
+      },
+      "negative": {
+        "sampleCount": 624,
+        "positiveCount": 27,
+        "prAuc": 0.3945451431357225,
+        "brier": 0.061076472669327156,
+        "precision": 0.3442622950819672,
+        "recall": 0.7777777777777778,
+        "f1": 0.4772727272727273
+      },
+      "spike": {
+        "sampleCount": 624,
+        "positiveCount": 61,
+        "prAuc": 0.4913907130850165,
+        "brier": 0.06892956632541505,
+        "precision": 0.5094339622641509,
+        "recall": 0.4426229508196721,
+        "f1": 0.47368421052631576
+      }
+    }
+  },
+  "septemberMetrics": {
+    "da": {
+      "mae": 46.208453975899346,
+      "rmse": 72.55892766743793,
+      "bias": -33.89888081557552,
+      "sampleCount": 720
+    },
+    "rt": {
+      "mae": 81.21946929371465,
+      "rmse": 126.76776900705418,
+      "bias": -52.03461108358842,
+      "sampleCount": 624
+    },
+    "spread": {
+      "mae": 52.56574936849972,
+      "rmse": 97.47611014894747,
+      "bias": 0.4485740934409345,
+      "sampleCount": 624
+    }
+  },
+  "septemberEvents": {
+    "negative": {
+      "sampleCount": 624,
+      "positiveCount": 27,
+      "prAuc": 0.3945451431357225,
+      "brier": 0.04609623896897416,
+      "precision": 0.2727272727272727,
+      "recall": 0.4444444444444444,
+      "f1": 0.3380281690140845
+    },
+    "spike": {
+      "sampleCount": 624,
+      "positiveCount": 61,
+      "prAuc": 0.4913907130850165,
+      "brier": 0.06938613597646055,
+      "precision": 0.7272727272727273,
+      "recall": 0.26229508196721313,
+      "f1": 0.3855421686746988
+    }
+  },
+  "featureSelection": {
+    "da": {
+      "selected": "baseline",
+      "scores": {
+        "baseline": 48.70740149388479,
+        "enhanced": 48.84697457866971
+      },
+      "featureCount": 289
+    },
+    "rt": {
+      "selected": "enhanced",
+      "scores": {
+        "baseline": 78.34866207039633,
+        "enhanced": 77.17006020999946
+      },
+      "featureCount": 386
+    },
+    "spread": {
+      "selected": "baseline",
+      "scores": {
+        "baseline": 61.125207010573156,
+        "enhanced": 61.84306849979023
+      },
+      "featureCount": 267
+    },
+    "negative": {
+      "selected": "baseline",
+      "scores": {
+        "baseline": 0.3857504204793793,
+        "enhanced": 0.3796148334934342
+      },
+      "featureCount": 289
+    },
+    "spike": {
+      "selected": "baseline",
+      "scores": {
+        "baseline": 0.4807176295705107,
+        "enhanced": 0.4536474284348158
+      },
+      "featureCount": 289
+    }
+  },
+  "modelSelection": {
+    "da": "XGBoost",
+    "rt": "LightGBM",
+    "spread": "LightGBM",
+    "negative": "LightGBM",
+    "spike": "LightGBM"
+  }
+}

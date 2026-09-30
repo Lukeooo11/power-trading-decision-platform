@@ -1,0 +1,72 @@
+{
+  "model_version": "sd-gfs24-d1-qra-regime-v7-research",
+  "source_version": "sd-gfs24-d1-price-actual-supply-mixed-v6",
+  "research_period": [
+    "2026-07-01",
+    "2026-09-30"
+  ],
+  "selection_caveat": "V6 feature routing used July-September; October is the next untouched month",
+  "serving": "July-September monthly walk-forward replay; final models fitted on all available prior OOF/labels for later target-day snapshots",
+  "day_ahead": "regularized QRA P10/P50/P90, alpha=0.005",
+  "real_time": "normal/negative/spike conditional price experts weighted by past-OOF calibrated event probabilities; QRA tail intervals remain research-only",
+  "risk_caveat": "negative-price point MAE worsened despite overall RT MAE improvement; never use forecast as automatic order",
+  "labels_available_through": {
+    "da": "2026-09-30",
+    "rt": "2026-09-28"
+  },
+  "metrics": {
+    "da_raw": {
+      "mae": 48.73456402966485,
+      "n": 2208
+    },
+    "da_period_14": {
+      "mae": 48.55215984230905,
+      "n": 2208
+    },
+    "da_weighted_45": {
+      "mae": 49.43452316096014,
+      "n": 2208
+    },
+    "da_weighted_90": {
+      "mae": 49.108491663292575,
+      "n": 2208
+    },
+    "da_q50": {
+      "mae": 46.29348914515302,
+      "n": 2208
+    },
+    "rt_raw": {
+      "mae": 76.93998014842475,
+      "n": 2112
+    },
+    "rt_period_14": {
+      "mae": 74.46967295009847,
+      "n": 2112
+    },
+    "rt_weighted_45": {
+      "mae": 76.44675741807878,
+      "n": 2112
+    },
+    "rt_weighted_90": {
+      "mae": 77.83660448853102,
+      "n": 2112
+    },
+    "rt_regime": {
+      "mae": 69.62110549334022,
+      "n": 2112
+    },
+    "rt_q50": {
+      "mae": 73.08538782085708,
+      "n": 2112
+    },
+    "spread_raw": {
+      "mae": 61.61153983114551,
+      "n": 2112
+    }
+  },
+  "source_sha256": {
+    "model_predictions.csv.gz": "68ebb6bdc6cb08c389ca135cd9916f1cac9a7659f129c2a5cdf942309a4f1333",
+    "quantile_predictions.csv.gz": "21dd35088beab2499eb065353be665317839738cf2765d6738f0b16c2307de6f",
+    "v5_expanding_oof_predictions.csv.gz": "39ed377113b63066a08d2b2ad7c547fc6d3f1037cfb5fe6151323c5ecc00ccd3"
+  }
+}

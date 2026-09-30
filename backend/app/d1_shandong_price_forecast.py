@@ -20,15 +20,15 @@ from .v5_shandong_price_forecast import (
     _interval_coverage,
     _point_metrics,
     _probability,
-    _features as legacy_features,
 )
+from .d1_feature_engineering import build_d1_features
 
-MODEL_VERSION = "sd-gfs24-d1-price-actual-supply-mixed-v5"
-DATA_VERSION = "sd-16city-gfs24-actual-supply-20260101-20260831-d1-mixed-v5"
+MODEL_VERSION = "sd-gfs24-d1-price-actual-supply-mixed-v6"
+DATA_VERSION = "sd-16city-gfs24-actual-supply-20260101-20260930-d1-enhanced-v6"
 SUPPORTED_START = "2026-01-01"
-SUPPORTED_END = "2026-07-31"
+SUPPORTED_END = "2026-09-30"
 OOF_START = "2026-02-01"
-OOF_END = "2026-06-30"
+OOF_END = "2026-09-30"
 MODEL_FILES = {"da": "day_ahead.pkl", "rt": "real_time.pkl", "spread": "spread.pkl", "negative": "negative.pkl", "spike": "spike.pkl"}
 PRICE_COLUMNS = ("日前价格", "实时价格", "实时价差")
 EVENT_COLUMNS = ("负价事件", "尖峰事件")
@@ -36,16 +36,13 @@ SUPPLY_D1_COLUMNS = ("直调负荷", "风电", "光伏", "新能源出力", "简
 
 
 def _features(source: pd.DataFrame) -> pd.DataFrame:
-    frame = legacy_features(source)
-    for column in (*PRICE_COLUMNS, *EVENT_COLUMNS, *SUPPLY_D1_COLUMNS):
-        frame[f"{column}_safe_lag24"] = pd.to_numeric(frame[column], errors="coerce").shift(24)
-    return frame.copy()
+    return build_d1_features(source)
 
 
 @lru_cache(maxsize=1)
 def _load():
     model_dir = Path(__file__).resolve().parents[1] / "model_assets" / MODEL_VERSION
-    feature_path = model_dir / "v6_gfs24_actual_supply_feature_store.csv.gz"
+    feature_path = model_dir / "shandong_feature_store_20260101_20260930.csv.gz"
     required = [model_dir / filename for filename in MODEL_FILES.values()] + [
         model_dir / "model_metadata.json",
         model_dir / "residual_calibration.json",
@@ -116,8 +113,8 @@ def run_d1_shandong_forecast(
         if absent:
             raise KeyError(f"{key} missing features: {absent[:5]}")
 
-    evaluation_mode = "FROZEN_HOLDOUT"
-    training_end = "2026-06-30"
+    evaluation_mode = "EXPANDING_WINDOW_OOF"
+    training_end = metadata.get("trainingCutoffByTarget", {}).get("rt", "2026-09-28")
     event_probability_calibration = "OOF_CALIBRATED"
     if OOF_START <= target_date <= OOF_END:
         extended, _ = _load_extended_backtest()
@@ -140,7 +137,7 @@ def run_d1_shandong_forecast(
         spike = np.clip(_probability(models["spike"], rows), 0, 1)
         if target_date < OOF_START:
             evaluation_mode = "IN_SAMPLE_DIAGNOSTIC"
-            training_end = "2026-06-30"
+            training_end = metadata.get("trainingCutoffByTarget", {}).get("rt", "2026-09-28")
 
     periods = rows["小时"].to_numpy(int)
     da10, da90, _ = _bounds(da, periods, "da", calibration)
@@ -179,17 +176,17 @@ def run_d1_shandong_forecast(
             "sample_count": int(pd.to_numeric(rows["日前价格"], errors="coerce").notna().sum()),
             "forecast_start": forecast[0]["datetime"],
             "forecast_end": forecast[-1]["datetime"],
-            "evaluation_method": "monthly expanding-window OOF plus frozen July holdout",
+            "evaluation_method": "monthly expanding-window OOF through September; robust feature selection across July-September; October is the next untouched holdout",
             "evaluation_mode": evaluation_mode,
             "training_end": training_end,
             "event_probability_calibration": event_probability_calibration,
-            "feature_set": "safe-lag48plus supply + D-1 settlement price/event/load/wind/solar lags + 16-city GFS24",
+            "feature_set": "16-city GFS24 + D-1 settlement/load/wind/solar + seven-day same-hour statistics + D-1 daily shape and weather-change features; event heads retain baseline features when stronger",
             "spread_output_policy": "independent LightGBM spread is retained for audit and strategy scoring; public contract displays DA P50 minus RT P50 for consistency",
             "weather_data_version": DATA_VERSION,
             "weather_known_before_declaration": cutoff_status == "VERIFIED",
             "weather_used_in_da_final": True,
             "weather_used_in_rt_final": True,
-            "supply_data_version": "actual-supply-2026h1-safe-lag48plus",
+            "supply_data_version": "actual-supply-20260101-20260928-safe-lag24plus",
             "supply_used_in_da_final": True,
             "supply_used_in_rt_final": True,
             "supply_issue_time_available": False,
@@ -204,6 +201,7 @@ def run_d1_shandong_forecast(
             "rt_interval_coverage": _interval_coverage(rows["实时价格"], rt10, rt90),
             "declaration_cutoff_audit": {"status": cutoff_status, "declaration_cutoff": cutoff_iso, "issue_time_max": raw_target["预报生成参考时间"].max().isoformat(), "lead_hours": 24},
             "forecast_selection": {"selected_model_version": MODEL_VERSION, "fallback_used": False, "target_actual_supply_used": False, "evaluation_mode": evaluation_mode, "training_end": training_end},
-            "model_card_july_metrics": metadata.get("julyMetrics"),
+            "model_card_september_metrics": metadata.get("septemberMetrics"),
+            "model_card_september_events": metadata.get("septemberEvents"),
         },
     }

@@ -1,0 +1,98 @@
+{
+  "modelVersion": "sd-gfs24-d1-price-actual-supply-mixed-v6",
+  "dataVersion": "sd-16city-gfs24-actual-supply-20260101-20260930-d1-enhanced-v6",
+  "trainingCutoffByTarget": {
+    "da": "2026-09-30",
+    "rt": "2026-09-28",
+    "spread": "2026-09-28",
+    "negative": "2026-09-28",
+    "spike": "2026-09-28"
+  },
+  "featurePolicy": "GFS24 target-day forecasts plus D-1 settlement price and D-1 measured load/wind/solar; target-day actual supply excluded",
+  "selected": {
+    "da": {
+      "featureSet": "baseline",
+      "featureCount": 289,
+      "algorithm": "XGBoost"
+    },
+    "rt": {
+      "featureSet": "enhanced",
+      "featureCount": 386,
+      "algorithm": "LightGBM"
+    },
+    "spread": {
+      "featureSet": "baseline",
+      "featureCount": 267,
+      "algorithm": "LightGBM"
+    },
+    "negative": {
+      "featureSet": "baseline",
+      "featureCount": 289,
+      "algorithm": "LightGBM"
+    },
+    "spike": {
+      "featureSet": "baseline",
+      "featureCount": 289,
+      "algorithm": "LightGBM"
+    }
+  },
+  "septemberMetrics": {
+    "da": {
+      "mae": 46.208453975899346,
+      "rmse": 72.55892766743793,
+      "bias": -33.89888081557552,
+      "sampleCount": 720
+    },
+    "rt": {
+      "mae": 81.21946929371465,
+      "rmse": 126.76776900705418,
+      "bias": -52.03461108358842,
+      "sampleCount": 624
+    },
+    "spread": {
+      "mae": 52.56574936849972,
+      "rmse": 97.47611014894747,
+      "bias": 0.4485740934409345,
+      "sampleCount": 624
+    }
+  },
+  "septemberEvents": {
+    "negative": {
+      "sampleCount": 624,
+      "positiveCount": 27,
+      "prAuc": 0.3945451431357225,
+      "brier": 0.04609623896897416,
+      "precision": 0.2727272727272727,
+      "recall": 0.4444444444444444,
+      "f1": 0.3380281690140845
+    },
+    "spike": {
+      "sampleCount": 624,
+      "positiveCount": 61,
+      "prAuc": 0.4913907130850165,
+      "brier": 0.06938613597646055,
+      "precision": 0.7272727272727273,
+      "recall": 0.26229508196721313,
+      "f1": 0.3855421686746988
+    }
+  },
+  "availabilityControl": {
+    "priceSettlementLagDays": 1,
+    "supplyMinimumLagHours": 24,
+    "targetDateActualSupplyUsed": false,
+    "weatherIssueTimeVerified": true
+  },
+  "sha256": {
+    "day_ahead.pkl": "dff19f54bb951df723eba8d9aa3346d7ed3a4de3187be9a2e7e9409570537301",
+    "extended_backtest_metrics.json": "846a8114ba7503e4312a6fb717f149f4f4b4e35544e969ae3e4009263c217ae0",
+    "feature_store_manifest.json": "e07a0fb53d12071f41075bcb6f66074f94181a9d07a68d9fb8eb3e7882fd60b1",
+    "hourly_backtest_metrics.csv": "d77cedb58d0b593d60b17a02c3fb5b5f114033387f4d57155eff96cfb3a08b39",
+    "negative.pkl": "cd15ce430490bfedbeecd96160239254b82e646118eb7c8f249c6ae9f624890a",
+    "real_time.pkl": "6f727df2abf8ae213c4b98cf015c843b58f563b9c80899c7960dbeab9f908d4c",
+    "residual_calibration.json": "07ee3c1a669ab6039488bf7c80e00c3cfe478519d3d376030ae74e47286d6b4e",
+    "shandong_feature_store_20260101_20260930.csv.gz": "31ed6eb27a4b802860f09a6d5e0dc76fa3dee070c1db432e195185016de5554f",
+    "spike.pkl": "e4d983327410b678ab69de5df8d57c5faa029245d9175dc20343e1a3c17f78db",
+    "spread.pkl": "f1dc1ef590f66141195f913d17089dec9a8c6f34623ef0ca7ceb709805ad225d",
+    "v5_expanding_oof_predictions.csv.gz": "39ed377113b63066a08d2b2ad7c547fc6d3f1037cfb5fe6151323c5ecc00ccd3"
+  }
+}

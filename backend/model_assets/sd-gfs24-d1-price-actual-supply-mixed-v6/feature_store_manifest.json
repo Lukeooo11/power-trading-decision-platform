@@ -1,0 +1,41 @@
+{
+  "modelVersion": "sd-gfs24-d1-price-actual-supply-mixed-v6",
+  "rows": 6552,
+  "columns": 103,
+  "coverage": [
+    "2026-01-01",
+    "2026-09-30"
+  ],
+  "weatherLeadHours": 24,
+  "missingLabels": {
+    "日前价格": 0,
+    "实时价格": 120,
+    "实时价差": 120
+  },
+  "missingSupplyByColumn": {
+    "直调负荷": 120,
+    "联络线": 120,
+    "风电": 120,
+    "光伏": 120,
+    "地方电厂": 120,
+    "自备机组": 120,
+    "非市场化核电总加": 120,
+    "新能源出力": 120,
+    "简单净负荷": 120
+  },
+  "informationBoundary": "target-day GFS24 only; target-day actual prices and supply are labels, never direct inputs; measured supply enters lagged features only",
+  "sources": {
+    "C:\\Users\\40126\\Desktop\\山东项目数据\\天气\\山东16市_GFS历史预报_提前24小时_20260101_20260930.xlsx": "b85f6f6bfc9444b2bed431829a5d3ce3798db8ce38cc6e3bed5d87f6815abfa6",
+    "C:\\Users\\40126\\Desktop\\山东项目数据\\价格\\山东省-现货价格-数据明细（2026-08-01_2026-09-30）.xlsx": "b766b59e753b1551b036f747bf082f30ef14e528708d08aaa6eae53f0cd876dc",
+    "C:\\Users\\40126\\Desktop\\山东项目数据\\电源出力\\实际出力\\山东省-电源出力-总览-实际出力（2026-07-01_2026-07-31）.xlsx": "75e9b021e626e8121b6cf8d1d58989d1f403399886c21f90374cde6e7f7294f0",
+    "C:\\Users\\40126\\Desktop\\山东项目数据\\电源出力\\实际出力\\山东省-电源出力-总览-电源出力-实际出力-（2026-01-01_2026-01-31）.xlsx": "633f9d5d4a3d67e5c441b6bbf496149fbdba08d6478a08f808da26ce818ee87f",
+    "C:\\Users\\40126\\Desktop\\山东项目数据\\电源出力\\实际出力\\山东省-电源出力-总览-电源出力-实际出力-（2026-02-01_2026-02-28）.xlsx": "06004d24c97e0e4d9cfedd3011ea3a01bd77c52cf7c8c421c46f5eaeeb293cfa",
+    "C:\\Users\\40126\\Desktop\\山东项目数据\\电源出力\\实际出力\\山东省-电源出力-总览-电源出力-实际出力-（2026-03-01_2026-03-31）.xlsx": "106d60a760cf8b5f33903f97a1553ad2db8f4bfd3d77e34cdeb72ca0b1a44983",
+    "C:\\Users\\40126\\Desktop\\山东项目数据\\电源出力\\实际出力\\山东省-电源出力-总览-电源出力-实际出力-（2026-04-01_2026-04-29）.xlsx": "48e123ec02a23b748af7e1c787bfbc72c257bcc58c8dd0b58fd41e2cf5e0ce82",
+    "C:\\Users\\40126\\Desktop\\山东项目数据\\电源出力\\实际出力\\山东省-电源出力-总览-电源出力-实际出力-（2026-05-01_2026-05-31）(1).xlsx": "c43c2c79531bf01be2ff028d624b7637abd34c501b9aa2f30fef02d166185b3a",
+    "C:\\Users\\40126\\Desktop\\山东项目数据\\电源出力\\实际出力\\山东省-电源出力-总览-电源出力-实际出力-（2026-06-01_2026-06-30）(1).xlsx": "f46d51fb99fbf16a2137bfc398e6529eb378335b8512ebe117e8c51671547d42",
+    "C:\\Users\\40126\\Desktop\\山东项目数据\\电源出力\\实际出力\\山东省-电源出力-总览-电源出力-实际出力-（2026-08-01_2026-08-31） (2).xlsx": "bcc78b9db02c8137abb695d0974df7948c9ff7154a07c9bb9fb2c35da7e7ae88",
+    "C:\\Users\\40126\\Desktop\\山东项目数据\\电源出力\\实际出力\\山东省-电源出力-总览-电源出力-实际出力-（2026-09-01_2026-09-28）.xlsx": "3d737aca54e9245f8d77f7296bd91ff1c2764a68d8a55b912ec37da469815f12"
+  },
+  "outputSha256": "31ed6eb27a4b802860f09a6d5e0dc76fa3dee070c1db432e195185016de5554f"
+}

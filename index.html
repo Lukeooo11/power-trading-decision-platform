@@ -4758,9 +4758,10 @@ button, input, select, textarea { border-radius: 8px !important; font-family: in
                 <select id="forecastDateSelect"></select>
               </label>
               <label class="field">
-                <span>模型版本（外部服务提供）</span>
+                <span>模型版本</span>
                 <select id="forecastModelSelect">
-                  <option value="sd-target-supply-conditional-v1">目标日供需条件增强（缺失自动回退）</option>
+                  <option value="sd-gfs24-d1-qra-regime-v7-research">V7 日前QRA＋实时分状态（研究）</option>
+                  <option value="sd-gfs24-d1-price-actual-supply-mixed-v6">V6 混合模型（对照）</option>
                 </select>
               </label>
               <label class="upload-card compact-upload">
@@ -6779,6 +6780,10 @@ function bindEvents() {
   document.querySelector("#exportForecastBtn").addEventListener("click", exportForecastResults);
   document.querySelector("#forecastDateSelect").addEventListener("change", (event) => {
     state.forecastDate = event.target.value;
+    if (state.selectedMarket === "SD" && state.forecastDate < "2026-07-01"
+        && document.querySelector("#forecastModelSelect").value === "sd-gfs24-d1-qra-regime-v7-research") {
+      document.querySelector("#forecastModelSelect").value = "sd-gfs24-d1-price-actual-supply-mixed-v6";
+    }
     runForecastEvaluation({ silent: true });
   });
   document.querySelector("#forecastModelSelect").addEventListener("change", (event) => {
@@ -7022,18 +7027,22 @@ function hydrateForecastDates() {
   }
   const priceDates = [...new Set(marketData.spotPrices.map((row) => row.date).filter(Boolean))].sort();
   const publishedForecastDates = [...new Set((state.priceForecastHistory?.results || []).map((row) => row.market_date).filter(Boolean))].sort();
-  const dates = hasConnectedMarketData() && publishedForecastDates.length
+  const baseDates = hasConnectedMarketData() && publishedForecastDates.length
     ? publishedForecastDates
     : hasConnectedMarketData() && priceDates.length > 2
     ? priceDates.slice(2)
     : hasConnectedMarketData()
       ? [...new Set(state.forecast96.map((row) => row.date).filter(Boolean))].sort()
       : [];
+  const dates = [...new Set([...baseDates, ...(hasConnectedMarketData() ? dateRange("2026-07-01", "2026-09-30") : [])])].sort();
   const modelDate = hasConnectedMarketData() ? state.priceForecastResult?.market_date : "";
   if (modelDate && !dates.includes(modelDate)) dates.push(modelDate);
   dates.sort();
   const latestSnapshotDate = (state.priceForecastHistory?.results || []).map(r => r.market_date).filter(d => dates.includes(d)).sort().at(-1);
   state.forecastDate = latestSnapshotDate || dates.at(-1) || "";
+  if (state.forecastDate && state.forecastDate < "2026-07-01") {
+    document.querySelector("#forecastModelSelect").value = "sd-gfs24-d1-price-actual-supply-mixed-v6";
+  }
   const observedDateSet = new Set(priceDates);
   select.innerHTML = dates.map((date) => `<option value="${date}">${date} · ${observedDateSet.has(date) ? "历史可回测" : "预测目标日"}</option>`).join("");
   select.value = state.forecastDate;
@@ -7058,8 +7067,8 @@ function hydrateForecastModelOptions() {
     select.value = "henan-real-time-pre-da-da-anchor-v4-t1";
     return;
   }
-  select.innerHTML = '<option value="sd-target-supply-conditional-v1">目标日供需条件增强（缺失自动回退）</option>';
-  select.value = "sd-target-supply-conditional-v1";
+  select.innerHTML = '<option value="sd-gfs24-d1-qra-regime-v7-research">V7 日前QRA＋实时分状态（研究）</option><option value="sd-gfs24-d1-price-actual-supply-mixed-v6">V6 混合模型（对照）</option>';
+  select.value = "sd-gfs24-d1-qra-regime-v7-research";
 }
 
 async function prepareHenanForecastControls() {
@@ -8883,7 +8892,7 @@ async function runForecastEvaluation(options = {}) {
     if (!options.silent) showToast("当前市场没有可用的山东真实数据。");
     return;
   }
-  state.forecastModelVersion = document.querySelector("#forecastModelSelect")?.value || "sd-target-supply-conditional-v1";
+  state.forecastModelVersion = document.querySelector("#forecastModelSelect")?.value || "sd-gfs24-d1-qra-regime-v7-research";
   const storedResult = selectedIntegratedForecastResultForDate();
   if (storedResult) {
     state.forecastResults = normalizeForecastRows(storedResult.periods || [], storedResult);
@@ -8952,7 +8961,11 @@ async function runForecastEvaluation(options = {}) {
     state.forecastProvidedMetrics = payload.result?.backtest || null;
     state.forecastRunMeta = { ...run, review_status: payload.review?.status || run.review_status };
     const conditionalFallback = payload.result?.warnings?.includes('FALLBACK_USED=TRUE');
-    state.forecastSource = payload.result?.model?.version === 'sd-target-supply-conditional-v1'
+    state.forecastSource = payload.result?.model?.version === 'sd-gfs24-d1-qra-regime-v7-research'
+      ? 'V7 日前QRA＋实时分状态研究预测；负价区间仍需人工复核'
+      : payload.result?.model?.version === 'sd-gfs24-d1-price-actual-supply-mixed-v6'
+      ? 'V6 混合模型对照预测'
+      : payload.result?.model?.version === 'sd-target-supply-conditional-v1'
       ? (conditionalFallback ? '目标日供需预测缺失或不完整，已自动回退现有模型' : '已使用完整24点目标日供需条件增强模型')
       : payload.result?.model?.version === 'sd-sixweather-lagged-supply-v1'
       ? '7月六天气特征与D-2出力滞后研究适配版（天气发布时间待确认）'

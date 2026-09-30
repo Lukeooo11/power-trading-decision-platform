@@ -2,10 +2,12 @@ from pathlib import Path
 import tempfile
 from unittest.mock import patch
 
+import pandas as pd
 from fastapi.testclient import TestClient
 from app import main
 from app.v5_shandong_price_forecast import MODEL_VERSION, run_v5_shandong_forecast
 from app.d1_shandong_price_forecast import MODEL_VERSION as D1_MODEL_VERSION
+from app.v7_shandong_price_forecast import MODEL_VERSION as V7_MODEL_VERSION
 from app.price_forecast_model import run_price_forecast
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,8 +24,8 @@ def test_v5_emits_24_ordered_quantile_periods():
         assert 0 <= row["negative_risk_probability"] <= 1
         assert 0 <= row["high_price_risk_probability"] <= 1
 
-def test_price_forecast_entry_selects_v5():
-    result = run_price_forecast(PRIVATE, "2026-07-01")
+def test_price_forecast_entry_keeps_v6_as_explicit_comparison():
+    result = run_price_forecast(PRIVATE, "2026-07-01", model_version=D1_MODEL_VERSION)
     assert result["model_version"] == D1_MODEL_VERSION
     assert len(result["forecast"]) == 24
     boundary = result["summary"]["price_information_boundary"]
@@ -47,7 +49,7 @@ def test_mixed_model_routes_day_ahead_to_xgboost_and_rt_spread_to_lightgbm():
 
 def test_v5_raw_contract_keeps_platform_hold_controls():
     from app.main import ModelRunCreateRequestV1, build_price_forecast_v1_result
-    raw = run_price_forecast(PRIVATE, "2026-07-01")
+    raw = run_price_forecast(PRIVATE, "2026-07-01", model_version=D1_MODEL_VERSION)
     request = ModelRunCreateRequestV1(
         request_id="test-v5-contract", market_code="SD", market_date="2026-07-01",
         model_id="price-forecast", model_version="sd-target-supply-conditional-v1",
@@ -105,9 +107,9 @@ def test_forecast_api_reports_v5_instead_of_silent_fallback():
             assert response.status_code == 202, response.text
             run = response.json()
             assert run["status"] == "SUCCEEDED"
-            assert run["model_version"] == D1_MODEL_VERSION
+            assert run["model_version"] == V7_MODEL_VERSION
             result = client.get(run["result_url"]).json()["result"]
-            assert result["model"]["version"] == D1_MODEL_VERSION
+            assert result["model"]["version"] == V7_MODEL_VERSION
             assert len(result["periods"]) == 24
             assert all(row["strategy_suggestion"]["action"] == "HOLD" for row in result["periods"])
 
@@ -133,6 +135,25 @@ def test_forecast_api_keeps_prediction_when_actual_realtime_is_missing():
             assert len(result["periods"]) == 24
             assert result["backtest"]["real_time_mae_yuan_per_mwh"] is None
             assert "SPREAD_DIRECTION_ACCURACY_UNAVAILABLE" in result["warnings"]
+
+
+def test_d1_v6_supports_september_and_keeps_target_actuals_out_of_features():
+    from app.d1_shandong_price_forecast import _load, run_d1_shandong_forecast
+
+    source, frame, models, metadata, _ = _load()
+    result = run_d1_shandong_forecast(target_date="2026-09-30", private_data_dir=PRIVATE)
+    assert result["model_version"] == D1_MODEL_VERSION
+    assert len(result["forecast"]) == 24
+    assert result["summary"]["forecast_selection"]["target_actual_supply_used"] is False
+    assert metadata["availabilityControl"]["targetDateActualSupplyUsed"] is False
+    assert metadata["selected"]["da"]["featureSet"] == "baseline"
+    assert metadata["selected"]["rt"]["featureSet"] == "enhanced"
+    assert metadata["selected"]["spread"]["featureSet"] == "baseline"
+    forbidden = {"日前价格", "实时价格", "实时价差", "直调负荷", "风电", "光伏"}
+    for package in models.values():
+        assert not forbidden.intersection(package["features"])
+    rows = source[source["日期"] == pd.Timestamp("2026-09-30")]
+    assert len(rows) == 24
 
 
 def test_public_platform_serves_price_data_required_by_date_selector():
