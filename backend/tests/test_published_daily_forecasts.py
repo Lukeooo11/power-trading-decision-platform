@@ -67,3 +67,7 @@ def test_september_spot_prices_are_available_to_the_public_platform():
     assert all(row["dayAheadPriceYuanMwh"] is not None for row in september)
     assert sum(row["realtimePriceYuanMwh"] is None for row in september) == 96
     assert all(row["sourceBatchId"] == "sd-september-prices-v1" for row in september)
+    with TestClient(main.app) as client:
+        response = client.get("/api/spot/prices", params={"market_code": "SD", "start_date": "2026-09-01", "end_date": "2026-09-30"})
+    assert response.status_code == 200
+    assert response.json()["point_count"] == 720

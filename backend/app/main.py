@@ -2455,7 +2455,9 @@ def spot_prices(
     date: str | None = None,
 ) -> dict[str, Any]:
     require_sample_market(market_code)
-    rows = load_private_json("spot_prices_2026h1.json")
+    # Use the public combined asset when available so September labels are
+    # visible through the API as well as the static dashboard.
+    rows = load_strategy_json("spot_prices_2026h1.json")
     if date:
         rows = [row for row in rows if row.get("date") == date]
     if start_date:
