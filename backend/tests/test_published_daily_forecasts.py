@@ -14,7 +14,8 @@ PUBLIC = Path(__file__).resolve().parents[2] / "data" / "forecast-daily"
 def test_all_dates_and_periods_are_published_without_trading_actions():
     index = json.loads((PUBLIC / "index.json").read_text(encoding="utf-8"))
     assert index["day_count"] == 273
-    assert index["period_count"] == 6552
+    assert index["result_count"] == 365
+    assert index["period_count"] == 8760
     assert index["dates"][0]["market_date"] == "2026-01-01"
     assert index["dates"][-1]["market_date"] == "2026-09-30"
     assert index["dates"][0]["evaluation_mode"] == "IN_SAMPLE_DIAGNOSTIC"
@@ -29,7 +30,7 @@ def test_all_dates_and_periods_are_published_without_trading_actions():
         for result in document["results"]:
             total += 1
             assert result["market_date"].startswith(label)
-            assert result["model"]["version"] == (V6_VERSION if month <= 6 else V7_VERSION)
+            assert result["model"]["version"] in ([V6_VERSION] if month <= 6 else [V6_VERSION, V7_VERSION])
             assert result["run_id"] is None
             assert result["strategy_ready"] is False
             assert result["execution_allowed"] is False
@@ -40,7 +41,7 @@ def test_all_dates_and_periods_are_published_without_trading_actions():
                 for key in ("day_ahead_price_yuan_per_mwh", "real_time_price_yuan_per_mwh"):
                     values = row[key]
                     assert values["p10"] <= values["p50"] <= values["p90"]
-    assert total == 273
+    assert total == 365
 
 
 def test_missing_realtime_actual_remains_unknown_and_static_assets_are_served():
@@ -54,4 +55,5 @@ def test_missing_realtime_actual_remains_unknown_and_static_assets_are_served():
         month = client.get("/data/forecast-daily/sd-2026-09.json")
     assert index.status_code == month.status_code == 200
     assert index.json()["day_count"] == 273
-    assert len(month.json()["results"]) == 30
+    assert index.json()["result_count"] == 365
+    assert len(month.json()["results"]) == 60

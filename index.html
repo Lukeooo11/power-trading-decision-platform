@@ -6134,7 +6134,7 @@ const DATA_SOURCES = {
   portfolioLoadHourly: "./data/portfolio-load-hourly.json",
   priceForecastResult: "./data/price-forecast-result.json?v=sd-target-supply-conditional-v1",
   priceForecastHistory: "./data/price-forecast-history.json?v=sd-target-supply-conditional-v1",
-  dailyForecastIndex: "./data/forecast-daily/index.json?v=sd-daily-20260930",
+  dailyForecastIndex: "./data/forecast-daily/index.json?v=sd-daily-dual-20260930",
   dailyForecastRoot: "./data/forecast-daily",
   secondaryPriceForecastResult: "./data/price-forecast-result-secondary.json?v=price-forecast-v1.2.0-supply-ensemble",
   dataQuality: "./data/data-quality.json",
@@ -6786,14 +6786,12 @@ function bindEvents() {
   document.querySelector("#exportForecastBtn").addEventListener("click", exportForecastResults);
   document.querySelector("#forecastDateSelect").addEventListener("change", (event) => {
     state.forecastDate = event.target.value;
-    if (state.selectedMarket === "SD" && state.forecastDate < "2026-07-01"
-        && document.querySelector("#forecastModelSelect").value === "sd-gfs24-d1-qra-regime-v7-research") {
-      document.querySelector("#forecastModelSelect").value = "sd-gfs24-d1-price-actual-supply-mixed-v6";
-    }
+    syncForecastModelAvailability();
     runForecastEvaluation({ silent: true });
   });
   document.querySelector("#forecastModelSelect").addEventListener("change", (event) => {
     state.forecastModelVersion = event.target.value;
+    syncForecastModelAvailability();
     runForecastEvaluation({ silent: true });
   });
   document.querySelector("#forecastResultUpload").addEventListener("change", importForecastResults);
@@ -7047,9 +7045,7 @@ function hydrateForecastDates() {
   dates.sort();
   const latestSnapshotDate = [...dailyPublished, ...(state.priceForecastHistory?.results || []).map(r => r.market_date)].filter(d => dates.includes(d)).sort().at(-1);
   state.forecastDate = latestSnapshotDate || dates.at(-1) || "";
-  if (state.forecastDate && state.forecastDate < "2026-07-01") {
-    document.querySelector("#forecastModelSelect").value = "sd-gfs24-d1-price-actual-supply-mixed-v6";
-  }
+  syncForecastModelAvailability();
   const observedDateSet = new Set(priceDates);
   const publishedDateSet = new Set(dailyPublished);
   const inSampleDateSet = new Set((state.dailyForecastIndex?.dates || []).filter(row => row.evaluation_mode === "IN_SAMPLE_DIAGNOSTIC").map(row => row.market_date));
@@ -7078,6 +7074,17 @@ function hydrateForecastModelOptions() {
   }
   select.innerHTML = '<option value="sd-gfs24-d1-qra-regime-v7-research">V7 日前QRA＋实时分状态（研究）</option><option value="sd-gfs24-d1-price-actual-supply-mixed-v6">V6 混合模型（对照）</option>';
   select.value = "sd-gfs24-d1-qra-regime-v7-research";
+  syncForecastModelAvailability();
+}
+
+function syncForecastModelAvailability() {
+  if (state.selectedMarket !== "SD") return;
+  const select = document.querySelector("#forecastModelSelect");
+  const v7 = [...select.options].find(option => option.value === "sd-gfs24-d1-qra-regime-v7-research");
+  if (!v7) return;
+  v7.disabled = Boolean(state.forecastDate && (state.forecastDate < "2026-07-01" || state.forecastDate > "2026-09-30"));
+  if (v7.disabled && select.value === v7.value) select.value = "sd-gfs24-d1-price-actual-supply-mixed-v6";
+  state.forecastModelVersion = select.value;
 }
 
 async function prepareHenanForecastControls() {
@@ -7116,8 +7123,9 @@ function primaryForecastResultForDate(date = state.forecastDate) {
 }
 
 function selectedIntegratedForecastResultForDate(date = state.forecastDate) {
-  const published = state.dailyForecastMonthCache?.[date.slice(0, 7)]?.results?.find(result => result.market_date === date);
-  if (published?.model?.version === state.forecastModelVersion) return published;
+  const published = state.dailyForecastMonthCache?.[date.slice(0, 7)]?.results?.find(result =>
+    result.market_date === date && result.model?.version === state.forecastModelVersion);
+  if (published) return published;
   if (state.forecastModelVersion === state.priceForecastResult?.model?.version) {
     return primaryForecastResultForDate(date);
   }
@@ -8905,12 +8913,12 @@ async function runForecastEvaluation(options = {}) {
   }
   state.forecastModelVersion = document.querySelector("#forecastModelSelect")?.value || "sd-gfs24-d1-qra-regime-v7-research";
   const publishedDay = (state.dailyForecastIndex?.dates || []).find(row => row.market_date === state.forecastDate);
-  if (publishedDay?.model_version === state.forecastModelVersion
+  if (publishedDay?.available_versions?.includes(state.forecastModelVersion)
       && !state.dailyForecastMonthCache[state.forecastDate.slice(0, 7)]) {
     const requestedDate = state.forecastDate;
     const requestedVersion = state.forecastModelVersion;
     const month = requestedDate.slice(0, 7);
-    const document = await fetchJsonOptional(`${DATA_SOURCES.dailyForecastRoot}/sd-${month}.json?v=sd-daily-20260930`, null);
+    const document = await fetchJsonOptional(`${DATA_SOURCES.dailyForecastRoot}/sd-${month}.json?v=sd-daily-dual-20260930`, null);
     if (document?.schema_version === "sd-daily-forecast-v1" && document.month === month
         && document.results?.every(result => result.periods?.length === 24 && result.execution_allowed === false)) {
       state.dailyForecastMonthCache[month] = document;

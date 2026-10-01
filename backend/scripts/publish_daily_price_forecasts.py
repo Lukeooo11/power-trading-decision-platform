@@ -1,7 +1,8 @@
 """Build versioned, read-only daily price forecasts for the public desk.
 
-January-June use the existing V6 research replay; July-September use V7's
-monthly walk-forward research replay. This never creates trading instructions.
+V6 is retained for every date January-September. V7's monthly walk-forward
+research replay is additionally published for July-September. This never
+creates trading instructions.
 """
 from __future__ import annotations
 
@@ -53,7 +54,8 @@ def build() -> dict:
             "execution_allowed": False,
         }
         target.write_text(json.dumps(document, ensure_ascii=False, allow_nan=False, separators=(",", ":")), encoding="utf-8")
-        print(f"BUILT {month}: {len(rows)} days, {len(rows) * 24} periods, {target.stat().st_size} bytes", flush=True)
+        days = len({row["market_date"] for row in rows})
+        print(f"BUILT {month}: {days} days, {len(rows)} model results, {len(rows) * 24} periods, {target.stat().st_size} bytes", flush=True)
 
     for target in dates:
         day = target.date().isoformat()
@@ -62,42 +64,51 @@ def build() -> dict:
             save_month(current_month, month_rows)
             month_rows = []
         current_month = month
-        version = V7_VERSION if day >= "2026-07-01" else V6_VERSION
-        raw = run_price_forecast(PRIVATE, day, model_version=version)
-        request = ModelRunCreateRequestV1(
-            request_id=f"published-{version}-{day}",
-            market_code="SD", market_date=day, model_id="price-forecast",
-            model_version=version, data_version=DATA_VERSION,
-            input_summary={"available_domains": ["prices", "weather"]},
-        )
-        result = build_price_forecast_v1_result(request, f"published-{version}-{day}", raw).model_dump(mode="json")
-        periods = result["periods"]
-        assert result["model"]["version"] == version
-        assert [row["period"] for row in periods] == list(range(1, 25))
-        assert not result["strategy_ready"]
-        assert all(row["strategy_suggestion"]["action"] == "HOLD"
-                   and row["strategy_suggestion"]["volume_mwh"] == 0 for row in periods)
-        # Static snapshots are not persisted model runs and must not expose a
-        # clickable review URL for a run that does not exist in SQLite.
-        result["run_id"] = None
-        result["forecast_scenario"] = "pre_market_research_replay"
-        result["audit"] = {
-            "evaluation_mode": raw["summary"].get("evaluation_mode"),
-            "training_end": raw["summary"].get("training_end"),
-            "target_actual_supply_used": False,
-            "price_actuals_used_only_for_scoring": True,
-        }
-        result["execution_allowed"] = False
-        month_rows.append(result)
+        versions = [V6_VERSION] + ([V7_VERSION] if day >= "2026-07-01" else [])
+        model_metrics: dict[str, dict] = {}
+        for version in versions:
+            raw = run_price_forecast(PRIVATE, day, model_version=version)
+            request = ModelRunCreateRequestV1(
+                request_id=f"published-{version}-{day}",
+                market_code="SD", market_date=day, model_id="price-forecast",
+                model_version=version, data_version=DATA_VERSION,
+                input_summary={"available_domains": ["prices", "weather"]},
+            )
+            result = build_price_forecast_v1_result(request, f"published-{version}-{day}", raw).model_dump(mode="json")
+            periods = result["periods"]
+            assert result["model"]["version"] == version
+            assert [row["period"] for row in periods] == list(range(1, 25))
+            assert not result["strategy_ready"]
+            assert all(row["strategy_suggestion"]["action"] == "HOLD"
+                       and row["strategy_suggestion"]["volume_mwh"] == 0 for row in periods)
+            # Static snapshots are not persisted model runs.
+            result["run_id"] = None
+            result["forecast_scenario"] = "pre_market_research_replay"
+            result["audit"] = {
+                "evaluation_mode": raw["summary"].get("evaluation_mode"),
+                "training_end": raw["summary"].get("training_end"),
+                "target_actual_supply_used": False,
+                "price_actuals_used_only_for_scoring": True,
+            }
+            result["execution_allowed"] = False
+            month_rows.append(result)
+            model_metrics[version] = {
+                "evaluation_mode": result["audit"]["evaluation_mode"],
+                "day_ahead_mae_yuan_per_mwh": result["backtest"].get("mae_yuan_per_mwh"),
+                "real_time_mae_yuan_per_mwh": result["backtest"].get("real_time_mae_yuan_per_mwh"),
+            }
+        default_version = versions[-1]
         index_rows.append({
-            "market_date": day, "month": month, "model_version": version,
-            "evaluation_mode": result["audit"]["evaluation_mode"],
-            "day_ahead_mae_yuan_per_mwh": result["backtest"].get("mae_yuan_per_mwh"),
-            "real_time_mae_yuan_per_mwh": result["backtest"].get("real_time_mae_yuan_per_mwh"),
+            "market_date": day, "month": month,
+            "model_version": default_version, "available_versions": versions,
+            "evaluation_mode": model_metrics[default_version]["evaluation_mode"],
+            "models": model_metrics,
         })
     save_month(current_month, month_rows)
     assert len(index_rows) == len(dates) == 273
     assert len({row["market_date"] for row in index_rows}) == 273
+    result_count = sum(len(row["available_versions"]) for row in index_rows)
+    assert result_count == 365
     manifest = {
         "schema_version": "sd-daily-forecast-index-v1",
         "market_code": "SD",
@@ -106,14 +117,15 @@ def build() -> dict:
         "data_version": DATA_VERSION,
         "v7_replay_sha256": hashlib.sha256(ASSET.read_bytes()).hexdigest(),
         "dates": index_rows,
-        "day_count": len(index_rows), "period_count": len(index_rows) * 24,
-        "note": "Historical research replay. January is in-sample diagnostic; later evaluation modes are shown per date. V7 July-September is not an independent untouched holdout. Missing actuals remain null. No automatic trading.",
+        "day_count": len(index_rows), "result_count": result_count,
+        "period_count": result_count * 24,
+        "note": "V6 is available January-September; V7 is additionally available July-September. January V6 is in-sample diagnostic. V7 July-September is not an independent untouched holdout. Missing actuals remain null. No automatic trading.",
         "execution_allowed": False,
     }
     (DESTINATION / "index.json").write_text(
         json.dumps(manifest, ensure_ascii=False, allow_nan=False, separators=(",", ":")), encoding="utf-8"
     )
-    print(f"COMPLETE {len(index_rows)} days, {len(index_rows) * 24} periods", flush=True)
+    print(f"COMPLETE {len(index_rows)} days, {result_count} model results, {result_count * 24} periods", flush=True)
     return manifest
 
 
