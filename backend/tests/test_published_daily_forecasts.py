@@ -57,3 +57,13 @@ def test_missing_realtime_actual_remains_unknown_and_static_assets_are_served():
     assert index.json()["day_count"] == 273
     assert index.json()["result_count"] == 365
     assert len(month.json()["results"]) == 60
+
+
+def test_september_spot_prices_are_available_to_the_public_platform():
+    rows = json.loads((Path(__file__).resolve().parents[2] / "data" / "spot-prices.json").read_text(encoding="utf-8"))
+    september = [row for row in rows if row["date"].startswith("2026-09-")]
+    assert len(september) == 720
+    assert {row["date"] for row in september} == {f"2026-09-{day:02d}" for day in range(1, 31)}
+    assert all(row["dayAheadPriceYuanMwh"] is not None for row in september)
+    assert sum(row["realtimePriceYuanMwh"] is None for row in september) == 96
+    assert all(row["sourceBatchId"] == "sd-september-prices-v1" for row in september)
